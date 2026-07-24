@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Follow-Up Visit Review &amp; Progress Plan - Integrative Psychiatry</title>
+<style>
+    :root {
+      --primary: #153430;
+      --primary-2: #224b3c;
+      --primary-light: #2a5c4f;
+      --primary-soft: #eef5f3;
+      --primary-soft-2: #f6faf8;
+      --primary-border: #a8cfc3;
+      --text: #1e293b;
+      --muted: #64748b;
+      --subtle: #94a3b8;
+      --line: #dbe3e8;
+      --paper: #ffffff;
+      --background: #f1f5f9;
+      --danger: #b42318;
+      --danger-bg: #fef3f2;
+      --danger-border: #f97066;
+      --warning: #b54708;
+      --warning-bg: #fffaeb;
+      --warning-border: #fdb022;
+      --info: #1d4ed8;
+      --info-bg: #eff6ff;
+      --info-border: #93c5fd;
+      --success: #047857;
+      --success-bg: #ecfdf5;
+      --success-border: #6ee7b7;
+      --rose: #be185d;
+      --rose-soft: #fdf2f8;
+      --rose-border: #f9a8d4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--background);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10pt;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .document {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--paper);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+      padding: 34px;
+      border: 1px solid #e2e8f0;
+    }
+.patient-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .patient-cell {
+      background: var(--primary-soft-2);
+      border: 1px solid #dcebe6;
+      border-radius: 12px;
+      padding: 9px 10px;
+      min-height: 54px;
+    }
+
+    .patient-cell.wide { grid-column: span 2; }
+
+    .patient-label {
+      margin: 0 0 3px;
+      color: var(--primary);
+      font-size: 8.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .patient-value {
+      margin: 0;
+      color: var(--text);
+      font-size: 9.8pt;
+      font-weight: 700;
+      white-space: pre-line;
+    }
+
+    .system-instructions-box {
+      background: #edf2f7;
+      border: 1px solid #cbd5e0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 20px;
+      color: #334155;
+      font-size: 9pt;
+    }
+
+    .system-instructions-box h2 {
+      margin: 0 0 8px;
+      color: var(--primary);
+      font-size: 11pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .provider-review-only {
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      border-left: 5px solid var(--warning);
+      border-radius: 12px;
+      padding: 13px 15px;
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .provider-review-only h2 {
+      margin: 0 0 8px;
+      color: var(--warning);
+      font-size: 11pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .section {
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      color: var(--primary);
+      font-size: 13pt;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-bottom: 2px solid #d9ebe5;
+      padding-bottom: 6px;
+    }
+
+    .section-title.danger { color: var(--danger); border-bottom-color: var(--danger-border); }
+    .section-title.warning { color: var(--warning); border-bottom-color: var(--warning-border); }
+
+    .subsection-title {
+      margin: 0 0 9px;
+      color: var(--primary);
+      font-size: 11pt;
+      font-weight: 900;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    .clinical-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 15px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .clinical-card.primary { background: var(--primary-soft); border-color: var(--primary-border); }
+    .clinical-card.danger { background: var(--danger-bg); border: 1.5px solid var(--danger-border); }
+    .clinical-card.warning { background: var(--warning-bg); border-color: var(--warning-border); }
+    .clinical-card.info { background: var(--info-bg); border-color: var(--info-border); }
+    .clinical-card.success { background: var(--success-bg); border-color: var(--success-border); }
+    .clinical-card.rose { background: var(--rose-soft); border-color: var(--rose-border); }
+
+    .clinical-field {
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .clinical-field:last-child { margin-bottom: 0; }
+
+    .field-label {
+      margin: 0 0 4px;
+      color: var(--primary);
+      font-size: 9pt;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .field-value {
+      margin: 0;
+      color: var(--text);
+      font-size: 9.7pt;
+      white-space: pre-line;
+    }
+
+    .field-value.bold { font-weight: 800; }
+
+    .clinical-field.missing .field-label,
+    .clinical-field.not-documented .field-label,
+    .clinical-field.not-assessed .field-label,
+    .field-label.missing,
+    .field-label.not-documented,
+    .field-label.not-assessed {
+      color: var(--danger);
+      font-weight: 900;
+    }
+
+    .clinical-field.conflicting .field-label,
+    .clinical-field.requires-review .field-label,
+    .field-label.conflicting,
+    .field-label.requires-review {
+      color: var(--warning);
+      font-weight: 900;
+    }
+
+    .ai-prompt {
+      color: inherit;
+      background: transparent;
+      font-style: inherit;
+    }
+
+    .ai-prompt-block {
+      display: block;
+      background: #fff7ed;
+      border: 1px dashed #f59e0b;
+      color: #7c2d12;
+      padding: 8px 10px;
+      margin-top: 5px;
+      font-size: 8.8pt;
+      border-radius: 8px;
+      line-height: 1.35;
+      font-weight: normal;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .agenda-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .agenda-list li { margin-bottom: 6px; }
+
+    .checkbox-list { list-style: none; padding-left: 0; margin: 0; }
+    .checkbox-list li { margin-bottom: 7px; }
+
+    .signature-section {
+      margin-top: 24px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .signature-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: end;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 15px;
+      background: #ffffff;
+    }
+
+    .signature-image {
+      max-width: 210px;
+      max-height: 58px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .footer {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 8.3pt;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    p { margin-top: 0; margin-bottom: 8px; }
+    ul { margin: 6px 0 0; padding-left: 18px; }
+    li { margin-bottom: 5px; font-size: 9.6pt; }
+    .no-break { page-break-inside: avoid; break-inside: avoid; }
+
+    @media print {
+
+      /* Allow long clinical content to split naturally across printed/PDF pages. */
+      .section,
+      .clinical-card,
+      .goal-card,
+      .goal-body,
+      .clinical-field,
+      .grid-2,
+      .grid-3 {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+
+      body { background: #ffffff; padding: 0; }
+      .document { max-width: none; box-shadow: none; border-radius: 0; border: none; padding: 22px; }
+      @page { size: letter portrait; margin: 0.35in; }
+      .system-instructions-box, .provider-review-only, .ai-prompt-block { display: none !important; }
+.section { margin-bottom: 16px; }
+      .section-title { font-size: 11.5pt; margin-bottom: 8px; }
+      .clinical-card { padding: 10px 12px; }
+      .field-value, li, p { font-size: 8.8pt; }
+      .field-label, .patient-label { font-size: 8pt; }
+      .patient-grid { gap: 7px; }
+      .patient-cell { padding: 7px 8px; }
+}
+
+    @media (max-width: 760px) {
+      body { padding: 12px; }
+      .document { padding: 22px; }
+.patient-grid, .grid-2, .grid-3, .signature-card { grid-template-columns: 1fr; }
+      .patient-cell.wide { grid-column: span 1; }
+    }
+  
+    /* --- ROSE FOLLOW-UP HEADER ONLY --- */
+    .fu-rose-header {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 24px;
+      align-items: stretch;
+      background:
+        radial-gradient(circle at 12% 15%, rgba(255,255,255,0.22), transparent 28%),
+        linear-gradient(135deg, #831843, #db2777);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+      page-break-inside: avoid;
+      break-inside: avoid;
+      color: #ffffff;
+    }
+
+    .fu-rose-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 136px;
+    }
+
+    .fu-rose-logo {
+      width: 235px;
+      max-height: 138px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.16));
+    }
+
+    .fu-rose-brand-text {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .fu-rose-wordmark {
+      margin: 0 0 6px;
+      color: #ffffff;
+      line-height: 0.9;
+      letter-spacing: 0.045em;
+      font-weight: 900;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.16);
+    }
+
+    .fu-rose-wordmark .large {
+      font-size: 25pt;
+    }
+
+    .fu-rose-wordmark .small {
+      font-size: 18pt;
+    }
+
+    .fu-rose-provider-line {
+      margin: 4px 0 4px;
+      color: rgba(255,255,255,0.95);
+      font-size: 10pt;
+      font-weight: 900;
+    }
+
+    .fu-rose-contact-line {
+      margin: 0 0 10px;
+      color: rgba(255,255,255,0.86);
+      font-size: 8.5pt;
+      line-height: 1.24;
+      font-weight: 650;
+    }
+
+    .fu-rose-doc-pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.16);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.38);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 10.5pt;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media print {
+      .fu-rose-header {
+        grid-template-columns: 190px 1fr;
+        gap: 16px;
+        padding: 13px 15px;
+        margin-bottom: 12px;
+        box-shadow: none;
+      }
+
+      .fu-rose-logo-wrap {
+        min-height: 105px;
+      }
+
+      .fu-rose-logo {
+        width: 180px;
+        max-height: 105px;
+      }
+
+      .fu-rose-wordmark .large {
+        font-size: 20pt;
+      }
+
+      .fu-rose-wordmark .small {
+        font-size: 14.5pt;
+      }
+
+      .fu-rose-doc-pill {
+        font-size: 9.5pt;
+        padding: 5px 10px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .fu-rose-header {
+        grid-template-columns: 1fr;
+      }
+
+      .fu-rose-brand-text {
+        text-align: left;
+        align-items: flex-start;
+      }
+
+      .fu-rose-logo-wrap {
+        min-height: auto;
+      }
+
+      .fu-rose-logo {
+        width: 220px;
+        max-height: 130px;
+      }
+    }
+
+
+/* --- GENERATED FOLLOW-UP CLEANUP / FLOWING PRINT EXPORT --- */
+.footer { display: none !important; }
+* { page-break-before:auto!important; page-break-after:auto!important; page-break-inside:auto!important; break-before:auto!important; break-after:auto!important; break-inside:auto!important; }
+.section, .clinical-card, .clinical-field, .grid-2, .grid-3, .patient-grid, .signature-section { page-break-before:auto!important; page-break-after:auto!important; page-break-inside:auto!important; break-before:auto!important; break-after:auto!important; break-inside:auto!important; }
+.clinical-field.missing .field-label, .patient-cell.missing .patient-label, .field-label.missing, .patient-label.missing { color: var(--danger)!important; font-weight:900!important; }
+.clinical-field.missing .field-value, .patient-cell.missing .patient-value { min-height:18px; display:block; }
+.field-value strong, .patient-value strong { font-weight:900; color:var(--primary); }
+.field-value .line { display:block; margin:0 0 7px; }
+.field-value .line:last-child { margin-bottom:0; }
+.clinical-card { border-left:5px solid var(--primary); box-shadow:0 8px 20px rgba(15,23,42,.045); }
+.section:nth-of-type(3n+1) .clinical-card { background:linear-gradient(135deg,var(--primary-soft-2),#fff 70%); border-color:var(--primary-border); border-left-color:var(--primary); }
+.section:nth-of-type(3n+2) .clinical-card { background:linear-gradient(135deg,var(--info-bg),#fff 72%); border-color:var(--info-border); border-left-color:var(--info); }
+.section:nth-of-type(3n) .clinical-card { background:linear-gradient(135deg,var(--rose-soft),#fff 72%); border-color:var(--rose-border); border-left-color:var(--rose); }
+.section .clinical-card.danger { background:linear-gradient(135deg,var(--danger-bg),#fff 72%); border-color:var(--danger-border); border-left-color:var(--danger); }
+.section .clinical-card.warning { background:linear-gradient(135deg,var(--warning-bg),#fff 72%); border-color:var(--warning-border); border-left-color:var(--warning); }
+.section .clinical-card.success { background:linear-gradient(135deg,var(--success-bg),#fff 72%); border-color:var(--success-border); border-left-color:var(--success); }
+.section-title { background:linear-gradient(90deg,rgba(253,242,248,.95),rgba(255,255,255,0)); border-radius:10px 10px 0 0; padding:8px 10px 7px; }
+@media print { .footer { display:none!important; } }
+
+
+/* --- Checkbox and full-width follow-up polish --- */
+.grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+.clinical-card, .patient-cell { break-inside: auto !important; page-break-inside: auto !important; }
+.checkbox-list { list-style: none !important; padding-left: 0 !important; margin: 0 !important; display: grid; gap: 7px; }
+.checkbox-list li { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 0 !important; line-height: 1.35; }
+.checkbox-box { width: 13px; height: 13px; border: 1.7px solid var(--primary); border-radius: 3px; background: #fff; flex: 0 0 13px; margin-top: 2px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+.agenda-list { margin: 0; padding-left: 20px; display: grid; gap: 9px; }
+.agenda-list li { margin-bottom: 0; line-height: 1.42; }
+.agenda-list strong { color: var(--primary); font-weight: 900; }
+.support-note { background: #ffffff; border: 1px solid var(--line); border-left: 4px solid var(--info); border-radius: 10px; padding: 9px 10px; margin-top: 10px; }
+@media print { .grid-2, .grid-3 { grid-template-columns: 1fr !important; } .checkbox-box { width: 11px; height: 11px; flex-basis: 11px; } }
+
+
+/* --- Added consistency polish: reusable clinical-note typography --- */
+.added-clinical-section .section-title,
+.added-clinical-section .subsection-title,
+.added-clinical-section .field-label,
+.added-clinical-section .mini-block h4 {
+  line-height: 1.25;
+}
+.added-clinical-section .field-value,
+.added-clinical-section .mini-block p,
+.added-clinical-section li,
+.added-clinical-section td,
+.added-clinical-section th {
+  font-size: 9.6pt;
+  line-height: 1.45;
+}
+.added-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.added-table th {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 8.8pt;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--line);
+}
+.added-table td {
+  vertical-align: top;
+  padding: 9px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+}
+.added-table tr:first-child td { border-top: 0; }
+.added-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 9pt;
+  font-weight: 650;
+}
+@media print {
+  .added-clinical-section .field-value,
+  .added-clinical-section .mini-block p,
+  .added-clinical-section li,
+  .added-clinical-section td,
+  .added-clinical-section th { font-size: 8.6pt; }
+  .added-table th, .added-table td { padding: 6px 7px; }
+}
+
+</style>
+</head>
+<body>
+<main class="document">
+<!-- =========================================================
+          ROSE FOLLOW-UP HEADER ONLY
+        ========================================================== -->
+<header class="fu-rose-header">
+<div class="fu-rose-logo-wrap">
+<img alt="Integrative Psychiatry Logo" class="fu-rose-logo" onerror="this.style.display='none'" src="https://sxjxsoakdsiifrmjsdeb.supabase.co/storage/v1/object/public/Logo/whitelogo.png"/>
+</div>
+<div class="fu-rose-brand-text">
+<div class="fu-rose-wordmark">
+<span class="large">I</span><span class="small">NTEGRATIVE</span><br/>
+<span class="large">P</span><span class="small">SYCHIATRY</span>
+</div>
+<p class="fu-rose-provider-line">Douglas Zelisko, M.D. • Board Certified Psychiatrist</p>
+<p class="fu-rose-contact-line">
+              45 South Main Street Suite 111, West Hartford, CT 06107<br/>
+              P: 860.615.3629  |  F: 860.318.2085  |  E: support@drzelisko.com
+            </p>
+<span class="fu-rose-doc-pill">Follow-Up Visit Key Points</span>
+</div>
+</header>
+<section class="patient-grid">
+<div class="patient-cell"><p class="patient-label">Patient Name</p><p class="patient-value"><span class="ai-prompt">Extract patient full name.</span></p></div>
+<div class="patient-cell"><p class="patient-label">DOB</p><p class="patient-value"><span class="ai-prompt">Extract DOB in MM-DD-YYYY format.</span></p></div>
+<div class="patient-cell"><p class="patient-label">Client ID</p><p class="patient-value"><span class="ai-prompt">Extract client ID if documented; if not stated, leave blank and mark the subtitle/label red.</span></p></div>
+<div class="patient-cell"><p class="patient-label">Visit Date</p><p class="patient-value"><span class="ai-prompt">Insert visit date if stated; if not stated, leave blank and mark Date/Visit Date label red.</span></p></div>
+<div class="patient-cell wide"><p class="patient-label">Current Diagnoses / ICD-10</p><p class="patient-value"><span class="ai-prompt">List current diagnoses with ICD-10 codes only when supported by intake, prior treatment plan, or prior note.</span></p></div>
+<div class="patient-cell"><p class="patient-label">Service Type</p><p class="patient-value"><span class="ai-prompt">Follow-up psychiatry visit; specify in-person or telehealth if documented.</span></p></div>
+<div class="patient-cell"><p class="patient-label">CPT / Billing</p><p class="patient-value"><span class="ai-prompt">Populate supported CPT/E/M/psychotherapy code. Do not leave blank. If unsupported, leave blank and mark the subtitle/label red.</span></p></div>
+<div class="patient-cell wide"><p class="patient-label">Most Recent Measures</p><p class="patient-value"><span class="ai-prompt">Extract most recent PHQ-9, GAD-7, ASRS, PCL-5, MDQ, PIRS, C-SSRS, or other scores with date and severity.</span></p></div>
+<div class="patient-cell wide"><p class="patient-label">Reason for Follow-Up</p><p class="patient-value"><span class="ai-prompt">One concise sentence stating why this follow-up visit is occurring and what needs to be reviewed from the prior session.</span></p></div>
+</section>
+<div class="system-instructions-box no-break" data-html2canvas-ignore="true">
+<h2>System Instructions: Follow-Up Visit Scribe &amp; Second-Visit Planner</h2>
+<p>Use this template to prepare a follow-up visit document after an intake or prior session. The purpose is to review what happened last session, assess interval progress, identify barriers, update medication and safety information, and generate a focused agenda for the next clinical conversation.</p>
+<ol>
+<li>Use only documented source material. Do not invent diagnoses, risk status, medication changes, CPT codes, or patient statements.</li>
+<li>Distinguish true negatives from missing information. If the patient denies cannabis use, do not mark Cannabis red. If cannabis is not mentioned, leave the value blank and mark the label red.</li>
+<li>Apply red labels for not documented/not assessed fields and amber labels for conflicting or provider-review fields.</li>
+<li>Replace every <code>span.ai-prompt</code> and remove instruction/prompt blocks from the final exported client/provider-facing output.</li>
+<li>Use client-safe, non-stigmatizing wording that remains clinically precise and insurance-ready.</li>
+</ol>
+<p><strong>Raw notes/source packet:</strong> Supplied separately to the generator; do not render source text in the final document.</p>
+<p>Missing-data rule: if a field is not stated in the source material, leave the value blank and mark the field subtitle/label red; do not write “Not documented” in the final document body.</p></div>
+<section class="provider-review-only" data-html2canvas-ignore="true">
+<h2>Provider Review Before Finalization</h2>
+<p><strong>Red labels:</strong> information is not documented or not assessed in the available source material.</p>
+<p><strong>Amber labels:</strong> information is conflicting, ambiguous, or requires provider confirmation.</p>
+<p><span class="ai-prompt">List any unresolved missing fields, conflicts, coding uncertainty, safety gaps, or items the provider should confirm live during the follow-up visit.</span></p>
+</section>
+<section class="section">
+<h2 class="section-title">1. Last Session Review</h2>
+<div class="grid-2">
+<div class="clinical-card primary">
+<div class="clinical-field">
+<h3 class="field-label">Prior Session Summary</h3>
+<p class="field-value"><span class="ai-prompt">Summarize the prior session in 4-7 clinically focused bullets. Include major themes, symptoms discussed, medication decisions, risk review, and patient goals.</span></p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">What Was Agreed Upon</h3>
+<p class="field-value"><span class="ai-prompt">List the concrete plan from last session: medication changes, labs, homework, tracking logs, referrals, care coordination, behavioral goals, or safety steps.</span></p>
+</div>
+</div>
+<div class="clinical-card">
+<div class="clinical-field">
+<h3 class="field-label">Unresolved Questions From Last Session</h3>
+<p class="field-value"><span class="ai-prompt">Identify topics left open or needing clarification, including diagnosis, meds, family/collateral, substance use, sleep, risk, labs, billing, or functional impairment.</span></p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Clinical Priorities for Today</h3>
+<p class="field-value"><span class="ai-prompt">Convert prior-session unresolved issues into a concise prioritized list for this follow-up visit.</span></p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section added-clinical-section">
+<h2 class="section-title">1A. Since-Last-Visit Change Tracker</h2>
+<div class="clinical-card info">
+<p class="added-note">Summarize clinical trajectory since the prior visit. Use clear status labels: improved, unchanged, worsened, new issue, resolved, not assessed, or not documented.</p>
+<table class="added-table">
+<thead>
+<tr>
+<th>Domain</th>
+<th>Status Since Last Visit</th>
+<th>Supporting Detail / Clinical Action</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Mood</td><td><span class="ai-prompt">State mood status since last visit.</span></td><td><span class="ai-prompt">Summarize supporting detail and any needed clinical action.</span></td></tr>
+<tr><td>Anxiety / Trauma</td><td><span class="ai-prompt">State anxiety, panic, trauma, irritability, or emotional regulation status since last visit.</span></td><td><span class="ai-prompt">Summarize supporting detail and any needed clinical action.</span></td></tr>
+<tr><td>Sleep</td><td><span class="ai-prompt">State sleep status since last visit.</span></td><td><span class="ai-prompt">Summarize sleep pattern, insomnia/hypersomnia, nightmares, medication effect, or next steps.</span></td></tr>
+<tr><td>Appetite / Weight / Energy</td><td><span class="ai-prompt">State appetite, weight, energy, or somatic status since last visit.</span></td><td><span class="ai-prompt">Summarize supporting detail and any monitoring or medical follow-up.</span></td></tr>
+<tr><td>Medication Adherence / Side Effects</td><td><span class="ai-prompt">State adherence and side-effect status since last visit.</span></td><td><span class="ai-prompt">Summarize missed doses, benefit, adverse effects, misuse/overuse, or medication questions.</span></td></tr>
+<tr><td>Substance Use / Lifestyle</td><td><span class="ai-prompt">State substance use, cravings, withdrawal, reduction, relapse, or lifestyle change since last visit.</span></td><td><span class="ai-prompt">Summarize supporting detail and any intervention needed.</span></td></tr>
+<tr><td>Safety</td><td><span class="ai-prompt">State safety status since last visit, including SI/HI/NSSI, psychosis, mania, impulsivity, or level-of-care concerns.</span></td><td><span class="ai-prompt">Summarize acute/chronic risk changes, protective factors, safety plan updates, or need for reassessment.</span></td></tr>
+<tr><td>Functioning / Relationships / Work</td><td><span class="ai-prompt">State functional status since last visit.</span></td><td><span class="ai-prompt">Summarize changes in work/school, relationships, ADLs, responsibilities, avoidance, or conflict.</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="section"><h2 class="section-title">2. Interval Follow-Up Targets</h2><div class="clinical-card success"><div class="clinical-field"><h3 class="field-label">Active / Unchanged Clinical Targets</h3><p class="field-value"><span class="ai-prompt">Summarize ongoing symptoms, unresolved treatment targets, and clinical areas requiring interval review. Do not include separate fields labeled improved, worsened/new concerns, or patient explanation of setbacks. If no interval data is documented, leave the value blank and apply the missing/red-label rule.</span></p></div></div><div class="clinical-card info" style="margin-top: 16px;"><div class="clinical-field"><h3 class="field-label">Targeted Interval Review Questions</h3><p class="field-value"><span class="ai-prompt">Generate concise targeted interval review questions that capture improvements and setbacks without using the removed headings. Include symptom change, functioning, safety, medication stance, substance use, sleep, and treatment-plan follow-through when relevant.</span></p></div></div></section>
+<section class="section">
+<h2 class="section-title">3. Symptom, Functioning &amp; Measurement Review</h2>
+<div class="grid-3">
+<div class="clinical-card">
+<h3 class="subsection-title">Mood / Anxiety / Trauma</h3>
+<div class="clinical-field"><h4 class="field-label">Depression</h4><p class="field-value"><span class="ai-prompt">Compare current depression symptoms to last session and rating scales. Include mood, anhedonia, motivation, guilt/worthlessness, appetite, energy, and functioning.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Anxiety / Rumination</h4><p class="field-value"><span class="ai-prompt">Compare anxiety, worry, panic, somatic arousal, avoidance, rumination, control needs, and interpersonal anxiety to prior session.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Trauma / Stress Response</h4><p class="field-value"><span class="ai-prompt">Document trauma/stressor symptoms if discussed. If not assessed, leave blank and mark the subtitle/label red.</span></p></div>
+</div>
+<div class="clinical-card">
+<h3 class="subsection-title">Sleep / Attention / Functioning</h3>
+<div class="clinical-field"><h4 class="field-label">Sleep</h4><p class="field-value"><span class="ai-prompt">Review sleep onset, maintenance, refreshment, nightmares, fatigue, daytime impact, and any sleep tracking since last visit.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Attention / Executive Function</h4><p class="field-value"><span class="ai-prompt">Review attention, organization, task initiation, follow-through, school/work performance, procrastination, and distractibility.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Functional Impact</h4><p class="field-value"><span class="ai-prompt">Summarize current functioning across school/work, relationships, family, ADLs, self-care, and social connection.</span></p></div>
+</div>
+<div class="clinical-card">
+<h3 class="subsection-title">Substance / Behavior / Lifestyle</h3>
+<div class="clinical-field"><h4 class="field-label">Cannabis / Alcohol / Other Substances</h4><p class="field-value"><span class="ai-prompt">Review current substance use, abstinence, cravings, withdrawal, relapse risk, perceived benefits/harms, and impact on mood/sleep/anxiety.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Coping Skills Used</h4><p class="field-value"><span class="ai-prompt">List coping skills attempted since last visit and whether they helped. Include exercise, journaling, grounding, social contact, mindfulness, creative work, exposure, or routines.</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Lifestyle / Health Behaviors</h4><p class="field-value"><span class="ai-prompt">Review diet, activity, caffeine, screen use, routines, medical follow-up, and other lifestyle behaviors relevant to symptoms.</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">4. Medication Management &amp; Care Coordination</h2>
+<div class="grid-2">
+<div class="clinical-card info">
+<div class="clinical-field"><h3 class="field-label">Current Medications</h3><p class="field-value"><span class="ai-prompt">List active psychiatric and relevant non-psychiatric medications with dose/frequency/indication if documented. If none, state No active psychiatric medications documented.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">Adherence / Response / Side Effects</h3><p class="field-value"><span class="ai-prompt">Review adherence, missed doses, clinical response, tolerability, side effects, adverse reactions, misuse risk, and patient concerns.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">Medication Changes Considered or Made</h3><p class="field-value"><span class="ai-prompt">Document medication starts, increases, decreases, discontinuations, or reasons to defer medication changes.</span></p></div>
+</div>
+<div class="clinical-card">
+<div class="clinical-field"><h3 class="field-label">Labs / Testing / Referrals</h3><p class="field-value"><span class="ai-prompt">Review labs, UDS, vitals, EKG, pharmacogenomics, records requests, referrals, or medical follow-up needed since last session.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">Collateral / Family / Provider Coordination</h3><p class="field-value"><span class="ai-prompt">Document any family/collateral involvement, ROI status, therapist/PCP/specialist coordination, Headway/admin items, school/work forms, or insurance issues.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">Administrative Items to Confirm</h3><p class="field-value"><span class="ai-prompt">List practical items to confirm: pharmacy, contact info, consent/ROI, next appointment, billing questions, lab location, portal access, or forms.</span></p></div>
+</div>
+</div>
+</section>
+
+<section class="section added-clinical-section">
+<h2 class="section-title">4A. Medication Decision Log</h2>
+<div class="clinical-card success">
+<p class="added-note">Document each medication decision clearly, including the patient’s preference, clinical rationale, risks/benefits reviewed, and monitoring plan.</p>
+<table class="added-table">
+<thead>
+<tr>
+<th>Medication</th>
+<th>Decision</th>
+<th>Patient Preference / Consent</th>
+<th>Rationale</th>
+<th>Risks / Benefits Reviewed</th>
+<th>Monitoring Plan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="ai-prompt">List medication 1 discussed, including dose/frequency when documented.</span></td>
+<td><span class="ai-prompt">State decision: continue, start, increase, decrease, stop, switch, hold, or defer.</span></td>
+<td><span class="ai-prompt">Summarize patient preference, agreement, ambivalence, refusal, consent, or questions.</span></td>
+<td><span class="ai-prompt">Explain clinical rationale using symptoms, response, side effects, safety, adherence, labs, or patient goals.</span></td>
+<td><span class="ai-prompt">Summarize risks, benefits, alternatives, interactions, black-box warnings, pregnancy considerations, substance interactions, or monitoring education when relevant.</span></td>
+<td><span class="ai-prompt">State monitoring plan, follow-up timing, labs/vitals, symptom tracking, side-effect watch, pharmacy confirmation, or safety instructions.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">List medication 2 discussed if applicable.</span></td>
+<td><span class="ai-prompt">State medication decision.</span></td>
+<td><span class="ai-prompt">Summarize patient preference or consent.</span></td>
+<td><span class="ai-prompt">Explain clinical rationale.</span></td>
+<td><span class="ai-prompt">Summarize risks/benefits reviewed.</span></td>
+<td><span class="ai-prompt">State monitoring plan.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">List medication 3 discussed if applicable.</span></td>
+<td><span class="ai-prompt">State medication decision.</span></td>
+<td><span class="ai-prompt">Summarize patient preference or consent.</span></td>
+<td><span class="ai-prompt">Explain clinical rationale.</span></td>
+<td><span class="ai-prompt">Summarize risks/benefits reviewed.</span></td>
+<td><span class="ai-prompt">State monitoring plan.</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="section">
+<h2 class="section-title danger">5. Safety Review &amp; Level of Care</h2>
+<div class="grid-3">
+<div class="clinical-card danger">
+<div class="clinical-field"><h3 class="field-label">Suicidality / Self-Harm</h3><p class="field-value"><span class="ai-prompt">Document SI, intent, plan, means, preparatory behavior, attempts, NSSI, denial, not assessed, or not documented. Do not infer absence unless assessed.</span></p></div>
+</div>
+<div class="clinical-card danger">
+<div class="clinical-field"><h3 class="field-label">Homicidality / Psychosis / Mania</h3><p class="field-value"><span class="ai-prompt">Document HI/violence, psychosis, mania/hypomania, intoxication, impulsivity, severe agitation, denial, not assessed, or not documented.</span></p></div>
+</div>
+<div class="clinical-card danger">
+<div class="clinical-field"><h3 class="field-label">Acute Risk Level &amp; Safety Plan</h3><p class="field-value"><span class="ai-prompt">State LOW, MODERATE, or HIGH acute risk only if supported. Include rationale, protective factors, safety plan, means restriction, crisis resources, and level-of-care recommendation.</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">6. Treatment Plan Progress &amp; Revisions</h2>
+<div class="grid-2">
+<div class="clinical-card success">
+<div class="clinical-field"><h3 class="field-label">Progress Toward Existing Goals</h3><p class="field-value"><span class="ai-prompt">Review each existing treatment goal and state progress: improved, partially improved, unchanged, worsened, or unable to assess.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">What Helped</h3><p class="field-value"><span class="ai-prompt">Identify interventions, insights, behaviors, supports, or environmental changes associated with improvement.</span></p></div>
+</div>
+<div class="clinical-card warning">
+<div class="clinical-field"><h3 class="field-label">Barriers / Noncompletion / Avoidance</h3><p class="field-value"><span class="ai-prompt">Identify barriers to completing prior plan items, including internal barriers, external constraints, ambivalence, avoidance, side effects, access issues, or unclear instructions.</span></p></div>
+<div class="clinical-field"><h3 class="field-label">Recommended Treatment Plan Edits</h3><p class="field-value"><span class="ai-prompt">Recommend concise edits to goals, objectives, interventions, medication plan, safety plan, therapy focus, measurement tracking, or follow-up frequency based on current progress.</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title warning">7. Accountability Checklist &amp; Today’s Agenda</h2>
+<div class="grid-2">
+<div class="clinical-card rose">
+<div class="clinical-field">
+<h3 class="field-label">Previous Action Items to Review</h3>
+<ul class="checkbox-list field-value"><li><span class="checkbox-box"></span><span><span class="ai-prompt">Generate one checkbox item for each prior-session action item, medication step, log, lab, skill practice, form, referral, or care-coordination task. Use the visual checkbox format only, not typed bracket placeholders.</span></span></li></ul>
+
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Barrier Inquiry</h3>
+<p class="field-value"><span class="ai-prompt">Always include: “If any action items or tracking logs from last session were not completed, what specific internal or external barriers got in the way?” Then add 3-5 targeted barrier questions based on the case.</span></p>
+</div>
+</div>
+<div class="clinical-card primary">
+<div class="clinical-field">
+<h3 class="field-label">Suggested Session Agenda</h3>
+<p class="field-value"><span class="ai-prompt">Generate an expanded, prioritized agenda for today’s follow-up. Include safety/risk check-in first when clinically relevant; sleep and substance-use review; medication stance/refusal/deferral/shared decision-making; mood/anxiety/functioning; relationship/family stressors; measurement-based care; treatment-plan revisions; and one to three measurable between-visit action steps. Do not use the word estimated for psychotherapy time/coding support.</span></p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Administrative Wrap-Up</h3>
+<ul class="checkbox-list field-value"><li><span class="checkbox-box"></span><span>Check state PMP/PDMP if prescribing controlled substances.</span></li><li><span class="checkbox-box"></span><span>Confirm pharmacy on file is correct and active.</span></li><li><span class="checkbox-box"></span><span>Confirm best phone/email/contact preferences.</span></li><li><span class="checkbox-box"></span><span>Confirm any labs, forms, ROIs, or collateral contacts needed.</span></li><li><span class="checkbox-box"></span><span>Determine exact date/timeframe for the next appointment before ending session.</span></li></ul>
+</div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">8. Billing, Medical Decision Making &amp; Documentation Support</h2>
+<div class="grid-3">
+<div class="clinical-card">
+<div class="clinical-field"><h3 class="field-label">Problems Addressed</h3><p class="field-value"><span class="ai-prompt">Describe number/complexity of problems addressed, including chronic conditions, exacerbations, comorbidity, risk, or diagnostic uncertainty.</span></p></div>
+</div>
+<div class="clinical-card">
+<div class="clinical-field"><h3 class="field-label">Data Reviewed / Ordered</h3><p class="field-value"><span class="ai-prompt">List rating scales, prior notes, labs, outside records, collateral, PDMP, medication history, or tests reviewed/ordered.</span></p></div>
+</div>
+<div class="clinical-card">
+<div class="clinical-field"><h3 class="field-label">Risk of Management</h3><p class="field-value"><span class="ai-prompt">Document prescription drug management, medication side effects, substance-use risk, safety planning, labs/monitoring, or level-of-care considerations.</span></p></div>
+</div>
+</div>
+
+</section>
+
+</main>
+</body>
+</html>

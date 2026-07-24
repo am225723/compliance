@@ -1,0 +1,3250 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pre-Intake Psychiatric Brief Template - Integrative Psychiatry</title>
+<style>
+
+    :root {
+
+      --primary: #153430;
+
+      --primary-light: #2a5c4f;
+
+      --primary-soft: #eef5f3;
+
+      --primary-border: #a8cfc3;
+
+      --text: #1e293b;
+
+      --muted: #64748b;
+
+      --subtle: #94a3b8;
+
+      --line: #dbe3e8;
+
+      --paper: #ffffff;
+
+      --background: #f1f5f9;
+
+      --danger: #b42318;
+
+      --danger-bg: #fef3f2;
+
+      --danger-border: #f97066;
+
+      --warning: #b54708;
+
+      --warning-bg: #fffaeb;
+
+      --warning-border: #fdb022;
+
+      --info: #1d4ed8;
+
+      --info-bg: #eff6ff;
+
+      --info-border: #93c5fd;
+
+      --success: #047857;
+
+      --success-bg: #ecfdf5;
+
+      --success-border: #6ee7b7;
+
+    }
+
+    * {
+
+      box-sizing: border-box;
+
+    }
+
+    body {
+
+      margin: 0;
+
+      padding: 24px;
+
+      background: var(--background);
+
+      color: var(--text);
+
+      font-family: Arial, Helvetica, sans-serif;
+
+      line-height: 1.45;
+
+      -webkit-print-color-adjust: exact;
+
+      print-color-adjust: exact;
+
+    }
+
+    .document {
+
+      max-width: 960px;
+
+      margin: 0 auto;
+
+      background: var(--paper);
+
+      border-radius: 18px;
+
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+
+      padding: 36px;
+
+      border: 1px solid #e2e8f0;
+
+    }
+
+    .document-header {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      gap: 24px;
+
+      border-bottom: 3px solid var(--primary);
+
+      padding-bottom: 18px;
+
+      margin-bottom: 24px;
+
+    }
+
+    .eyebrow {
+
+      margin: 0 0 6px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+
+      font-weight: 800;
+
+      letter-spacing: 0.12em;
+
+      text-transform: uppercase;
+
+    }
+
+    h1 {
+
+      margin: 0;
+
+      color: var(--primary);
+
+      font-size: 30px;
+
+      line-height: 1.1;
+
+      font-weight: 900;
+
+    }
+
+    .header-meta {
+
+      min-width: 230px;
+
+      text-align: right;
+
+      font-size: 13px;
+
+      color: var(--muted);
+
+      font-weight: 600;
+
+    }
+
+    .header-meta p {
+
+      margin: 3px 0;
+
+    }
+
+    .header-meta strong {
+
+      color: var(--text);
+
+    }
+
+    .section {
+
+      margin-bottom: 24px;
+
+    }
+
+    .section-title {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      margin: 0 0 12px;
+
+      color: var(--primary);
+
+      font-size: 14px;
+
+      font-weight: 900;
+
+      letter-spacing: 0.08em;
+
+      text-transform: uppercase;
+
+      border-bottom: 2px solid #d9ebe5;
+
+      padding-bottom: 6px;
+
+    }
+
+    .section-title.danger {
+
+      color: var(--danger);
+
+      border-bottom-color: var(--danger-border);
+
+    }
+
+    .section-title.warning {
+
+      color: var(--warning);
+
+      border-bottom-color: var(--warning-border);
+
+    }
+
+    .grid-2 {
+
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      gap: 18px;
+
+    }
+
+    .grid-3 {
+
+      display: grid;
+
+      grid-template-columns: repeat(3, 1fr);
+
+      gap: 18px;
+
+    }
+
+    .clinical-card {
+
+      background: #f8fafc;
+
+      border: 1px solid #e2e8f0;
+
+      border-radius: 14px;
+
+      padding: 16px;
+
+    }
+
+    .clinical-card.primary {
+
+      background: var(--primary-soft);
+
+      border-color: var(--primary-border);
+
+    }
+
+    .clinical-card.danger {
+
+      background: var(--danger-bg);
+
+      border: 2px solid var(--danger-border);
+
+    }
+
+    .clinical-card.warning {
+
+      background: var(--warning-bg);
+
+      border-color: var(--warning-border);
+
+    }
+
+    .clinical-card.info {
+
+      background: var(--info-bg);
+
+      border-color: var(--info-border);
+
+    }
+
+    .clinical-card.success {
+
+      background: var(--success-bg);
+
+      border-color: var(--success-border);
+
+    }
+
+    .clinical-field {
+
+      margin-bottom: 12px;
+
+    }
+
+    .clinical-field:last-child {
+
+      margin-bottom: 0;
+
+    }
+
+    .field-label {
+
+      margin: 0 0 4px;
+
+      color: var(--subtle);
+
+      font-size: 11px;
+
+      font-weight: 900;
+
+      letter-spacing: 0.08em;
+
+      text-transform: uppercase;
+
+    }
+
+    .field-value {
+
+      margin: 0;
+
+      color: var(--text);
+
+      font-size: 13px;
+
+      white-space: pre-line;
+
+    }
+
+    .field-value.large {
+
+      font-size: 14px;
+
+    }
+
+    .field-value.bold {
+
+      font-weight: 800;
+
+    }
+
+    .clinical-field.missing .field-label,
+
+    .clinical-field.not-documented .field-label,
+
+    .clinical-field.not-assessed .field-label,
+
+    .field-label.missing,
+
+    .field-label.not-documented,
+
+    .field-label.not-assessed {
+
+      color: var(--danger);
+
+      font-weight: 900;
+
+    }
+
+    .clinical-field.conflicting .field-label,
+
+    .clinical-field.requires-review .field-label,
+
+    .field-label.conflicting,
+
+    .field-label.requires-review {
+
+      color: var(--warning);
+
+      font-weight: 900;
+
+    }
+
+    .clinical-field.supported .field-label,
+
+    .field-label.supported {
+
+      color: var(--subtle);
+
+    }
+
+    ul {
+
+      margin: 6px 0 0;
+
+      padding-left: 18px;
+
+    }
+
+    li {
+
+      margin-bottom: 5px;
+
+      font-size: 13px;
+
+    }
+
+    .alert-list li {
+
+      color: #7a271a;
+
+      font-weight: 700;
+
+    }
+
+    .question-row {
+
+      display: flex;
+
+      gap: 12px;
+
+      align-items: flex-start;
+
+      background: var(--warning-bg);
+
+      border: 1px solid #fedf89;
+
+      border-radius: 12px;
+
+      padding: 12px;
+
+      margin-bottom: 8px;
+
+    }
+
+    .question-number {
+
+      width: 24px;
+
+      height: 24px;
+
+      flex: 0 0 24px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      background: #fde68a;
+
+      color: #92400e;
+
+      border-radius: 999px;
+
+      font-size: 12px;
+
+      font-weight: 900;
+
+    }
+
+    .question-text {
+
+      margin: 1px 0 0;
+
+      font-size: 13px;
+
+      font-weight: 700;
+
+      color: var(--text);
+
+    }
+
+    .score-grid {
+
+      display: grid;
+
+      gap: 10px;
+
+    }
+
+    .score-item {
+
+      background: #ffffff;
+
+      border: 1px solid #dbeafe;
+
+      border-radius: 10px;
+
+      padding: 10px;
+
+    }
+
+    .score-line {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: baseline;
+
+      gap: 12px;
+
+      margin-bottom: 4px;
+
+    }
+
+    .score-name {
+
+      font-size: 13px;
+
+      font-weight: 900;
+
+      color: var(--text);
+
+    }
+
+    .score-value {
+
+      background: #d6e8e2;
+
+      color: var(--primary);
+
+      border-radius: 999px;
+
+      padding: 2px 8px;
+
+      font-size: 12px;
+
+      font-weight: 900;
+
+      white-space: nowrap;
+
+    }
+
+    .score-interpretation {
+
+      margin: 0;
+
+      color: var(--muted);
+
+      font-size: 12px;
+
+      font-weight: 600;
+
+    }
+
+    .tool-card {
+
+      border-radius: 14px;
+
+      padding: 16px;
+
+      border: 1px solid #e2e8f0;
+
+      background: #f8fafc;
+
+    }
+
+    .tool-title {
+
+      margin: 0 0 10px;
+
+      padding-bottom: 6px;
+
+      border-bottom: 1px solid #e2e8f0;
+
+      font-size: 13px;
+
+      font-weight: 900;
+
+      color: var(--primary);
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+    }
+
+    .tool-title.orange {
+
+      color: #c2410c;
+
+    }
+
+    .tool-title.indigo {
+
+      color: #3730a3;
+
+    }
+
+    .tool-title.green {
+
+      color: #047857;
+
+    }
+
+    .tool-title.blue {
+
+      color: #1d4ed8;
+
+    }
+
+    .tool-title.rose {
+
+      color: #be123c;
+
+    }
+
+    .tool-title.red {
+
+      color: #b91c1c;
+
+    }
+
+    .tool-title.purple {
+
+      color: #7e22ce;
+
+    }
+
+    .mini-heading {
+
+      margin: 0 0 3px;
+
+      font-size: 11px;
+
+      letter-spacing: 0.05em;
+
+      text-transform: uppercase;
+
+      font-weight: 900;
+
+      color: var(--muted);
+
+    }
+
+    .mini-content {
+
+      margin: 0 0 10px;
+
+      font-size: 13px;
+
+      color: var(--text);
+
+      white-space: pre-line;
+
+    }
+.ai-prompt {
+
+      color: inherit;
+
+      background: transparent;
+
+    }
+
+    @media print {
+
+      /* Allow long clinical content to split naturally across printed/PDF pages. */
+      .section,
+      .clinical-card,
+      .goal-card,
+      .goal-body,
+      .clinical-field,
+      .grid-2,
+      .grid-3 {
+      }
+
+
+      body {
+
+        background: #ffffff;
+
+        padding: 0;
+
+      }
+
+      .document {
+
+        max-width: none;
+
+        box-shadow: none;
+
+        border-radius: 0;
+
+        border: none;
+
+        padding: 24px;
+
+      }
+
+      @page {
+
+        size: letter portrait;
+
+        margin: 0.35in;
+
+      }
+
+      h1 {
+
+        font-size: 22px;
+
+      }
+
+      .grid-2,
+
+      .grid-3 {
+
+        gap: 12px;
+
+      }
+
+      .clinical-card,
+
+      .tool-card {
+
+        padding: 12px;
+
+      }
+
+      .field-value,
+
+      li,
+
+      .mini-content {
+
+        font-size: 11px;
+
+      }
+
+      .field-label,
+
+      .mini-heading {
+
+        font-size: 9px;
+
+      }
+
+    }
+
+    @media (max-width: 760px) {
+
+      body {
+
+        padding: 12px;
+
+      }
+
+      .document {
+
+        padding: 22px;
+
+      }
+
+      .document-header {
+
+        flex-direction: column;
+
+      }
+
+      .header-meta {
+
+        text-align: left;
+
+      }
+
+      .grid-2,
+
+      .grid-3 {
+
+        grid-template-columns: 1fr;
+
+      }
+
+    }
+
+  
+    /* --- ENHANCED INTEGRATIVE PSYCHIATRY HEADER / INTAKE ADDITIONS --- */
+    .brand-header {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 26px;
+      align-items: end;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 20px;
+      margin-bottom: 22px;
+    }
+
+    .brand-logo-wrap {
+      display: flex;
+      align-items: flex-end;
+      min-height: 145px;
+    }
+
+    .brand-logo {
+      width: 250px;
+      max-height: 150px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .brand-right {
+      text-align: right;
+    }
+
+    .brand-wordmark {
+      margin: 0 0 6px;
+      color: var(--primary);
+      line-height: 0.92;
+      letter-spacing: 0.05em;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .brand-wordmark .large {
+      font-size: 30px;
+    }
+
+    .brand-wordmark .small {
+      font-size: 22px;
+    }
+
+    .brand-provider {
+      margin: 5px 0 4px;
+      color: var(--primary-light);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .brand-contact {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.25;
+      font-weight: 650;
+    }
+
+    .document-kind {
+      display: inline-block;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .intake-title-card {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      background: linear-gradient(135deg, var(--primary-soft), #ffffff);
+      border: 1px solid var(--primary-border);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .intake-title-card h1 {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .intake-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .intake-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meta-pill {
+      background: #ffffff;
+      border: 1px solid #d9ebe5;
+      border-radius: 12px;
+      padding: 9px 10px;
+    }
+
+    .meta-label {
+      margin: 0 0 3px;
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .meta-value {
+      margin: 0;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: pre-line;
+    }
+
+    .provider-note {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--primary);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+    }
+
+    .provider-note-title {
+      margin: 0 0 6px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .provider-note p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .compact-card-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .compact-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .compact-card.warning {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+    }
+
+    .compact-card.danger {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    .compact-card.info {
+      background: var(--info-bg);
+      border-color: var(--info-border);
+    }
+
+    .compact-card.success {
+      background: var(--success-bg);
+      border-color: var(--success-border);
+    }
+
+    .compact-label {
+      margin: 0 0 5px;
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .compact-value {
+      margin: 0;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: pre-line;
+    }
+
+    .section-subtitle {
+      margin: -6px 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .clinical-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .clinical-table th {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 9px;
+    }
+
+    .clinical-table td {
+      border-top: 1px solid var(--line);
+      padding: 9px;
+      vertical-align: top;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .system-instructions-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid var(--primary);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+      color: #334155;
+      font-size: 12px;
+    }
+
+    .system-instructions-box h2 {
+      margin: 0 0 8px;
+      color: var(--primary);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .system-instructions-box p {
+      margin: 0 0 7px;
+    }
+
+    .system-instructions-box ul {
+      margin-top: 7px;
+    }
+
+    @media print {
+      .system-instructions-box {
+        display: none !important;
+      }
+
+      .brand-header {
+        grid-template-columns: 205px 1fr;
+        gap: 16px;
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+      }
+
+      .brand-logo {
+        width: 195px;
+        max-height: 115px;
+      }
+
+      .brand-logo-wrap {
+        min-height: 115px;
+      }
+
+      .brand-wordmark .large {
+        font-size: 23px;
+      }
+
+      .brand-wordmark .small {
+        font-size: 17px;
+      }
+
+      .intake-title-card {
+        padding: 13px;
+        margin-bottom: 16px;
+      }
+
+      .intake-title-card h1 {
+        font-size: 21px;
+      }
+
+      .compact-card-row {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .compact-card {
+        padding: 9px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .brand-header,
+      .intake-title-card,
+      .compact-card-row {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-right {
+        text-align: left;
+      }
+
+      .brand-logo {
+        width: 220px;
+      }
+
+      .intake-meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  
+    :root {
+      --header-bg: #3b0764;
+      --header-bg-2: #6b21a8;
+      --header-accent: #d8b4fe;
+      --header-soft: #faf5ff;
+    }
+
+    /* --- COLORED BRAND HEADER BAND --- */
+    .colored-brand-header {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 24px;
+      align-items: stretch;
+      background:
+        radial-gradient(circle at 12% 15%, rgba(255,255,255,0.22), transparent 28%),
+        linear-gradient(135deg, var(--header-bg), var(--header-bg-2));
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+      color: #ffffff;
+    }
+
+    .colored-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 136px;
+    }
+
+    .colored-logo {
+      width: 235px;
+      max-height: 138px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.16));
+    }
+
+    .colored-brand-text {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .colored-wordmark {
+      margin: 0 0 6px;
+      color: #ffffff;
+      line-height: 0.9;
+      letter-spacing: 0.045em;
+      font-weight: 900;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.16);
+    }
+
+    .colored-wordmark .large {
+      font-size: 25pt;
+    }
+
+    .colored-wordmark .small {
+      font-size: 18pt;
+    }
+
+    .colored-provider-line {
+      margin: 4px 0 4px;
+      color: rgba(255,255,255,0.95);
+      font-size: 10pt;
+      font-weight: 900;
+    }
+
+    .colored-contact-line {
+      margin: 0 0 10px;
+      color: rgba(255,255,255,0.86);
+      font-size: 8.5pt;
+      line-height: 1.24;
+      font-weight: 650;
+    }
+
+    .colored-doc-pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.16);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.38);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 10.5pt;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      backdrop-filter: blur(4px);
+    }
+
+    .colored-purpose-card {
+      background: var(--header-soft);
+      border: 1px solid var(--header-accent);
+      border-left: 5px solid var(--header-bg);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+    }
+
+    .colored-purpose-card p {
+      margin: 0;
+      color: var(--header-bg);
+      font-size: 8.9pt;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    @media print {
+      .colored-brand-header {
+        grid-template-columns: 190px 1fr;
+        gap: 16px;
+        padding: 13px 15px;
+        margin-bottom: 12px;
+        box-shadow: none;
+      }
+
+      .colored-logo-wrap {
+        min-height: 105px;
+      }
+
+      .colored-logo {
+        width: 180px;
+        max-height: 105px;
+      }
+
+      .colored-wordmark .large {
+        font-size: 20pt;
+      }
+
+      .colored-wordmark .small {
+        font-size: 14.5pt;
+      }
+
+      .colored-doc-pill {
+        font-size: 9.5pt;
+        padding: 5px 10px;
+      }
+
+      .colored-purpose-card {
+        padding: 8px 10px;
+        margin-bottom: 12px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .colored-brand-header {
+        grid-template-columns: 1fr;
+      }
+
+      .colored-brand-text {
+        text-align: left;
+        align-items: flex-start;
+      }
+
+      .colored-logo-wrap {
+        min-height: auto;
+      }
+
+      .colored-logo {
+        width: 220px;
+        max-height: 130px;
+      }
+    }
+
+  
+
+/* --- V2 QUICK-READ EXECUTIVE LAYOUT --- */
+.executive-snapshot {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.snapshot-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 15px;
+}
+.snapshot-card.primary { background: var(--primary-soft); border-color: var(--primary-border); }
+.snapshot-card.warning { background: var(--warning-bg); border-color: var(--warning-border); }
+.snapshot-card.danger { background: var(--danger-bg); border-color: var(--danger-border); }
+.snapshot-card h2,
+.snapshot-card h3 {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 10.5pt;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.snapshot-card.danger h2,
+.snapshot-card.danger h3 { color: var(--danger); }
+.snapshot-card.warning h2,
+.snapshot-card.warning h3 { color: var(--warning); }
+.snapshot-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.snapshot-list li {
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+.snapshot-list strong,
+.clean-line strong,
+.priority-line strong {
+  color: var(--text);
+  font-weight: 900;
+}
+.clean-line {
+  margin: 0 0 7px;
+  line-height: 1.42;
+}
+.clean-line:last-child { margin-bottom: 0; }
+.priority-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.priority-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 14px;
+}
+.priority-card h3 {
+  margin: 0 0 8px;
+  font-size: 10pt;
+  color: var(--primary);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+.priority-line {
+  margin: 0;
+  line-height: 1.42;
+}
+.single-column {
+  display: block;
+  margin-bottom: 16px;
+}
+.single-column > .clinical-card {
+  width: 100%;
+}
+.psychometrics-section {
+  margin-bottom: 24px;
+}
+.psychometrics-section > .clinical-card {
+  width: 100%;
+}
+.psychometric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.psychometric-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+}
+.psychometric-card.warning { background: var(--warning-bg); border-color: var(--warning-border); }
+.psychometric-card.danger { background: var(--danger-bg); border-color: var(--danger-border); }
+.psychometric-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.psychometric-name {
+  color: var(--primary);
+  font-size: 9pt;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-width: 0;
+  line-height: 1.2;
+}
+.psychometric-score {
+  flex: 0 0 auto;
+  background: #d6e8e2;
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 8.8pt;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.psychometric-date {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 8.4pt;
+  font-weight: 800;
+}
+.psychometric-interpretation {
+  margin: 0;
+  color: var(--text);
+  font-size: 8.8pt;
+  line-height: 1.35;
+  white-space: normal;
+}
+.psychometric-note {
+  margin: 5px 0 0;
+  color: var(--warning);
+  font-size: 8.4pt;
+  line-height: 1.35;
+  font-weight: 800;
+  white-space: normal;
+}
+@media print {
+  .executive-snapshot { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .priority-grid, .psychometric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .snapshot-card, .priority-card, .psychometric-card { padding: 8px 9px; }
+  .snapshot-card h2, .snapshot-card h3, .priority-card h3 { font-size: 8.5pt; }
+  .psychometric-name, .psychometric-score, .psychometric-date, .psychometric-interpretation, .psychometric-note { font-size: 7.8pt; }
+}
+@media (max-width: 760px) {
+  .executive-snapshot, .priority-grid, .psychometric-grid { grid-template-columns: 1fr; }
+}
+
+
+/* --- Psychometrics layout fix: prevent score pills from forcing labels into vertical wrapping --- */
+.psychometric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.psychometric-card {
+  min-width: 0;
+  overflow: visible;
+}
+
+.psychometric-top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.psychometric-name {
+  display: block;
+  width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.psychometric-score {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-height: 1.25;
+  border-radius: 12px;
+  padding: 4px 10px;
+}
+
+.psychometric-score .ai-prompt {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+@media print {
+  .psychometric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .psychometric-top { display: grid; grid-template-columns: 1fr; gap: 5px; }
+  .psychometric-score { white-space: normal; border-radius: 10px; padding: 3px 7px; }
+}
+
+@media (max-width: 760px) {
+  .psychometric-grid { grid-template-columns: 1fr; }
+}
+
+
+    /* --- Structured readability upgrades --- */
+    .structured-block {
+      margin: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .structured-item {
+      margin: 0;
+      padding: 0 0 12px;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .structured-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .structured-item strong,
+    .diagnosis-name,
+    .item-title {
+      display: block;
+      color: var(--primary);
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .structured-item .item-body {
+      display: block;
+      color: var(--text);
+    }
+
+    .diagnosis-item {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .diagnosis-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .patient-letter {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 14px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .patient-letter p {
+      margin: 0 0 11px;
+    }
+
+    .patient-letter p:last-child {
+      margin-bottom: 0;
+    }
+
+    .client-education-card {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .script-question {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .script-question:last-child {
+      margin-bottom: 0;
+    }
+
+    .script-number {
+      color: var(--primary);
+      font-weight: 900;
+      margin-right: 5px;
+    }
+
+    @media print {
+      .structured-item,
+      .patient-letter,
+      .script-question {
+        font-size: 11px;
+      }
+      .structured-block {
+        gap: 8px;
+      }
+      .diagnosis-item {
+        margin-bottom: 10px;
+        padding-bottom: 9px;
+      }
+    }
+
+
+    /* --- Clinical block spacing upgrades --- */
+    .clinical-block-list {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+    }
+
+    .blindspot-item,
+    .med-option,
+    .intervention-item,
+    .scale-item,
+    .risk-item {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 14px;
+    }
+
+    .blindspot-item {
+      border-left: 5px solid #f97316;
+      background: #fff7ed;
+    }
+
+    .med-option {
+      border-left: 5px solid var(--success);
+      background: #f0fdf4;
+    }
+
+    .intervention-item {
+      border-left: 5px solid #64748b;
+      background: #f8fafc;
+    }
+
+    .risk-item {
+      border-left: 5px solid var(--danger);
+      background: #fef2f2;
+    }
+
+    .scale-item {
+      border-left: 5px solid #7c3aed;
+      background: #faf5ff;
+    }
+
+    .block-title {
+      display: block;
+      color: var(--primary);
+      font-weight: 900;
+      margin: 0 0 8px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .block-line {
+      margin: 0 0 8px;
+      color: var(--text);
+      line-height: 1.42;
+    }
+
+    .block-line:last-child {
+      margin-bottom: 0;
+    }
+
+    .block-label {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .question-text-line {
+      display: block;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .script-note {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+      padding-top: 7px;
+      border-top: 1px solid var(--line);
+    }
+
+    @media print {
+      .clinical-block-list { gap: 9px; }
+      .blindspot-item,
+      .med-option,
+      .intervention-item,
+      .risk-item,
+      .scale-item,
+      .script-question { padding: 9px 10px; }
+      .block-title, .block-line, .script-note { font-size: 10.5px; }
+    }
+
+
+    /* --- Provider review priority card --- */
+    .provider-priority-card {
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      border-left: 5px solid var(--warning);
+      border-radius: 14px;
+      padding: 15px;
+    }
+
+    .provider-priority-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .provider-priority-line {
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      padding: 10px 12px;
+      line-height: 1.42;
+      color: var(--text);
+    }
+
+    .provider-priority-line strong {
+      display: block;
+      color: var(--warning);
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    @media print {
+      .provider-priority-card { padding: 10px 12px; }
+      .provider-priority-list { gap: 7px; }
+      .provider-priority-line { padding: 8px 9px; font-size: 10.5px; }
+    }
+
+
+
+    /* --- Half-page paired cards and denser provider-priority layout --- */
+    .tool-card,
+    .provider-priority-card {
+      height: 100%;
+    }
+
+    .provider-priority-card .section-title {
+      font-size: 12px;
+      margin: 0 0 10px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #fed7aa;
+      letter-spacing: 0.06em;
+    }
+
+    .provider-priority-card.compact-half {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .provider-priority-card.compact-half .provider-priority-list {
+      gap: 8px;
+    }
+
+    .provider-priority-card.compact-half .provider-priority-line {
+      padding: 9px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .provider-priority-card.compact-half .provider-priority-line strong {
+      margin-bottom: 3px;
+      font-size: 12px;
+    }
+
+    .card-grid-note {
+      display: block;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 650;
+      line-height: 1.35;
+      margin: -2px 0 10px;
+    }
+
+    @media print {
+      .provider-priority-card.compact-half .provider-priority-line {
+        padding: 7px 8px;
+        font-size: 9.8px;
+      }
+      .provider-priority-card.compact-half .provider-priority-line strong {
+        font-size: 9.8px;
+      }
+      .provider-priority-card .section-title {
+        font-size: 10.2px;
+      }
+    }
+
+
+
+    /* --- Provider Support full card system --- */
+    .provider-support-section .grid-2 {
+      align-items: start;
+    }
+
+    .provider-support-section .tool-card,
+    .provider-support-section .provider-priority-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .provider-support-section .tool-card > .tool-title {
+      margin-bottom: 12px;
+    }
+
+    .provider-support-section .clinical-block-list,
+    .provider-support-section .structured-block {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .provider-support-section .structured-item,
+    .provider-support-section .diagnosis-item,
+    .provider-support-section .letter-subject-card,
+    .provider-support-section .patient-letter,
+    .provider-support-section .safety-item,
+    .provider-support-section .measurement-note-card,
+    .provider-support-section .scale-item,
+    .provider-support-section .risk-item,
+    .provider-support-section .intervention-item,
+    .provider-support-section .blindspot-item,
+    .provider-support-section .med-option,
+    .provider-support-section .script-question,
+    .provider-support-section .provider-priority-line {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--primary-border);
+      border-radius: 13px;
+      padding: 12px 13px;
+      margin: 0;
+    }
+
+    .provider-support-section .diagnosis-item,
+    .provider-support-section .structured-item {
+      border-bottom: 0;
+      padding-bottom: 12px;
+      margin-bottom: 0;
+    }
+
+    .provider-support-section .diagnosis-item { border-left-color: #6366f1; background: #eef2ff; }
+    .provider-support-section .tool-card:nth-of-type(2) .structured-item { border-left-color: var(--success); background: #f0fdf4; }
+    .provider-support-section .client-education-card .structured-item { border-left-color: #f59e0b; background: #fffbeb; }
+    .provider-support-section .safety-item { border-left-color: var(--danger); background: var(--danger-bg); }
+    .provider-support-section .tool-card:nth-of-type(6) .structured-item { border-left-color: #ef4444; background: #fff1f2; }
+    .provider-support-section .tool-card:nth-of-type(7) .structured-item { border-left-color: #7c3aed; background: #f5f3ff; }
+    .provider-support-section .measurement-note-card { border-left-color: #2563eb; background: #eff6ff; }
+    .provider-support-section .letter-subject-card,
+    .provider-support-section .patient-letter { border-left-color: #0ea5e9; background: #f0f9ff; }
+
+    .provider-support-section .diagnosis-name,
+    .provider-support-section .item-title,
+    .provider-support-section .block-title,
+    .provider-support-section .script-question .question-text-line,
+    .provider-support-section .provider-priority-line strong {
+      display: block;
+      color: var(--primary);
+      font-weight: 900;
+      margin-bottom: 5px;
+      line-height: 1.28;
+    }
+
+    .provider-support-section .item-body,
+    .provider-support-section .block-line,
+    .provider-support-section .script-note,
+    .provider-support-section .measurement-note-card p,
+    .provider-support-section .letter-subject-card p {
+      display: block;
+      margin: 0;
+      color: var(--text);
+      line-height: 1.46;
+    }
+
+    .provider-support-section .block-line + .block-line,
+    .provider-support-section .patient-letter p + p,
+    .provider-support-section .script-note,
+    .provider-support-section .provider-priority-line strong + span {
+      margin-top: 8px;
+    }
+
+    .provider-support-section .mini-heading {
+      margin-bottom: 8px;
+    }
+
+    .provider-support-section .provider-priority-line {
+      display: block;
+      border-left-color: var(--warning);
+      background: var(--warning-bg);
+      margin-bottom: 10px;
+    }
+
+    .provider-support-section .provider-priority-line:last-child {
+      margin-bottom: 0;
+    }
+
+    .provider-support-section .provider-priority-line span {
+      display: block;
+      line-height: 1.44;
+    }
+
+    @media print {
+      .provider-support-section .tool-card,
+      .provider-support-section .provider-priority-card,
+      .provider-support-section .structured-item,
+      .provider-support-section .diagnosis-item,
+      .provider-support-section .letter-subject-card,
+      .provider-support-section .patient-letter,
+      .provider-support-section .safety-item,
+      .provider-support-section .measurement-note-card,
+      .provider-support-section .script-question,
+      .provider-support-section .provider-priority-line {
+        box-shadow: none;
+        padding: 9px 10px;
+      }
+    }
+/* --- Provider support card color accents --- */
+    .provider-support-section .tool-card {
+      border-left-width: 6px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .provider-support-section .indigo-card {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      border-left-color: #6366f1;
+    }
+
+    .provider-support-section .green-card {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      border-left-color: #059669;
+    }
+
+    .provider-support-section .blue-card {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      border-left-color: #2563eb;
+    }
+
+    .provider-support-section .orange-card {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      border-left-color: #f97316;
+    }
+
+    .provider-support-section .rose-card {
+      background: #fff1f2;
+      border-color: #fecdd3;
+      border-left-color: #e11d48;
+    }
+
+    .provider-support-section .red-card {
+      background: #fef2f2;
+      border-color: #fecaca;
+      border-left-color: #dc2626;
+    }
+
+    .provider-support-section .purple-card {
+      background: #faf5ff;
+      border-color: #ddd6fe;
+      border-left-color: #7c3aed;
+    }
+
+    .provider-support-section .letter-subject-card p {
+      margin: 0;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.4;
+    }
+
+    .measurement-card-full {
+      grid-column: span 1;
+    }
+
+
+    .provider-support-section .amber-card {
+      background: #fffbeb;
+      border-color: #fde68a;
+      border-left-color: #f59e0b;
+    }
+
+    .provider-support-section .teal-card {
+      background: #f0fdfa;
+      border-color: #99f6e4;
+      border-left-color: #0d9488;
+    }
+
+    .provider-support-section .tool-title.amber { color: #b45309; }
+    .provider-support-section .tool-title.teal { color: #0f766e; }
+
+    .letter-subject-text {
+      margin: 0;
+      font-weight: 900;
+      color: var(--primary);
+      line-height: 1.4;
+    }
+
+  
+
+    /* --- PAGE BREAKS REMOVED / FLOWING PRINT EXPORT --- */
+    * {
+      page-break-before: auto !important;
+      page-break-after: auto !important;
+      page-break-inside: auto !important;
+      break-before: auto !important;
+      break-after: auto !important;
+      break-inside: auto !important;
+    }
+
+    .page-break,
+    .no-break,
+    .avoid-break,
+    .section,
+    .clinical-card,
+    .tool-card,
+    .provider-review-card,
+    .compact-card,
+    .question-row,
+    .priority-item,
+    .support-card,
+    .patient-grid,
+    .grid-2,
+    .grid-3 {
+      page-break-before: auto !important;
+      page-break-after: auto !important;
+      page-break-inside: auto !important;
+      break-before: auto !important;
+      break-after: auto !important;
+      break-inside: auto !important;
+    }
+
+
+
+    /* --- Added: AI Voice Briefing + Bottom Client-Facing Materials --- */
+    .client-facing-section {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 3px solid var(--primary-soft);
+    }
+
+    .client-facing-section .tool-card {
+      height: auto;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-left-width: 6px;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .client-facing-section .blue-card {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+      border-left-color: #0ea5e9;
+    }
+
+    .client-facing-section .amber-card {
+      background: #fffbeb;
+      border-color: #fde68a;
+      border-left-color: #f59e0b;
+    }
+
+    @media print {
+      .client-facing-section {
+        margin-top: 18px;
+        padding-top: 12px;
+      }
+      .client-facing-section .tool-card {
+        box-shadow: none;
+        padding: 10px 11px;
+      }
+    }
+
+/* --- REORDERED CLINICAL WORKFLOW / FULL-WIDTH PRIORITY BLOCKS --- */
+.diagnostic-tools-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+.full-width-card {
+  width: 100%;
+  grid-column: 1 / -1;
+}
+.provider-review-full-section .provider-priority-card {
+  width: 100%;
+  height: auto;
+}
+.provider-review-full-section .provider-priority-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.provider-review-full-section .provider-priority-line {
+  width: 100%;
+}
+@media print {
+  .diagnostic-tools-stack {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .provider-review-full-section .provider-priority-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* --- V3 requested clinical workflow layout --- */
+.card-title {
+  margin: 0 0 12px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid #d9ebe5;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.history-card-grid { align-items: stretch; }
+.history-card-grid > .clinical-card { height: 100%; }
+.intake-voice-briefing { margin-top: 16px; }
+.differential-blindspot-grid { align-items: start; }
+.integrated-crisis-plan { margin-top: 16px; }
+.full-width-card { width: 100%; }
+@media print {
+  .history-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .history-card-grid > .clinical-card { padding: 9px 10px; }
+  .history-card-grid .field-value, .history-card-grid li { font-size: 9.8px; }
+  .history-card-grid .field-label, .history-card-grid .card-title { font-size: 8.8px; }
+  .differential-blindspot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
+@media (max-width: 760px) {
+  .history-card-grid, .differential-blindspot-grid { grid-template-columns: 1fr; }
+}
+
+    /* --- Full-width differential and blindspot cards with two-column internal grids --- */
+    .full-width-clinical-stack {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .full-width-clinical-card {
+      width: 100%;
+    }
+
+    .clinical-item-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .clinical-item-grid-2 > .diagnosis-item,
+    .clinical-item-grid-2 > .blindspot-item {
+      height: 100%;
+      margin: 0;
+    }
+
+    @media print {
+      .full-width-clinical-stack { gap: 12px; }
+      .clinical-item-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    }
+
+    @media (max-width: 760px) {
+      .clinical-item-grid-2 { grid-template-columns: 1fr; }
+    }
+
+
+
+    /* --- STANDARDIZED TYPOGRAPHY SYSTEM --- */
+    :root {
+      --font-document-title: 30px;
+      --font-brand-large: 30px;
+      --font-brand-small: 22px;
+      --font-section-title: 14px;
+      --font-card-title: 13px;
+      --font-body: 13px;
+      --font-label: 11px;
+      --font-small: 11px;
+      --line-body: 1.5;
+      --line-compact: 1.35;
+
+      --font-document-title-print: 22px;
+      --font-brand-large-print: 23px;
+      --font-brand-small-print: 17px;
+      --font-section-title-print: 12px;
+      --font-card-title-print: 11px;
+      --font-body-print: 11px;
+      --font-label-print: 9px;
+      --font-small-print: 9px;
+    }
+
+    body {
+      font-size: var(--font-body);
+      line-height: var(--line-body);
+    }
+
+    h1,
+    .intake-title-card h1 {
+      font-size: var(--font-document-title) !important;
+      line-height: 1.12 !important;
+    }
+
+    .brand-wordmark .large,
+    .colored-wordmark .large {
+      font-size: var(--font-brand-large) !important;
+    }
+
+    .brand-wordmark .small,
+    .colored-wordmark .small {
+      font-size: var(--font-brand-small) !important;
+    }
+
+    .section-title {
+      font-size: var(--font-section-title) !important;
+      line-height: 1.25 !important;
+    }
+
+    .tool-title,
+    .snapshot-card h2,
+    .snapshot-card h3,
+    .priority-card h3,
+    .block-title,
+    .diagnosis-name,
+    .item-title,
+    .provider-note-title,
+    .provider-priority-card .section-title {
+      font-size: var(--font-card-title) !important;
+      line-height: 1.3 !important;
+    }
+
+    .field-value,
+    .field-value.large,
+    .mini-content,
+    .compact-value,
+    .meta-value,
+    .question-text,
+    .score-name,
+    .clinical-table td,
+    .structured-item,
+    .structured-item .item-body,
+    .patient-letter,
+    .script-question,
+    .block-line,
+    .question-text-line,
+    .provider-priority-line,
+    .provider-priority-line strong,
+    .provider-priority-line span,
+    .clean-line,
+    .priority-line,
+    .snapshot-list li,
+    .psychometric-interpretation,
+    .letter-subject-text,
+    .measurement-note-card,
+    .measurement-note-card p,
+    .safety-item,
+    .risk-item,
+    .scale-item,
+    .intervention-item,
+    .blindspot-item,
+    .med-option,
+    .clinical-card,
+    .tool-card,
+    li {
+      font-size: var(--font-body) !important;
+      line-height: var(--line-body) !important;
+    }
+
+    .field-label,
+    .mini-heading,
+    .meta-label,
+    .compact-label,
+    .eyebrow,
+    .clinical-table th,
+    .psychometric-name,
+    .score-value,
+    .psychometric-score,
+    .document-kind,
+    .colored-doc-pill {
+      font-size: var(--font-label) !important;
+      line-height: var(--line-compact) !important;
+    }
+
+    .header-meta,
+    .intake-subtitle,
+    .section-subtitle,
+    .provider-note p,
+    .brand-provider,
+    .brand-contact,
+    .colored-provider-line,
+    .colored-contact-line,
+    .card-grid-note,
+    .score-interpretation,
+    .psychometric-date,
+    .psychometric-note,
+    .script-note,
+    .provider-support-section .script-note {
+      font-size: var(--font-small) !important;
+      line-height: var(--line-compact) !important;
+    }
+
+    @media print {
+      body {
+        font-size: var(--font-body-print) !important;
+      }
+
+      h1,
+      .intake-title-card h1 {
+        font-size: var(--font-document-title-print) !important;
+      }
+
+      .brand-wordmark .large,
+      .colored-wordmark .large {
+        font-size: var(--font-brand-large-print) !important;
+      }
+
+      .brand-wordmark .small,
+      .colored-wordmark .small {
+        font-size: var(--font-brand-small-print) !important;
+      }
+
+      .section-title {
+        font-size: var(--font-section-title-print) !important;
+      }
+
+      .tool-title,
+      .snapshot-card h2,
+      .snapshot-card h3,
+      .priority-card h3,
+      .block-title,
+      .diagnosis-name,
+      .item-title,
+      .provider-note-title,
+      .provider-priority-card .section-title {
+        font-size: var(--font-card-title-print) !important;
+      }
+
+      .field-value,
+      .field-value.large,
+      .mini-content,
+      .compact-value,
+      .meta-value,
+      .question-text,
+      .score-name,
+      .clinical-table td,
+      .structured-item,
+      .structured-item .item-body,
+      .patient-letter,
+      .script-question,
+      .block-line,
+      .question-text-line,
+      .provider-priority-line,
+      .provider-priority-line strong,
+      .provider-priority-line span,
+      .clean-line,
+      .priority-line,
+      .snapshot-list li,
+      .psychometric-interpretation,
+      .letter-subject-text,
+      .measurement-note-card,
+      .measurement-note-card p,
+      .safety-item,
+      .risk-item,
+      .scale-item,
+      .intervention-item,
+      .blindspot-item,
+      .med-option,
+      .clinical-card,
+      .tool-card,
+      li {
+        font-size: var(--font-body-print) !important;
+      }
+
+      .field-label,
+      .mini-heading,
+      .meta-label,
+      .compact-label,
+      .eyebrow,
+      .clinical-table th,
+      .psychometric-name,
+      .score-value,
+      .psychometric-score,
+      .document-kind,
+      .colored-doc-pill {
+        font-size: var(--font-label-print) !important;
+      }
+
+      .header-meta,
+      .intake-subtitle,
+      .section-subtitle,
+      .provider-note p,
+      .brand-provider,
+      .brand-contact,
+      .colored-provider-line,
+      .colored-contact-line,
+      .card-grid-note,
+      .score-interpretation,
+      .psychometric-date,
+      .psychometric-note,
+      .script-note,
+      .provider-support-section .script-note {
+        font-size: var(--font-small-print) !important;
+      }
+    }
+
+.question-row{display:block;}
+
+/* --- V6 CONSISTENT CLINICAL CARD LAYOUT SYSTEM --- */
+.structured-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.structured-card-grid > * {
+  height: 100%;
+  min-width: 0;
+}
+
+.uniform-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--primary-border);
+  border-radius: 13px;
+  padding: 13px 14px;
+}
+
+.uniform-card.warning {
+  background: var(--warning-bg);
+  border-color: #fedf89;
+  border-left-color: var(--warning);
+}
+
+.uniform-card.primary {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  border-left-color: var(--primary);
+}
+
+.uniform-card.info {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  border-left-color: var(--info);
+}
+
+.uniform-card.success {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  border-left-color: var(--success);
+}
+
+.uniform-card.purple {
+  background: #faf5ff;
+  border-color: #ddd6fe;
+  border-left-color: #7c3aed;
+}
+
+.uniform-card.teal {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  border-left-color: #0d9488;
+}
+
+.uniform-card.red {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  border-left-color: var(--danger);
+}
+
+.uniform-card-title {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 13px;
+  line-height: 1.28;
+  font-weight: 900;
+}
+
+.uniform-card-label {
+  display: block;
+  margin: 8px 0 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.uniform-card-body {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.46;
+}
+
+.mandatory-question-card {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.mandatory-question-card .question-number {
+  margin-top: 1px;
+}
+
+.provider-support-section > .grid-2 {
+  align-items: stretch;
+}
+
+.provider-support-section > .grid-2 > .tool-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.provider-support-section > .grid-2 > .tool-card > .clinical-field {
+  flex: 1;
+}
+
+.provider-support-section .structured-card-grid,
+.provider-support-section .clinical-block-list.structured-card-grid {
+  align-items: stretch;
+}
+
+.provider-support-section .structured-card-grid > .med-option,
+.provider-support-section .structured-card-grid > .risk-item,
+.provider-support-section .structured-card-grid > .structured-item,
+.provider-support-section .structured-card-grid > .script-question {
+  height: 100%;
+}
+
+@media print {
+  .structured-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .uniform-card {
+    padding: 9px 10px;
+  }
+
+  .uniform-card-title,
+  .uniform-card-body {
+    font-size: 10.5px;
+  }
+
+  .uniform-card-label {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 760px) {
+  .structured-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+</style>
+</head>
+<body>
+<main class="document">
+<header class="colored-brand-header">
+<div class="colored-logo-wrap">
+<img alt="Integrative Psychiatry Logo" class="colored-logo" onerror="this.style.display='none'" src="https://sxjxsoakdsiifrmjsdeb.supabase.co/storage/v1/object/public/Logo/whitelogo.png"/>
+</div>
+<div class="colored-brand-text">
+<div class="colored-wordmark">
+<span class="large">I</span><span class="small">NTEGRATIVE</span><br/>
+<span class="large">P</span><span class="small">SYCHIATRY</span>
+</div>
+<p class="colored-provider-line">Douglas Zelisko, M.D. • Board Certified Psychiatrist</p>
+<p class="colored-contact-line">
+          45 South Main Street Suite 111, West Hartford, CT 06107<br/>
+          P: 860.615.3629  |  F: 860.318.2085  |  E: support@drzelisko.com
+        </p>
+<span class="colored-doc-pill">Pre-Intake Psychiatric Brief</span>
+</div>
+</header>
+<section class="intake-title-card no-break">
+<div>
+<p class="eyebrow">Pre-Intake Psychiatric Brief</p>
+<h1><span class="ai-prompt">Extract patient full legal name</span></h1>
+<p class="intake-subtitle">Provider-facing pre-intake briefing with structured risk, symptom, psychometric, and first-visit priorities.</p>
+</div>
+<div class="intake-meta-grid">
+<div class="meta-pill"><p class="meta-label">DOB / Age</p><p class="meta-value"><span class="ai-prompt">Extract DOB and age</span></p></div>
+<div class="meta-pill"><p class="meta-label">Client ID</p><p class="meta-value"><span class="ai-prompt">Extract client ID</span></p></div>
+<div class="meta-pill"><p class="meta-label">Date of Service / Intake</p><p class="meta-value"><span class="ai-prompt">Extract intake/source dates</span></p></div>
+<div class="meta-pill"><p class="meta-label">Document Type</p><p class="meta-value">Pre-Intake Summary</p></div>
+</div>
+</section><section class="executive-snapshot no-break">
+<div class="snapshot-card primary">
+<h2>Executive Snapshot</h2>
+<p class="clean-line"><strong>Primary presentation:</strong> <span class="ai-prompt">Summarize the primary presentation in one clean sentence using documented concerns only.</span></p>
+<p class="clean-line"><strong>Clinical complexity:</strong> <span class="ai-prompt">Summarize the main overlapping diagnostic or clinical complexity areas.</span></p>
+<p class="clean-line"><strong>Patient goal:</strong> <span class="ai-prompt">Extract the patient’s treatment goal or desired outcome. If not documented, state Not documented and mark this label red.</span></p>
+</div>
+<div class="snapshot-card danger">
+<h2>Immediate Risk Snapshot</h2>
+<ul class="snapshot-list">
+<li><strong>Safety:</strong> <span class="ai-prompt">Summarize suicidal ideation, self-harm, homicidal ideation, psychosis, mania, access to means, or state no acute safety alert documented.</span></li>
+<li><strong>Sleep/medication safety:</strong> <span class="ai-prompt">Summarize sleep medication/OTC concerns or state Not documented.</span></li>
+<li><strong>Family/social risk context:</strong> <span class="ai-prompt">Summarize major relational/family stressors affecting safety or functioning.</span></li>
+<li><strong>Substance context:</strong> <span class="ai-prompt">Summarize current substance use/cessation/withdrawal concerns.</span></li>
+</ul>
+</div>
+</section><section class="priority-grid no-break">
+<div class="priority-card"><h3>First 10 Minutes</h3><p class="priority-line"><strong>Clarify:</strong> <span class="ai-prompt">Generate the first-session safety or orientation priority.</span></p></div>
+<div class="priority-card"><h3>Diagnostic Focus</h3><p class="priority-line"><strong>Differentiate:</strong> <span class="ai-prompt">Generate the top diagnostic clarification focus areas.</span></p></div>
+<div class="priority-card"><h3>Treatment Planning</h3><p class="priority-line"><strong>Prioritize:</strong> <span class="ai-prompt">Generate the first treatment-planning priorities.</span></p></div>
+</section><section class="psychometrics-section"><div class="clinical-card primary">
+<h3 class="section-title">Psychometrics</h3>
+<div class="psychometric-grid">
+<div class="psychometric-card">
+<div class="psychometric-top">
+<span class="psychometric-name">PHQ-9</span>
+<span class="psychometric-score"><span class="ai-prompt">Extract PHQ-9 score</span></span>
+</div>
+<p class="psychometric-interpretation">
+<span class="ai-prompt">Interpret PHQ-9 score. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="psychometric-card">
+<div class="psychometric-top">
+<span class="psychometric-name">GAD-7</span>
+<span class="psychometric-score"><span class="ai-prompt">Extract GAD-7 score</span></span>
+</div>
+<p class="psychometric-interpretation">
+<span class="ai-prompt">Interpret GAD-7 score. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="psychometric-card">
+<div class="psychometric-top">
+<span class="psychometric-name">ASRS / ADHD Screening</span>
+<span class="psychometric-score"><span class="ai-prompt">Extract ASRS or ADHD screening score if available</span></span>
+</div>
+<p class="psychometric-interpretation">
+<span class="ai-prompt">Interpret ADHD screening data if available. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="psychometric-card">
+<div class="psychometric-top">
+<span class="psychometric-name">Other Measures</span>
+<span class="psychometric-score"><span class="ai-prompt">Extract other rating scale scores</span></span>
+</div>
+<p class="psychometric-interpretation">
+<span class="ai-prompt">Summarize any additional scale results and interpretations. If none are documented, state "Not documented."</span>
+</p>
+</div>
+</div>
+</div></section><section class="section">
+<div class="clinical-card danger">
+<h2 class="section-title danger">Urgent Safety Alerts</h2>
+<div class="clinical-field">
+<h3 class="field-label">Safety Alert Summary</h3>
+<p class="field-value bold">
+<span class="ai-prompt">Extract urgent safety alerts, prioritizing suicidal ideation, homicidal ideation, self-harm, psychosis, mania, intoxication, aggression, access to means, or severe behavioral risk. If no safety alert is documented, state "No urgent safety alert documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Trigger Quotes / Source Evidence</h3>
+<p class="field-value">
+<span class="ai-prompt">Extract exact quotes or source evidence supporting safety concern. If none are documented, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field not-assessed">
+<h3 class="field-label">Required Risk Follow-Up</h3>
+<p class="field-value">
+<span class="ai-prompt">Generate concise required safety/risk follow-up questions, including chronology, intent, plan, means, prior attempts, protective factors, and emergency supports when relevant.</span>
+</p>
+</div>
+</div>
+</section><section class="section">
+<h2 class="section-title">Intake Summary</h2>
+<div class="single-column">
+<div class="clinical-card">
+<div class="clinical-field">
+<h3 class="field-label">Chief Complaint - Verbatim</h3>
+<p class="field-value large bold">
+<span class="ai-prompt">Extract the chief complaint verbatim if available. If not documented, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Chief Complaint - Clinical Framing</h3>
+<p class="field-value">
+<span class="ai-prompt">Provide a concise clinical framing of the presenting concern, including age, symptom focus, duration, severity, and functional impact when documented.</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">HPI Summary</h3>
+<p class="field-value">
+<span class="ai-prompt">Synthesize a concise but clinically meaningful HPI summary. Include duration, onset, progression, severity, triggers, functional impairment, sleep/appetite/energy/concentration, mood/anxiety symptoms, and current goals when documented.</span>
+</p>
+</div>
+</div>
+<div class="tool-card blue-card full-width-card intake-voice-briefing">
+<h3 class="tool-title blue">AI Voice Briefing</h3>
+<div class="clinical-field">
+<h4 class="mini-heading">90-Second Provider Briefing Transcript</h4>
+<div class="mini-content structured-block">
+<div class="structured-item">
+<strong>Briefing Script</strong>
+<span class="item-body"><span class="ai-prompt">Write a concise 60–90 second provider-facing voice briefing. Include patient name, age, primary presentation, documented symptoms, psychometric results, major risks or missing safety data, medication/medical context, and the highest-priority first-session question. Use only source-supported information. Do not overstate suicide, violence, psychosis, mania, substance, or medical risk beyond what is documented; phrase uncertainties as items requiring direct assessment.</span></span>
+</div>
+<div class="structured-item">
+<strong>One-Line Clinical Orientation</strong>
+<span class="item-body"><span class="ai-prompt">Provide one concise sentence the provider can read immediately before entering the session, summarizing the main clinical task for the visit.</span></span>
+</div>
+</div>
+</div>
+</div></div>
+</section><section class="section medication-history-row"><h2 class="section-title">Medication, Psychiatric &amp; Substance History</h2><div class="grid-3 history-card-grid"><div class="clinical-card">
+<h3 class="card-title">Current &amp; Prior Medications</h3>
+<div class="clinical-field">
+<h4 class="field-label">Current Regimen</h4>
+<p class="field-value">
+<span class="ai-prompt">List all current psychiatric and non-psychiatric medications, including dose and frequency when available. If not documented, state "Medication information not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Prior Psychiatric Medication Trials</h4>
+<p class="field-value">
+<span class="ai-prompt">List prior psychiatric medication trials, dose, duration, response, side effects, and reason for discontinuation when documented. If not documented, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Medication Adherence</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize medication adherence, missed doses, misuse, overuse, barriers, or concerns. If not assessed, state "Medication adherence was not assessed in available documentation."</span>
+</p>
+</div>
+</div><div class="clinical-card">
+<h3 class="card-title">Psychiatric History</h3>
+<div class="clinical-field">
+<h4 class="field-label">Past Psychiatric History</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize prior diagnoses, outpatient treatment, therapy, psychiatry, hospitalizations, higher level of care, suicide attempts, self-harm, trauma treatment, or prior evaluations. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Trauma History</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize trauma history only when documented. If trauma is denied, state denial. If not mentioned, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Psychiatric Hospitalization</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract psychiatric hospitalization history. Distinguish explicit denial from no documentation.</span>
+</p>
+</div>
+</div><div class="clinical-card">
+<h3 class="card-title">Substance Use</h3>
+<div class="clinical-field">
+<h4 class="field-label">Alcohol Use</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract alcohol use history, current use, quantity, frequency, consequences, withdrawal, or denial. If not mentioned, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Cannabis Use</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract cannabis/marijuana use history, current use, frequency, route, last use, impact, or denial. If cannabis is not mentioned, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Nicotine / Tobacco Use</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract nicotine, tobacco, cigarette, vaping, quit history, or denial. If not mentioned, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Other Substance Use</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract stimulant, cocaine, opioid, sedative/hypnotic, hallucinogen, inhalant, or other substance use. Distinguish explicit denial from missing information.</span>
+</p>
+</div>
+</div></div></section><section class="section">
+<h2 class="section-title warning">Mandatory Intake Questions</h2>
+<div class="structured-card-grid">
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">1</div>
+<div><h3 class="uniform-card-title">Immediate Safety &amp; Stability</h3><p class="uniform-card-body"><span class="ai-prompt">Generate the highest-priority direct question addressing current suicidal ideation, self-harm, homicidal ideation, psychosis, mania, intoxication, abuse, access to means, or another urgent safety concern supported by the source. If no specific risk is documented, generate a standard direct safety-screen question.</span></p></div>
+</div>
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">2</div>
+<div><h3 class="uniform-card-title">Symptom Timeline &amp; Functional Impact</h3><p class="uniform-card-body"><span class="ai-prompt">Generate a question clarifying onset, duration, course, triggers, severity, and impact on work, sleep, relationships, self-care, or daily functioning.</span></p></div>
+</div>
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">3</div>
+<div><h3 class="uniform-card-title">Mood, Activation &amp; Bipolar Screen</h3><p class="uniform-card-body"><span class="ai-prompt">Generate a direct question that clarifies episodic elevated or irritable mood, decreased need for sleep, increased energy, impulsivity, pressured speech, racing thoughts, or antidepressant-related activation when clinically relevant.</span></p></div>
+</div>
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">4</div>
+<div><h3 class="uniform-card-title">Medication History &amp; Adherence</h3><p class="uniform-card-body"><span class="ai-prompt">Generate a question clarifying current medications, actual adherence, benefits, adverse effects, prior trials, reasons for stopping, prescribers, pharmacy, and patient expectations.</span></p></div>
+</div>
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">5</div>
+<div><h3 class="uniform-card-title">Substance, Sleep &amp; Medical Contributors</h3><p class="uniform-card-body"><span class="ai-prompt">Generate a question addressing alcohol, nicotine, cannabis, caffeine, other substances, sleep pattern, pain, medical conditions, or physiological contributors most relevant to the documented presentation.</span></p></div>
+</div>
+<div class="uniform-card warning mandatory-question-card">
+<div class="question-number">6</div>
+<div><h3 class="uniform-card-title">Goals, Supports &amp; Readiness</h3><p class="uniform-card-body"><span class="ai-prompt">Generate a collaborative question clarifying the patient's most important treatment goal, preferred changes, support system, barriers, and readiness for medication, psychotherapy, behavioral change, or care coordination.</span></p></div>
+</div>
+</div>
+</section><section class="section">
+<h2 class="section-title">First-Session Priorities</h2>
+<div class="structured-card-grid">
+<div class="uniform-card primary">
+<h3 class="uniform-card-title">1. Opening Focus</h3>
+<p class="uniform-card-body"><span class="ai-prompt">Recommend a warm, clinically appropriate opening focus based on the patient's stated goals, distress, communication style, and most important concern. Include one suggested opening statement or question.</span></p>
+</div>
+<div class="uniform-card info">
+<h3 class="uniform-card-title">2. Essential Clarifications</h3>
+<p class="uniform-card-body"><span class="ai-prompt">Identify the most important issues that must be clarified before diagnosis or treatment planning, including safety chronology, bipolar screen, psychosis, trauma, substance timeline, medical mimics, medication history, or level-of-care needs.</span></p>
+</div>
+<div class="uniform-card success">
+<h3 class="uniform-card-title">3. Engagement Strategy</h3>
+<p class="uniform-card-body"><span class="ai-prompt">Suggest rapport, pacing, validation, structure, and interviewing guidance tailored to the documented presentation. Include likely barriers to engagement and how to reduce them.</span></p>
+</div>
+<div class="uniform-card warning">
+<h3 class="uniform-card-title">4. Avoid Over-Assuming</h3>
+<p class="uniform-card-body"><span class="ai-prompt">List areas where the available documentation is insufficient and the provider should avoid over-assuming, including diagnosis, trauma, intent, substance severity, medication appropriateness, causality, or family dynamics.</span></p>
+</div>
+</div>
+</section><section class="section">
+<h2 class="section-title">First-Visit Agenda</h2>
+<p class="section-subtitle">Provider-facing visit structure generated from the available intake materials. Use this as a flexible agenda, not a substitute for clinical judgment.</p>
+<div class="structured-card-grid">
+<div class="uniform-card primary">
+<h3 class="uniform-card-title">1. Opening &amp; Orientation</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate a brief opening agenda item that validates the patient's stated concern and explains the structure of the intake.</span></p>
+<span class="uniform-card-label">Suggested wording</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate one warm opening question or statement tailored to the documented presentation.</span></p>
+</div>
+<div class="uniform-card red">
+<h3 class="uniform-card-title">2. Safety Screen</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate direct safety-screen tasks, including SI, HI, self-harm, psychosis or mania, access to means, protective factors, and crisis supports as clinically indicated.</span></p>
+<span class="uniform-card-label">Suggested wording</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate concise, non-leading safety-screen wording without implying unsupported risk.</span></p>
+</div>
+<div class="uniform-card info">
+<h3 class="uniform-card-title">3. Symptom Timeline</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate the key symptom-timeline items to clarify, including onset, duration, triggers, course, severity, impairment, sleep, appetite, energy, concentration, and mood or anxiety symptoms when relevant.</span></p>
+<span class="uniform-card-label">Suggested wording</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate one timeline-focused question that helps clarify diagnostic fit.</span></p>
+</div>
+<div class="uniform-card purple">
+<h3 class="uniform-card-title">4. Diagnostic Screening</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate the diagnostic screens that should be completed or clarified, such as bipolar disorder, psychosis, trauma or PTSD, substance use, ADHD, anxiety, depression, adjustment disorder, or medical mimics.</span></p>
+<span class="uniform-card-label">What to listen for</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate key follow-up questions, contradictions, and red flags to listen for.</span></p>
+</div>
+<div class="uniform-card teal">
+<h3 class="uniform-card-title">5. Medication &amp; Medical Review</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate medication and medical review priorities, including reconciliation, prior trials, adherence, side effects, labs, vitals, PCP, pharmacy, pain, sleep, and medical rule-outs.</span></p>
+<span class="uniform-card-label">Clarification question</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate one medication or medical clarification question based on missing or high-priority data.</span></p>
+</div>
+<div class="uniform-card success">
+<h3 class="uniform-card-title">6. Treatment Plan &amp; Next Steps</h3>
+<span class="uniform-card-label">Clinical task</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate likely next-step planning items, including therapy, medication evaluation, measurement-based care, labs, records, releases, safety planning, symptom tracking, follow-up interval, or referrals.</span></p>
+<span class="uniform-card-label">Closing question</span>
+<p class="uniform-card-body"><span class="ai-prompt">Generate a closing question that confirms patient goals, readiness, understanding, and shared next steps.</span></p>
+</div>
+</div>
+</section><section class="section">
+<h2 class="section-title">Diagnostic Decision Support, Measurement-Based Care &amp; Intake Interventions</h2>
+<p class="section-subtitle">Working differential, targeted measurement, focused intake questions, provider language, and immediate first-visit interventions.</p>
+<table class="clinical-table">
+<thead><tr><th>Question</th><th>Why It Matters</th><th>What to Listen For</th></tr></thead>
+<tbody>
+<tr>
+<td><span class="ai-prompt">Generate the highest-priority diagnostic clarification question based on the client’s documented symptoms, chronology, impairment, medications, and unresolved differential.</span></td>
+<td><span class="ai-prompt">Explain exactly how the answer would help distinguish among the leading diagnostic possibilities or change immediate care planning.</span></td>
+<td><span class="ai-prompt">List the specific response patterns, timelines, functional examples, red flags, protective factors, or contradictions the provider should listen for.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">Generate a second targeted diagnostic clarification question addressing another major unresolved condition, symptom cluster, safety concern, or confound.</span></td>
+<td><span class="ai-prompt">Explain why this question is clinically necessary and what diagnostic error it may prevent.</span></td>
+<td><span class="ai-prompt">List concrete findings that would support, weaken, or redirect the working differential.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">Generate a third targeted diagnostic clarification question addressing trauma, mood, sleep, substance use, medical contributors, developmental history, grief, psychosis, eating symptoms, or another source-supported priority.</span></td>
+<td><span class="ai-prompt">Explain how this question connects to the available source material and treatment planning.</span></td>
+<td><span class="ai-prompt">List what to listen for, including chronology, severity, episodicity, triggers, impairment, and safety implications.</span></td>
+</tr>
+</tbody>
+</table>
+<div class="diagnostic-tools-stack">
+<div class="tool-card purple-card full-width-card">
+<h3 class="tool-title purple">Measurement-Based Care</h3>
+<div class="clinical-field"><h4 class="mini-heading">Recommended Scales / Tracking</h4>
+<div class="mini-content structured-block">
+<div class="scale-item"><strong><span class="ai-prompt">Recommended measure 1</span></strong><span class="item-body"><span class="ai-prompt">Explain why this measure is indicated, when to administer it, what domain it will track, and how the result could change diagnosis or treatment planning.</span></span></div>
+<div class="scale-item"><strong><span class="ai-prompt">Recommended measure 2</span></strong><span class="item-body"><span class="ai-prompt">Explain the source-based rationale, timing, interpretation purpose, and clinical decision supported by this measure.</span></span></div>
+<div class="scale-item"><strong><span class="ai-prompt">Recommended measure 3</span></strong><span class="item-body"><span class="ai-prompt">Explain the source-based rationale, timing, interpretation purpose, and clinical decision supported by this measure. Use only if clinically indicated; otherwise state that no additional measure is currently indicated.</span></span></div>
+</div></div></div>
+<div class="tool-card teal-card full-width-card">
+<h3 class="tool-title teal">Targeted Intake Interventions &amp; Provider Scripts</h3>
+<div class="clinical-field"><h4 class="mini-heading">Provider Scripts</h4>
+<div class="mini-content clinical-block-list">
+<div class="structured-card-grid"><div class="script-question"><span class="script-number">1.</span><span class="question-text-line"><span class="ai-prompt">Write a direct, natural provider question tied to the first diagnostic priority.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">Explain why this wording matters and what the provider should clarify.</span></span></div><div class="script-question"><span class="script-number">2.</span><span class="question-text-line"><span class="ai-prompt">Write a direct, natural provider question tied to the second diagnostic priority.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">Explain why this wording matters and what the provider should clarify.</span></span></div><div class="script-question"><span class="script-number">3.</span><span class="question-text-line"><span class="ai-prompt">Write a direct, natural provider question tied to the third diagnostic priority.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">Explain why this wording matters and what the provider should clarify.</span></span></div><div class="script-question"><span class="script-number">4.</span><span class="question-text-line"><span class="ai-prompt">Write a provider script for introducing a sensitive, stigmatized, or potentially anxiety-provoking topic using normalization and collaborative language.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">State the clinical purpose and what response requires follow-up.</span></span></div><div class="script-question"><span class="script-number">5.</span><span class="question-text-line"><span class="ai-prompt">Write a provider script for medication, safety, substance use, collateral, or immediate functional planning, whichever is most clinically relevant.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">Explain the immediate intervention or decision this question supports.</span></span></div><div class="script-question"><span class="script-number">6.</span><span class="question-text-line"><span class="ai-prompt">Write a collaborative closing intervention or provider script that translates the assessment into one achievable next step and confirms the patient's understanding, preferences, and readiness.</span></span><span class="script-note"><strong>Note:</strong> <span class="ai-prompt">Explain how this script supports shared decision-making, engagement, and follow-through.</span></span></div></div></div></div></div>
+</div>
+</section><section class="section provider-review-full-section"><h2 class="section-title warning">Provider Review Priorities</h2><div class="provider-priority-card compact-half full-width-card">
+<span class="card-grid-note">Provider-facing items to confirm early in the visit.</span>
+<div class="provider-priority-list">
+<div class="provider-priority-line"><strong>1. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line. Include the specific clinical action or question to resolve before finalizing the intake brief.</span></span></div>
+<div class="provider-priority-line"><strong>2. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line.</span></span></div>
+<div class="provider-priority-line"><strong>3. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line.</span></span></div>
+<div class="provider-priority-line"><strong>4. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line.</span></span></div>
+<div class="provider-priority-line"><strong>5. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line.</span></span></div>
+<div class="provider-priority-line"><strong>6. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line.</span></span></div>
+<div class="provider-priority-line"><strong>7. <span class="ai-prompt">Priority title</span></strong><span class="priority-body"><span class="ai-prompt">Write one provider review priority on its own line, only if clinically necessary. Otherwise remove this line.</span></span></div>
+</div>
+</div></section><section class="section differential-blindspot-section">
+<h2 class="section-title">Recommended Differentials &amp; Clinical Blindspots / Red Flags</h2>
+<div class="full-width-clinical-stack">
+<div class="tool-card indigo-card full-width-clinical-card">
+<h3 class="tool-title indigo">Recommended Differentials</h3>
+<p class="card-grid-note">Present up to four clinically supported differentials in a two-column layout. Keep each diagnosis in its own block and distinguish documented evidence from hypotheses requiring provider review.</p>
+<div class="clinical-item-grid-2">
+<div class="diagnosis-item"><strong class="diagnosis-name"><span class="ai-prompt">Diagnosis 1 name + ICD-10 code</span></strong><span class="item-body"><span class="ai-prompt">Rationale, supporting evidence, contradictory or missing evidence, and provider-review caveats.</span></span></div>
+<div class="diagnosis-item"><strong class="diagnosis-name"><span class="ai-prompt">Diagnosis 2 name + ICD-10 code</span></strong><span class="item-body"><span class="ai-prompt">Rationale, supporting evidence, contradictory or missing evidence, and provider-review caveats.</span></span></div>
+<div class="diagnosis-item"><strong class="diagnosis-name"><span class="ai-prompt">Diagnosis 3 name + ICD-10 code</span></strong><span class="item-body"><span class="ai-prompt">Rationale, supporting evidence, contradictory or missing evidence, and provider-review caveats.</span></span></div>
+<div class="diagnosis-item"><strong class="diagnosis-name"><span class="ai-prompt">Diagnosis 4 name + ICD-10 code, if clinically supported</span></strong><span class="item-body"><span class="ai-prompt">Rationale, supporting evidence, contradictory or missing evidence, and provider-review caveats. Omit this block when a fourth differential is not supported.</span></span></div>
+</div>
+</div>
+<div class="tool-card orange-card full-width-clinical-card">
+<h3 class="tool-title orange">Clinical Blindspots and Red Flags</h3>
+<p class="card-grid-note"><span class="ai-prompt">Identify up to four high-value blindspots or red flags in a two-column layout. Use measured clinical language and provide a specific action for each item.</span></p>
+<div class="clinical-item-grid-2">
+<div class="blindspot-item">
+<strong class="block-title"><span class="ai-prompt">Potential blindspot or red flag title 1</span></strong>
+<p class="block-line"><span class="ai-prompt">Describe what the provider may overlook or misinterpret, using measured clinical language and avoiding unsupported conclusions.</span></p>
+<p class="block-line"><span class="ai-prompt">Explain the source-based evidence or clinical pattern supporting the concern, clearly distinguishing documented facts from hypotheses.</span></p>
+<p class="block-line"><span class="block-label">Action:</span> <span class="ai-prompt">Give a concrete next step, assessment, lab, structured interview, collateral question, monitoring step, or safety action.</span></p>
+</div>
+<div class="blindspot-item">
+<strong class="block-title"><span class="ai-prompt">Potential blindspot or red flag title 2</span></strong>
+<p class="block-line"><span class="ai-prompt">Describe what the provider may overlook or misinterpret, using measured clinical language and avoiding unsupported conclusions.</span></p>
+<p class="block-line"><span class="ai-prompt">Explain the source-based evidence or clinical pattern supporting the concern, clearly distinguishing documented facts from hypotheses.</span></p>
+<p class="block-line"><span class="block-label">Action:</span> <span class="ai-prompt">Give a concrete next step, assessment, lab, structured interview, collateral question, monitoring step, or safety action.</span></p>
+</div>
+<div class="blindspot-item">
+<strong class="block-title"><span class="ai-prompt">Potential blindspot or red flag title 3</span></strong>
+<p class="block-line"><span class="ai-prompt">Describe what the provider may overlook or misinterpret, using measured clinical language and avoiding unsupported conclusions.</span></p>
+<p class="block-line"><span class="ai-prompt">Explain the source-based evidence or clinical pattern supporting the concern, clearly distinguishing documented facts from hypotheses.</span></p>
+<p class="block-line"><span class="block-label">Action:</span> <span class="ai-prompt">Give a concrete next step, assessment, lab, structured interview, collateral question, monitoring step, or safety action.</span></p>
+</div>
+<div class="blindspot-item">
+<strong class="block-title"><span class="ai-prompt">Potential blindspot or red flag title 4</span></strong>
+<p class="block-line"><span class="ai-prompt">Describe a fourth clinically meaningful blindspot or red flag. Avoid repeating earlier items and omit only when no additional concern is supported.</span></p>
+<p class="block-line"><span class="ai-prompt">Explain the source-based evidence or clinical pattern supporting the concern, clearly distinguishing documented facts from hypotheses.</span></p>
+<p class="block-line"><span class="block-label">Action:</span> <span class="ai-prompt">Give a concrete next step, assessment, lab, structured interview, collateral question, monitoring step, or safety action.</span></p>
+</div>
+</div>
+</div>
+</div>
+</section><section class="section"><h2 class="section-title">Medical, Physiological, Social &amp; Family Context</h2><div class="grid-3"><div class="clinical-card">
+<h3 class="section-title">Medical / Vitals / Labs</h3>
+<div class="clinical-field">
+<h4 class="field-label">Medical History</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize relevant medical history, chronic conditions, surgeries, neurological issues, endocrine concerns, cardiovascular risks, pregnancy status if relevant, and pain/somatic concerns. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Vitals and Baseline Labs</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract baseline vitals, BMI, blood pressure, labs, EKG, TSH, CBC, CMP, urine toxicology, or recommended workups. If unavailable, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Medical Rule-Outs / Physiological Considerations</h4>
+<p class="field-value">
+<span class="ai-prompt">Identify top medical rule-outs, mimics, or physiological considerations relevant to psychiatric presentation. Do not invent unsupported medical concerns. If none documented, state "Not documented."</span>
+</p>
+</div>
+</div><div class="clinical-card">
+<h3 class="section-title">Allergies and Safety Factors</h3>
+<div class="clinical-field">
+<h4 class="field-label">Allergies</h4>
+<p class="field-value bold">
+<span class="ai-prompt">Extract known drug, food, environmental, or other allergies. If explicitly denied, state "No known allergies documented." If absent, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Side Effects / Medication Risks</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize documented medication side effects, adverse reactions, interactions, contraindications, or monitoring concerns. If not documented, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Substance-Related Medication Risk</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize any substance-related medication safety risks, including alcohol, cannabis, sedatives, opioids, stimulants, or benzodiazepines. If not documented, state "Not documented."</span>
+</p>
+</div>
+</div><div class="clinical-card">
+<h3 class="section-title">Social and Family Context</h3>
+<div class="clinical-field">
+<h4 class="field-label">Living Situation</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize current living situation, housing stability, household members, and safety when documented. If missing, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Relationship / Family Context</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize relationship status, family dynamics, supports, parenting, caregiving, separation/divorce, or relational stressors when documented.</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Occupational / Educational Functioning</h4>
+<p class="field-value">
+<span class="ai-prompt">Summarize work, school, disability, performance, attendance, impairment, or educational history when documented. If absent, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Family Psychiatric History</h4>
+<p class="field-value">
+<span class="ai-prompt">Extract family psychiatric history, substance use history, suicide history, and major family medical history. Distinguish denial from absence.</span>
+</p>
+</div>
+</div></div></section><section class="section">
+<h2 class="section-title danger">Risk, Safety Review &amp; Crisis Plan</h2>
+<div class="grid-3">
+<div class="clinical-card danger">
+<div class="clinical-field">
+<h3 class="field-label">Suicidal Ideation</h3>
+<p class="field-value">
+<span class="ai-prompt">Document suicidal ideation. Distinguish current, historical, passive, active, plan, intent, means, denial, not assessed, and not documented.</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Self-Harm / NSSI</h3>
+<p class="field-value">
+<span class="ai-prompt">Document self-harm/NSSI history or current concern. Distinguish denial, historical, current, not assessed, and not documented.</span>
+</p>
+</div>
+</div>
+<div class="clinical-card danger">
+<div class="clinical-field">
+<h3 class="field-label">Homicidal Ideation</h3>
+<p class="field-value">
+<span class="ai-prompt">Document homicidal ideation, violence risk, aggression, threats, or denial. Distinguish not assessed and not documented.</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Psychosis / Mania / Intoxication</h3>
+<p class="field-value">
+<span class="ai-prompt">Document psychosis, mania, intoxication, withdrawal, severe disorganization, or behavioral dyscontrol if present. If not assessed, state that clearly.</span>
+</p>
+</div>
+</div>
+<div class="clinical-card danger">
+<div class="clinical-field">
+<h3 class="field-label">Protective Factors</h3>
+<p class="field-value">
+<span class="ai-prompt">Extract protective factors, supports, reasons for living, treatment engagement, spirituality, family, future orientation, or safety commitments. If not documented, state "Not documented."</span>
+</p>
+</div>
+<div class="clinical-field">
+<h3 class="field-label">Safety Plan / Crisis Instructions</h3>
+<p class="field-value">
+<span class="ai-prompt">Summarize documented safety plan, crisis resources, emergency instructions, lethal means counseling, or need for risk follow-up. If not documented, state "Not documented."</span>
+</p>
+</div>
+</div>
+</div>
+<div class="clinical-card danger full-width-card integrated-crisis-plan">
+<div class="clinical-field"><h4 class="mini-heading">Individualized Crisis-Planning Details</h4><div class="mini-content clinical-block-list"><div class="safety-item"><strong class="item-title">Warning Signs</strong><span class="item-body"><span class="ai-prompt">List individualized warning signs based on available source material. If not documented, state "Not documented."</span></span></div><div class="safety-item"><strong class="item-title">Internal Coping</strong><span class="item-body"><span class="ai-prompt">List internal coping strategies supported by available data or clinically appropriate general strategies requiring provider review.</span></span></div><div class="safety-item"><strong class="item-title">Social / Professional Supports</strong><span class="item-body"><span class="ai-prompt">List documented social and professional supports. If not documented, state "Not documented."</span></span></div></div></div></div></section><section class="section">
+<h2 class="section-title">Care Planning Handoff &amp; Preliminary Treatment Plan</h2>
+<p class="section-subtitle">Initial care direction, records and collateral, post-visit setup, and a coordinated multimodal treatment framework for provider review.</p>
+<div class="grid-3">
+<div class="clinical-card success"><h3 class="section-title">Likely Care Needs</h3><div class="clinical-field"><h4 class="field-label">Initial Care Direction</h4><p class="field-value"><span class="ai-prompt">Summarize the most likely initial care needs supported by the intake, including psychotherapy focus, medication evaluation, medical workup, sleep intervention, substance-use support, safety planning, family/couples support, or care coordination as applicable. Prioritize rather than listing every possibility.</span></p></div></div>
+<div class="clinical-card info"><h3 class="section-title">Records / Collateral</h3><div class="clinical-field"><h4 class="field-label">Recommended Records to Request</h4><p class="field-value"><span class="ai-prompt">List the specific prior records, medication history, laboratory results, school/work documentation, hospital records, therapy notes, pharmacy data, or collateral sources that would materially improve diagnostic confidence or safety, when clinically appropriate and authorized.</span></p></div></div>
+<div class="clinical-card warning"><h3 class="section-title">After-Visit Setup</h3><div class="clinical-field"><h4 class="field-label">Likely Post-Intake Tasks</h4><p class="field-value"><span class="ai-prompt">List likely next steps after the intake, such as scales, laboratory testing, medication reconciliation, pharmacy confirmation, ROI forms, symptom or sleep tracking, safety-plan completion, referrals, follow-up interval, and coordination tasks. Tailor to the client.</span></p></div></div>
+</div>
+<div class="tool-card green-card full-width-card">
+<h3 class="tool-title green">Preliminary Multimodal Treatment Plan</h3>
+<div class="clinical-field"><h4 class="mini-heading">Multimodal Plan</h4>
+<div class="mini-content structured-block">
+<div class="structured-item"><strong><span class="ai-prompt">Treatment domain 1</span></strong><span class="item-body"><span class="ai-prompt">Provide a specific, patient-centered initial action and rationale. Include the clinical target, immediate next step, and what must be clarified before implementation.</span></span></div>
+<div class="structured-item"><strong><span class="ai-prompt">Treatment domain 2</span></strong><span class="item-body"><span class="ai-prompt">Provide a specific initial action and rationale related to medication, psychotherapy, medical assessment, sleep, substance use, family functioning, or safety as supported by the source.</span></span></div>
+<div class="structured-item"><strong><span class="ai-prompt">Treatment domain 3</span></strong><span class="item-body"><span class="ai-prompt">Provide a specific initial action and rationale, including measurable or observable treatment targets where possible.</span></span></div>
+<div class="structured-item"><strong><span class="ai-prompt">Treatment domain 4</span></strong><span class="item-body"><span class="ai-prompt">Provide a specific coordination, monitoring, follow-up, records, or measurement-based action and rationale.</span></span></div>
+</div></div></div>
+</section><section class="section provider-support-section">
+<h2 class="section-title">Clinical Tools and Provider Support</h2>
+<div class="grid-2">
+<div class="tool-card red-card">
+<h3 class="tool-title red">Medication / Physiological Risks</h3>
+<div class="clinical-field">
+<h4 class="mini-heading">Risk Review</h4>
+<div class="mini-content structured-block">
+<div class="risk-item"><strong class="block-title"><span class="ai-prompt">Medication risk 1</span></strong><p class="block-line"><span class="ai-prompt">Describe the most important patient-specific medication or physiological risk, why it matters, and what should be assessed or monitored.</span></p></div>
+<div class="risk-item"><strong class="block-title"><span class="ai-prompt">Medication risk 2</span></strong><p class="block-line"><span class="ai-prompt">Describe another source-supported medication, medical, cardiovascular, neurological, metabolic, reproductive, sleep, appetite, adherence, misuse, or substance-related risk and the required follow-up.</span></p></div>
+<div class="risk-item"><strong class="block-title">Drug Interactions</strong><p class="block-line"><span class="ai-prompt">Perform a patient-specific interaction review using all documented prescription medications, OTC products, supplements, alcohol, cannabis, nicotine, caffeine/energy products, and other substances. Identify clinically meaningful interaction categories, additive adverse effects, contraindicated combinations, metabolism effects, monitoring needs, and missing reconciliation data. Do not invent medications or present unsupported interactions as confirmed.</span></p></div>
+<div class="risk-item"><strong class="block-title"><span class="ai-prompt">Medication risk 4 or monitoring priority</span></strong><p class="block-line"><span class="ai-prompt">Add one additional clinically meaningful monitoring issue if supported; otherwise state that no additional risk is documented and identify what must be confirmed during the visit.</span></p></div>
+</div>
+</div>
+</div>
+<div class="tool-card green-card"><h3 class="tool-title green">Pharmacotherapy Ideas</h3>
+<div class="clinical-field">
+<h4 class="mini-heading">Patient-Specific Medication Options for Provider Review</h4>
+<div class="mini-content clinical-block-list structured-card-grid">
+<div class="med-option">
+<strong class="block-title"><span class="ai-prompt">Pharmacotherapy option 1 — optimize or continue the current regimen</span></strong>
+<p class="block-line"><span class="block-label">Clinical rationale:</span> <span class="ai-prompt">Generate a patient-specific option based on the documented diagnosis, target symptoms, current medications, prior response, adverse effects, adherence, medical history, substance use, and patient goals. Explain why continuation, dose optimization, timing adjustment, formulation change, or no medication change may be reasonable. Do not prescribe or imply a finalized decision.</span></p>
+<p class="block-line"><span class="block-label">Before considering:</span> <span class="ai-prompt">List the history, vitals, labs, interaction review, pregnancy/reproductive considerations, misuse/diversion assessment, diagnostic clarification, or collateral information that must be confirmed first.</span></p>
+<p class="block-line"><span class="block-label">Monitoring:</span> <span class="ai-prompt">List patient-specific efficacy, adverse-effect, safety, adherence, and measurement-based monitoring needs, including expected reassessment timing when clinically appropriate.</span></p>
+</div>
+<div class="med-option">
+<strong class="block-title"><span class="ai-prompt">Pharmacotherapy option 2 — alternative, switch, or adjunctive strategy</span></strong>
+<p class="block-line"><span class="block-label">Clinical rationale:</span> <span class="ai-prompt">Generate one evidence-informed alternative or adjunctive medication class or strategy that could be discussed if supported by the available information. Tie it to specific target symptoms and prior-treatment limitations. Avoid unsupported specificity and clearly identify diagnostic uncertainty.</span></p>
+<p class="block-line"><span class="block-label">Risks / cautions:</span> <span class="ai-prompt">Identify patient-specific contraindications, interaction risks, activation or mood-switch concerns, cardiovascular or metabolic concerns, sedation, cognitive effects, sexual or reproductive effects, withdrawal/discontinuation issues, and substance-related considerations that require provider review.</span></p>
+<p class="block-line"><span class="block-label">Monitoring:</span> <span class="ai-prompt">Specify appropriate baseline and follow-up monitoring without inventing results.</span></p>
+</div>
+<div class="med-option">
+<strong class="block-title"><span class="ai-prompt">Pharmacotherapy option 3 — simplification, taper, deprescribing, or defer medication change</span></strong>
+<p class="block-line"><span class="block-label">Clinical rationale:</span> <span class="ai-prompt">Assess whether medication simplification, cautious taper discussion, correction of adherence or timing problems, treatment of a medical or sleep contributor, psychotherapy-first care, substance reduction, or deferring medication changes until diagnostic clarification may be clinically preferable. Include only options supported by the record.</span></p>
+<p class="block-line"><span class="block-label">Safeguards:</span> <span class="ai-prompt">Identify withdrawal risks, relapse risks, tapering cautions, coordination needs with the existing prescriber, and circumstances in which medication changes should not occur at the initial visit.</span></p>
+</div>
+<div class="med-option">
+<strong class="block-title">Medication Decision Summary</strong>
+<p class="block-line"><span class="ai-prompt">Summarize the most defensible medication-planning direction for discussion at intake, the key uncertainties preventing a final recommendation, and the exact information the provider should obtain before making any change. State clearly that all options require clinician review, informed consent, reconciliation, and individualized risk-benefit assessment.</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section><section class="section client-facing-section">
+<h2 class="section-title">Client-Facing Materials</h2>
+<p class="section-subtitle">Content in this section is intended for patient-facing communication or education and should remain at the bottom of the template.</p>
+<div class="grid-2">
+<div class="tool-card blue-card">
+<h3 class="tool-title blue">Empathetic Patient Summary Letter</h3>
+<div class="clinical-field">
+<h4 class="mini-heading">Subject</h4>
+<div class="mini-content clinical-block-list">
+<div class="letter-subject-card">
+<p class="letter-subject-text"><span class="ai-prompt">Welcome to Integrative Psychiatry — preparing for your intake visit</span></p>
+</div>
+</div>
+</div>
+<div class="clinical-field">
+<h4 class="mini-heading">Letter Body</h4>
+<div class="mini-content patient-letter">
+<p><span class="ai-prompt">Dear [Patient First Name],</span></p>
+<p><span class="ai-prompt">Opening paragraph: warmly acknowledge intake completion and main concerns in client-safe language.</span></p>
+<p><span class="ai-prompt">Second paragraph: explain what the visit will cover and reassure the client that the process will be collaborative.</span></p>
+<p><span class="ai-prompt">Safety paragraph if applicable: mention direct safety discussion supportively, without alarmist or shaming language. Omit if not applicable.</span></p>
+<p><span class="ai-prompt">Closing paragraph: supportive closing and next-step encouragement.</span></p>
+</div>
+</div>
+</div><div class="tool-card client-education-card amber-card">
+<h3 class="tool-title amber">Client-Facing Psychoeducation</h3>
+<div class="structured-block"><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 1: Understanding the main symptoms and how they affect daily life</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 2: How stress, anxiety, mood, trauma, grief, sleep, or medical factors may interact</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 3: Reducing shame and separating symptoms from identity or character</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 4: Sleep, routines, and physiological regulation</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 5: Medication education and safe monitoring</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 6: Communication, relationships, parenting, work, or school functioning</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 7: Practical coping and executive-function strategies</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 8: What to expect from psychotherapy and collaborative treatment</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div><div class="structured-item"><strong><span class="ai-prompt">Client-specific education topic 9: Tracking progress and knowing when to seek additional help</span></strong><span class="item-body"><span class="ai-prompt">Write a detailed, plain-language, supportive explanation tailored to the client’s documented concerns. Include practical examples or next steps, avoid jargon and alarmist language, and do not state unconfirmed diagnoses as facts.</span></span></div></div>
+</div>
+</div>
+</section><section class="section missing-data-checklist-section">
+<div class="clinical-card warning">
+<h2 class="section-title warning">Missing / Not Documented Clinical Data Checklist</h2>
+<p class="section-subtitle">Provider-facing checklist placed at the bottom by request. Use this to verify what still needs to be clarified before finalizing diagnosis, risk formulation, or treatment planning.</p>
+<table class="clinical-table">
+<thead>
+<tr>
+<th>Clinical Domain</th>
+<th>Missing / Not Documented Items to Flag</th>
+<th>Provider Follow-Up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vitals / Medical Baseline</td>
+<td><span class="ai-prompt">Identify whether vitals, BP, weight, BMI, recent labs, EKG, PCP name, pharmacy, medical diagnoses, surgeries, neurological/endocrine/cardiovascular concerns, or medical rule-outs are missing or incomplete.</span></td>
+<td><span class="ai-prompt">Generate concise follow-up needed for missing medical baseline data. If complete, state No follow-up needed based on available documentation.</span></td>
+</tr>
+<tr>
+<td>Medication Data</td>
+<td><span class="ai-prompt">Identify whether current medication dose/frequency, adherence, missed doses, benefit, side effects, prior trials, reason for discontinuation, prescriber, refill needs, or contraindication/interaction data are missing or incomplete.</span></td>
+<td><span class="ai-prompt">Generate concise medication clarification tasks for the provider.</span></td>
+</tr>
+<tr>
+<td>Risk / Safety</td>
+<td><span class="ai-prompt">Identify whether SI, HI, NSSI, prior attempts, plan, intent, access to means, psychosis, mania, intoxication/withdrawal, aggression, protective factors, safety plan, or crisis supports are not assessed, not documented, or require clarification. Distinguish explicit denial from missing data.</span></td>
+<td><span class="ai-prompt">Generate concise direct risk follow-up questions. Do not overstate risk when source material is negative or incomplete.</span></td>
+</tr>
+<tr>
+<td>Diagnostic Screens</td>
+<td><span class="ai-prompt">Identify missing or incomplete diagnostic screen data, including PHQ-9, GAD-7, ASRS/ADHD, bipolar screen, psychosis screen, PTSD/trauma screen, substance-use screen, eating/appetite concerns, sleep assessment, and cognitive concerns when relevant.</span></td>
+<td><span class="ai-prompt">Generate recommended screens or clarifying questions needed at intake.</span></td>
+</tr>
+<tr>
+<td>Substance Use</td>
+<td><span class="ai-prompt">Identify whether alcohol, cannabis, nicotine/tobacco/vaping, stimulants, opioids, sedatives/benzodiazepines, hallucinogens, other substances, caffeine, withdrawal, consequences, last use, quantity, frequency, and route are missing, denied, or unclear.</span></td>
+<td><span class="ai-prompt">Generate concise substance-use follow-up questions, clearly distinguishing missing data from documented denial.</span></td>
+</tr>
+<tr>
+<td>Psychiatric / Trauma History</td>
+<td><span class="ai-prompt">Identify whether prior diagnoses, therapy, psychiatry, hospitalizations, higher level of care, trauma history/details, abuse chronology, prior evaluations, treatment response, and family psychiatric/suicide/substance history are missing or incomplete.</span></td>
+<td><span class="ai-prompt">Generate concise psychiatric-history and trauma-history clarification tasks.</span></td>
+</tr>
+<tr>
+<td>Social / Functional Context</td>
+<td><span class="ai-prompt">Identify whether living situation, relationship/family context, employment/school functioning, legal issues, financial stressors, social supports, emergency contact, strengths/protective factors, and current therapist/outside providers are missing or incomplete.</span></td>
+<td><span class="ai-prompt">Generate concise social-context follow-up questions.</span></td>
+</tr>
+<tr>
+<td>Records / ROI / Collateral</td>
+<td><span class="ai-prompt">Identify whether ROI needs, prior records, current therapist, prior psychiatrist, PCP records, hospital records, labs, medication history, collateral contact, or outside-provider coordination are missing or recommended.</span></td>
+<td><span class="ai-prompt">Generate recommended ROI/collateral tasks if clinically appropriate and authorized.</span></td>
+</tr>
+<tr>
+<td>Global Missing Fields</td>
+<td><span class="ai-prompt">List every additional field or section where information was not found, not assessed, unsupported, conflicting, or ambiguous. Include source-based wording and avoid inventing missing items that are not relevant to the template.</span></td>
+<td><span class="ai-prompt">Generate final provider review priorities needed before completing the intake summary.</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section></main>
+</body>
+</html>

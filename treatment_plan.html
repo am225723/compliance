@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Clinical Treatment Plan Template - Integrative Psychiatry</title>
+<style>
+    :root {
+      --primary:#153430; --primary-2:#224b3c; --primary-light:#2a5c4f;
+      --primary-soft:#eef5f3; --primary-soft-2:#f6faf8; --primary-border:#a8cfc3;
+      --text:#1e293b; --muted:#64748b; --subtle:#94a3b8; --line:#dbe3e8;
+      --paper:#ffffff; --background:#f1f5f9;
+      --danger:#b42318; --danger-bg:#fef3f2; --danger-border:#f97066;
+      --warning:#b54708; --warning-bg:#fffaeb; --warning-border:#fdb022;
+      --info:#1d4ed8; --info-bg:#eff6ff; --info-border:#93c5fd;
+      --success:#047857; --success-bg:#ecfdf5; --success-border:#6ee7b7;
+      --purple:#6b21a8; --purple-bg:#faf5ff; --purple-border:#d8b4fe;
+      --rose:#be185d; --rose-bg:#fdf2f8; --rose-border:#f9a8d4;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; padding:24px; background:var(--background); color:var(--text);
+      font-family:Arial, Helvetica, sans-serif; font-size:10pt; line-height:1.48;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .document {
+      max-width:980px; margin:0 auto; background:var(--paper); border-radius:18px;
+      box-shadow:0 20px 50px rgba(15,23,42,.12); padding:34px; border:1px solid #e2e8f0;
+    }
+    .colored-brand-header {
+      display:grid; grid-template-columns:250px 1fr; gap:24px; align-items:stretch;
+      background:radial-gradient(circle at 12% 15%, rgba(255,255,255,.22), transparent 28%),
+                 linear-gradient(135deg, var(--primary), var(--primary-2));
+      border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:18px 20px;
+      margin-bottom:16px; box-shadow:0 14px 34px rgba(15,23,42,.18); color:#fff;
+    }
+    .colored-logo-wrap { display:flex; align-items:center; justify-content:flex-start; min-height:136px; }
+    .colored-logo { width:235px; max-height:138px; object-fit:contain; display:block; filter:drop-shadow(0 6px 14px rgba(0,0,0,.16)); }
+    .colored-brand-text { text-align:right; display:flex; flex-direction:column; justify-content:center; align-items:flex-end; }
+    .colored-wordmark { margin:0 0 6px; color:#fff; line-height:.9; letter-spacing:.045em; font-weight:900; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.16); }
+    .colored-wordmark .large { font-size:25pt; }
+    .colored-wordmark .small { font-size:18pt; }
+    .colored-provider-line { margin:4px 0; color:rgba(255,255,255,.95); font-size:10pt; font-weight:900; }
+    .colored-contact-line { margin:0 0 10px; color:rgba(255,255,255,.86); font-size:8.5pt; line-height:1.24; font-weight:650; }
+    .colored-doc-pill { display:inline-block; background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.38); border-radius:999px; padding:7px 13px; font-size:10.5pt; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+
+    .patient-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:0 0 22px; }
+    .patient-cell { background:var(--primary-soft-2); border:1px solid #dcebe6; border-radius:12px; padding:9px 10px; min-height:52px; }
+    .patient-label { margin:0 0 3px; color:var(--primary); font-size:8.5pt; font-weight:900; text-transform:uppercase; letter-spacing:.05em; }
+    .patient-value { margin:0; color:var(--text); font-size:10pt; font-weight:750; white-space:pre-line; }
+
+    .section { margin-bottom:24px; }
+    .section-title {
+      display:flex; align-items:center; gap:8px; margin:0 0 12px; color:var(--primary);
+      font-size:13pt; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+      border-bottom:2px solid #d9ebe5; padding-bottom:6px;
+    }
+    .section-title.danger { color:var(--danger); border-bottom-color:var(--danger-border); }
+    .subsection-title { margin:0 0 9px; color:var(--primary); font-size:11pt; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; align-items:start; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px; align-items:start; }
+
+    .clinical-card {
+      background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:15px;
+      box-shadow:0 1px 0 rgba(15,23,42,.03);
+    }
+    .clinical-card.primary { background:var(--primary-soft); border-color:var(--primary-border); }
+    .clinical-card.danger { background:var(--danger-bg); border:1.5px solid var(--danger-border); }
+    .clinical-card.warning { background:var(--warning-bg); border-color:var(--warning-border); }
+    .clinical-card.info { background:var(--info-bg); border-color:var(--info-border); }
+    .clinical-card.success { background:var(--success-bg); border-color:var(--success-border); }
+    .clinical-card.purple { background:var(--purple-bg); border-color:var(--purple-border); }
+    .clinical-card.rose { background:var(--rose-bg); border-color:var(--rose-border); }
+
+    .clinical-field { margin-bottom:13px; }
+    .clinical-field:last-child { margin-bottom:0; }
+    .field-label {
+      display:block; margin:0 0 4px; color:var(--primary); font-size:9pt; font-weight:900;
+      letter-spacing:.05em; text-transform:uppercase;
+    }
+    .field-label.warning { color:var(--warning); }
+    .field-label.danger { color:var(--danger); }
+    .field-value { display:block; margin:0; color:var(--text); font-size:9.7pt; white-space:pre-line; }
+    .field-value strong { font-weight:900; color:#16251f; }
+    .field-value .line { display:block; margin:0 0 7px; }
+    .field-value .line:last-child { margin-bottom:0; }
+    .field-value .muted { color:var(--muted); font-weight:650; }
+    .clinical-list { margin:0; padding-left:18px; }
+    .clinical-list li { margin-bottom:7px; font-size:9.7pt; }
+    .clinical-list li:last-child { margin-bottom:0; }
+
+    .block-list { display:grid; gap:10px; }
+    .mini-block { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 11px; }
+    .mini-block h4 { margin:0 0 5px; color:var(--primary); font-size:9.4pt; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .mini-block p { margin:0; font-size:9.6pt; white-space:pre-line; }
+
+    .goal-card { border:1px solid #dbe3e8; border-radius:14px; overflow:hidden; margin-bottom:14px; background:#fff; }
+    .goal-header { background:var(--primary); color:#fff; padding:10px 14px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; font-size:10pt; }
+    .goal-body { padding:14px; }
+    .smart-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .smart-item { background:#f8fafc; border:1px solid var(--line); border-radius:11px; padding:10px; }
+    .smart-item h4 { margin:0 0 5px; color:var(--primary); font-size:8.8pt; letter-spacing:.05em; text-transform:uppercase; }
+    .smart-item p { margin:0; font-size:9.5pt; }
+
+    .consent-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch; }
+    .signature-image { max-height:58px; max-width:230px; object-fit:contain; display:block; margin:3px 0 7px; }
+    .sig-line { border-top:1px solid #111827; padding-top:7px; margin-top:6px; }
+    .ack-pill { display:inline-block; background:var(--primary-soft); border:1px solid var(--primary-border); color:var(--primary); border-radius:999px; padding:4px 9px; font-size:8.5pt; font-weight:900; text-transform:uppercase; letter-spacing:.05em; }
+
+    p { margin-top:0; margin-bottom:8px; }
+    ul { margin:6px 0 0; padding-left:18px; }
+    li { margin-bottom:5px; font-size:9.6pt; }
+
+    @media print {
+      body { background:#fff; padding:0; }
+      .document { max-width:none; box-shadow:none; border-radius:0; border:none; padding:22px; }
+      @page { size:letter portrait; margin:.35in; }
+      .section, .clinical-card, .goal-card, .goal-body, .clinical-field, .grid-2, .grid-3, .mini-block {
+        page-break-inside:auto !important; break-inside:auto !important;
+      }
+      .section { margin-bottom:16px; }
+      .section-title { font-size:11.5pt; margin-bottom:8px; }
+      .clinical-card, .goal-body { padding:10px 12px; }
+      .field-value, li, p { font-size:8.8pt; }
+      .field-label, .patient-label { font-size:8pt; }
+      .patient-grid { gap:7px; }
+      .patient-cell { padding:7px 8px; }
+    }
+    @media (max-width:760px) {
+      body { padding:12px; }
+      .document { padding:22px; }
+      .colored-brand-header, .patient-grid, .grid-2, .grid-3, .smart-grid, .consent-grid { grid-template-columns:1fr; }
+      .colored-brand-text { text-align:left; align-items:flex-start; }
+      .colored-logo { width:220px; max-height:130px; }
+    }
+
+
+    /* --- COLOR-RICH OPENING LAYOUT --- */
+    .treatment-hero {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;
+      margin:18px 0 16px;
+      align-items:stretch;
+    }
+    .hero-main {
+      border:1px solid var(--primary-border);
+      border-radius:18px;
+      padding:18px 20px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(168,207,195,.45), transparent 32%),
+        linear-gradient(135deg, #eef5f3 0%, #ffffff 72%);
+      box-shadow:0 10px 26px rgba(21,52,48,.08);
+    }
+    .hero-eyebrow {
+      margin:0 0 8px;
+      color:var(--primary);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .hero-title {
+      margin:0 0 8px;
+      color:var(--primary);
+      font-size:28px;
+      line-height:1.08;
+      font-weight:900;
+      letter-spacing:.01em;
+    }
+    .hero-subtitle {
+      margin:0;
+      color:var(--text);
+      font-size:13px;
+      line-height:1.45;
+      font-weight:650;
+    }
+    .hero-side {
+      border:1px solid var(--warning-border);
+      border-left:6px solid var(--warning);
+      border-radius:18px;
+      padding:16px 18px;
+      background:linear-gradient(135deg, var(--warning-bg), #ffffff);
+      box-shadow:0 10px 26px rgba(181,71,8,.08);
+    }
+    .hero-side-title {
+      margin:0 0 8px;
+      color:var(--warning);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .hero-side p { margin:0 0 8px; font-size:12px; line-height:1.42; }
+    .hero-side p:last-child { margin-bottom:0; }
+    .start-card-grid {
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:12px;
+      margin:0 0 18px;
+    }
+    .start-card {
+      border-radius:15px;
+      padding:13px 14px;
+      border:1px solid var(--line);
+      background:#fff;
+      min-height:98px;
+    }
+    .start-card.green { background:var(--primary-soft); border-color:var(--primary-border); }
+    .start-card.red { background:var(--danger-bg); border-color:var(--danger-border); }
+    .start-card.blue { background:var(--info-bg); border-color:var(--info-border); }
+    .start-card.purple { background:var(--purple-bg); border-color:var(--purple-border); }
+    .start-label {
+      margin:0 0 7px;
+      font-size:10px;
+      color:var(--primary);
+      font-weight:900;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+    }
+    .start-card.red .start-label { color:var(--danger); }
+    .start-card.blue .start-label { color:var(--info); }
+    .start-card.purple .start-label { color:var(--purple); }
+    .start-value {
+      margin:0;
+      font-size:12.5px;
+      line-height:1.38;
+      color:var(--text);
+      font-weight:650;
+    }
+    .patient-grid.color-start {
+      background:linear-gradient(135deg, #f6faf8, #ffffff);
+      border:1px solid var(--primary-border);
+      border-radius:18px;
+      padding:14px;
+      margin-bottom:22px;
+    }
+    .patient-grid.color-start .patient-cell:nth-child(4n+1) { border-left:4px solid var(--primary); }
+    .patient-grid.color-start .patient-cell:nth-child(4n+2) { border-left:4px solid var(--info); }
+    .patient-grid.color-start .patient-cell:nth-child(4n+3) { border-left:4px solid var(--purple); }
+    .patient-grid.color-start .patient-cell:nth-child(4n+4) { border-left:4px solid var(--success); }
+    @media (max-width: 760px) {
+      .treatment-hero, .start-card-grid { grid-template-columns:1fr; }
+      .hero-title { font-size:23px; }
+    }
+    @media print {
+      .treatment-hero { gap:10px; margin:12px 0; }
+      .hero-main, .hero-side, .start-card { box-shadow:none; }
+      .hero-title { font-size:22px; }
+      .start-card-grid { gap:8px; margin-bottom:12px; }
+      .start-card { padding:10px; min-height:auto; }
+      .patient-grid.color-start { padding:10px; margin-bottom:14px; }
+    }
+
+
+    /* --- COLORFUL DOCUMENT CARD ACCENTS --- */
+    .section .clinical-card {
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+    }
+
+    .section:nth-of-type(3n+1) .clinical-card {
+      background: linear-gradient(135deg, var(--primary-soft-2), #ffffff 68%);
+      border-color: var(--primary-border);
+      border-left-color: var(--primary);
+    }
+
+    .section:nth-of-type(3n+2) .clinical-card {
+      background: linear-gradient(135deg, var(--info-bg), #ffffff 70%);
+      border-color: var(--info-border);
+      border-left-color: var(--info);
+    }
+
+    .section:nth-of-type(3n) .clinical-card {
+      background: linear-gradient(135deg, var(--purple-bg), #ffffff 70%);
+      border-color: var(--purple-border);
+      border-left-color: var(--purple);
+    }
+
+    .section .clinical-card.danger {
+      background: linear-gradient(135deg, var(--danger-bg), #ffffff 72%);
+      border-color: var(--danger-border);
+      border-left-color: var(--danger);
+    }
+
+    .section .clinical-card.warning {
+      background: linear-gradient(135deg, var(--warning-bg), #ffffff 72%);
+      border-color: var(--warning-border);
+      border-left-color: var(--warning);
+    }
+
+    .section .clinical-card.success {
+      background: linear-gradient(135deg, var(--success-bg), #ffffff 72%);
+      border-color: var(--success-border);
+      border-left-color: var(--success);
+    }
+
+    .section-title {
+      background: linear-gradient(90deg, rgba(238,245,243,.9), rgba(255,255,255,0));
+      border-radius: 10px 10px 0 0;
+      padding: 8px 10px 7px;
+    }
+
+    .goal-card:nth-of-type(3n+1) .goal-header { background: var(--primary); }
+    .goal-card:nth-of-type(3n+2) .goal-header { background: var(--info); }
+    .goal-card:nth-of-type(3n) .goal-header { background: var(--purple); }
+
+    .acknowledgment-box {
+      background: linear-gradient(135deg, var(--primary-soft), #ffffff 70%);
+      border-left-color: var(--primary);
+    }
+
+  
+
+    /* Missing-data rule: red subtitle with a blank value instead of visible “Missing” text. */
+    .clinical-field.missing .field-label,
+    .clinical-field.not-documented .field-label,
+    .field-label.missing,
+    .field-label.not-documented {
+      color: var(--danger) !important;
+      font-weight: 900;
+    }
+
+    .clinical-field.missing .field-value,
+    .clinical-field.not-documented .field-value {
+      min-height: 18px;
+      display: block;
+    }
+
+
+    /* --- TEMPLATE-BASED GENERATION PLACEHOLDERS --- */
+    .ai-prompt {
+      color: inherit;
+      background: transparent;
+      font-style: inherit;
+      font-weight: inherit;
+    }
+
+    .template-instructions {
+      background: #edf2f7;
+      border: 1px solid #cbd5e0;
+      border-left: 5px solid var(--primary);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      color: #334155;
+      font-size: 9pt;
+    }
+
+    .template-instructions strong { color: var(--primary); }
+
+    /* Missing/unsupported fields: red subtitle + blank value area. */
+    .clinical-field.missing .field-label,
+    .clinical-field.not-documented .field-label,
+    .clinical-field.not-assessed .field-label,
+    .field-label.missing,
+    .field-label.not-documented,
+    .field-label.not-assessed,
+    .patient-cell.missing .patient-label,
+    .patient-label.missing {
+      color: var(--danger) !important;
+      font-weight: 900;
+    }
+
+    .clinical-field.missing .field-value,
+    .clinical-field.not-documented .field-value,
+    .clinical-field.not-assessed .field-value,
+    .patient-cell.missing .patient-value {
+      min-height: 16px;
+    }
+
+    @media print {
+      .template-instructions { display: none !important; }
+      .section,
+      .clinical-card,
+      .goal-card,
+      .goal-body,
+      .clinical-field,
+      .grid-2,
+      .grid-3,
+      .smart-grid,
+      .mini-block {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+    }
+
+
+    /* --- Fixed Treatment Plan Signature / Acknowledgment Block --- */
+    .signature-card,
+    .acknowledgment-card {
+      border-left-width: 6px;
+    }
+
+    .signature-card {
+      background: #f8fafc;
+      border-left-color: var(--primary);
+    }
+
+    .acknowledgment-card {
+      border-left-color: #2563eb;
+    }
+
+    .signature-date-line {
+      margin-top: 8px;
+    }
+
+    .signature-date-line .ai-prompt {
+      display: inline-block;
+      min-width: 150px;
+      min-height: 1em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.35);
+      color: transparent;
+    }
+
+
+    /* --- Zan requested layout refinements --- */
+    .stacked-section,
+    .full-length-section {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: start;
+    }
+
+    .full-width-card {
+      width: 100%;
+    }
+
+    .balanced-field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .balanced-field-grid + .clinical-field,
+    .full-span-field {
+      margin-top: 14px;
+    }
+
+    @media (max-width:760px) {
+      .balanced-field-grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      .stacked-section,
+      .full-length-section,
+      .balanced-field-grid {
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+    }
+
+
+/* --- Added consistency polish: reusable clinical-note typography --- */
+.added-clinical-section .section-title,
+.added-clinical-section .subsection-title,
+.added-clinical-section .field-label,
+.added-clinical-section .mini-block h4 {
+  line-height: 1.25;
+}
+.added-clinical-section .field-value,
+.added-clinical-section .mini-block p,
+.added-clinical-section li,
+.added-clinical-section td,
+.added-clinical-section th {
+  font-size: 9.6pt;
+  line-height: 1.45;
+}
+.added-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.added-table th {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 8.8pt;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--line);
+}
+.added-table td {
+  vertical-align: top;
+  padding: 9px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+}
+.added-table tr:first-child td { border-top: 0; }
+.added-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 9pt;
+  font-weight: 650;
+}
+@media print {
+  .added-clinical-section .field-value,
+  .added-clinical-section .mini-block p,
+  .added-clinical-section li,
+  .added-clinical-section td,
+  .added-clinical-section th { font-size: 8.6pt; }
+  .added-table th, .added-table td { padding: 6px 7px; }
+}
+
+</style>
+</head>
+<body>
+<main class="document">
+<header class="colored-brand-header">
+<div class="colored-logo-wrap">
+<img alt="Integrative Psychiatry Logo" class="colored-logo" onerror="this.style.display='none'" src="https://sxjxsoakdsiifrmjsdeb.supabase.co/storage/v1/object/public/Logo/whitelogo.png"/>
+</div>
+<div class="colored-brand-text">
+<div class="colored-wordmark">
+<span class="large">I</span><span class="small">NTEGRATIVE</span><br/>
+<span class="large">P</span><span class="small">SYCHIATRY</span>
+</div>
+<p class="colored-provider-line">Douglas Zelisko, M.D. • Board Certified Psychiatrist</p>
+<p class="colored-contact-line">
+          45 South Main Street Suite 111, West Hartford, CT 06107<br/>
+          P: 860.615.3629  |  F: 860.318.2085  |  E: support@drzelisko.com
+        </p>
+<span class="colored-doc-pill">Clinical Treatment Plan</span>
+</div>
+</header><section class="template-instructions" data-html2canvas-ignore="true"><p><strong>Template-based generation:</strong> populate every <code>&lt;span class="ai-prompt"&gt;...&lt;/span&gt;</code> using only supported source material. If a field is missing, unsupported, or not assessed, leave the value blank and make the subtitle/field label red. Do not write “Missing” in the final document body.</p></section>
+<section class="treatment-hero">
+<div class="hero-main">
+<p class="hero-eyebrow">Initial Outpatient Psychiatric Treatment Plan</p>
+<h1 class="hero-title"><span class="ai-prompt">Insert patient full legal or preferred name exactly as supported by the source material. If unsupported or missing, leave blank.</span></h1>
+<p class="hero-subtitle"><strong>Clinical focus:</strong> mood/anxiety stabilization, sleep restoration, cannabis-withdrawal support, safety planning, diagnostic clarification, and improved emotional/interpersonal functioning.</p>
+</div>
+</section>
+<section class="patient-grid color-start">
+<div class="patient-cell"><p class="patient-label">Patient Name</p><p class="patient-value"><span class="ai-prompt">Insert patient full legal/preferred name exactly as supported by the source material. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Date of Birth</p><p class="patient-value"><span class="ai-prompt">Insert DOB in MM/DD/YYYY format when available. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Client ID</p><p class="patient-value"><span class="ai-prompt">Insert client/patient ID when available. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Date of Service</p><p class="patient-value"><span class="ai-prompt">Insert the actual intake/session date, not the generated date. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">ICD-10</p><p class="patient-value"><span class="ai-prompt">Insert supported ICD-10 diagnosis code(s) only, separated by semicolons. Do not include diagnosis names or descriptions in this header field. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">CPT Code</p><p class="patient-value"><span class="ai-prompt">Insert selected CPT code(s). For new patient E/M with psychotherapy add-on, use 99204 or 99205 when supported, plus 90833, 90836, or 90838 only when separately identifiable psychotherapy time is documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">E/M Level</p><p class="patient-value"><span class="ai-prompt">Insert selected new-patient E/M level: 99204 for moderate MDM or 99205 for high MDM when supported by documented problems, data, and risk. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Psychotherapy Code / Time</p><p class="patient-value"><span class="ai-prompt">Insert psychotherapy add-on code and exact separately identifiable psychotherapy time: 90833 = 16–37 min, 90836 = 38–52 min, 90838 = 53+ min. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Prescriptions Ordered</p><p class="patient-value"><span class="ai-prompt">Insert medications ordered, changed, continued, or discontinued, including name/dose/frequency when documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Treatment Setting</p><p class="patient-value"><span class="ai-prompt">Insert in-person/telehealth and outpatient level of care when documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Plan Status</p><p class="patient-value"><span class="ai-prompt">Insert initial, updated, reviewed, or continued treatment plan status. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="patient-cell"><p class="patient-label">Provider</p><p class="patient-value"><span class="ai-prompt">Insert treating provider name and credentials. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</section>
+<section class="section">
+<h2 class="section-title">1. Clinical Brief &amp; Synthesis</h2>
+<div class="stacked-section">
+<div class="clinical-card primary full-width-card">
+<h3 class="subsection-title">Chief Complaint</h3>
+<div class="clinical-field">
+<h4 class="field-label">Chief Complaint - Verbatim</h4>
+<div class="verbatim-block">
+<p class="field-value"><span class="ai-prompt">Extract the patient’s complete chief complaint quote/reason for visit verbatim when available. Use the full-length quote, not a shortened version. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Chief Complaint - Clinical Summary</h4>
+<p class="field-value"><span class="ai-prompt">Write a full clinical chief-complaint summary that synthesizes the reason for visit, symptom clusters, duration/chronicity, impairment, and treatment goals. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+</div>
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">History of Present Illness</h3>
+<div class="clinical-field">
+<h4 class="field-label">Narrative (Subjective)</h4>
+<p class="field-value"><span class="ai-prompt">Write a full-length HPI in organized paragraphs with bold clinical anchors and new lines. Include onset, duration, course, triggers, stressors, functional impact, prior treatment/self-management, substance/sleep context, safety context, and patient goals. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Pertinent Positives &amp; Negatives</h4>
+<p class="field-value"><span class="ai-prompt">List pertinent positives and negatives with bold labels and line breaks. Distinguish explicit denials from missing information. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Functional Impact Domains</h4>
+<p class="field-value"><span class="ai-prompt">Describe impairment across school/work, relationships, sleep, concentration, ADLs/self-care, emotional regulation, social functioning, and daily functioning. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Context / Stressors</h4>
+<p class="field-value"><span class="ai-prompt">List acute and chronic psychosocial stressors with each stressor on a new line when possible. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Clinical Brief / One-Paragraph Synthesis</h4>
+<p class="field-value"><span class="ai-prompt">Write a concise but substantive 3–5 sentence clinical synthesis based only on documented symptoms, impairment, risk, and diagnostic formulation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">2. Detailed Review of Systems &amp; Symptoms</h2>
+<div class="full-length-section">
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Psychiatric Review of Systems</h3>
+<div class="clinical-field"><h4 class="field-label">Depression (SIGECAPS)</h4><p class="field-value"><span class="ai-prompt">Evaluate depressed mood, anhedonia, guilt/worthlessness, energy, concentration, appetite, psychomotor change, sleep, and suicidality. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Anxiety (WATCHERS)</h4><p class="field-value"><span class="ai-prompt">Evaluate generalized worry, panic/autonomic arousal, tension, avoidance, chronicity, triggers, severity, and functional impact. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">OCD &amp; Tic Disorders</h4><p class="field-value"><span class="ai-prompt">Evaluate obsessions, compulsions, rituals, time burden, impairment, and motor/vocal tics. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Trauma / Stressor-Related</h4><p class="field-value"><span class="ai-prompt">Evaluate trauma exposure, ACEs, nightmares, flashbacks, avoidance, hypervigilance, dissociation, startle, triggers, and impairment. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Mania / Hypomania (DIGFAST)</h4><p class="field-value"><span class="ai-prompt">Evaluate DIGFAST symptoms, duration, episodicity, impairment, decreased need for sleep, risky behavior, and bipolar-spectrum concerns. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Psychosis</h4><p class="field-value"><span class="ai-prompt">Evaluate hallucinations, delusions, paranoia, disorganization, thought broadcasting/insertion, perceptual disturbances, substance/sleep context, and reality testing. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Eating / Body Image</h4><p class="field-value"><span class="ai-prompt">Evaluate restriction, binge/purge behavior, appetite change, weight/shape concerns, body image distress, excessive exercise, and impairment. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Sleep Architecture</h4><p class="field-value"><span class="ai-prompt">Evaluate initial/middle/terminal insomnia, hypersomnia, sleep schedule, nightmares, apnea/RLS risk, sleep aids, and daytime impact. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Attention / Executive Function (ADHD)</h4><p class="field-value"><span class="ai-prompt">Evaluate sustained attention, working memory, task initiation/completion, organization, distractibility, impulsivity, hyperactivity, childhood onset, and impairment across settings. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Symptom Inventory</h3>
+<div class="clinical-field"><h4 class="field-label">Cognitive</h4><p class="field-value"><span class="ai-prompt">Extract concentration, memory, indecisiveness, racing thoughts, slowed processing, rumination, brain fog, and executive dysfunction. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Affective</h4><p class="field-value"><span class="ai-prompt">Extract mood, anxiety, irritability, guilt, worthlessness, emotional lability, anger, numbness, mood reactivity, and emotional sensitivity. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Neurovegetative</h4><p class="field-value"><span class="ai-prompt">Extract sleep, energy, appetite, libido, psychomotor, circadian, fatigue, and motivation symptoms. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Psychomotor</h4><p class="field-value"><span class="ai-prompt">Extract agitation, retardation, restlessness, fidgeting, tremor, abnormal movement, or observed motor findings. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Interpersonal</h4><p class="field-value"><span class="ai-prompt">Extract relationship strain, social isolation, conflict, avoidance, attachment/boundary concerns, family stress, and interpersonal impairment. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<h3 class="subsection-title">Psychometrics / Measures</h3>
+<div class="block-list">
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #1 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #2 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #3 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">3. Substance Use &amp; Addiction Review</h2>
+<div class="clinical-card">
+<h3 class="subsection-title">Substance Use Detail</h3>
+<div class="grid-2">
+<div>
+<div class="clinical-field"><h4 class="field-label">Alcohol</h4><p class="field-value"><span class="ai-prompt">Document alcohol use pattern, frequency, quantity, duration, last use, withdrawal, blackouts, cravings, consequences, treatment history, and clinical impact. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Cannabis</h4><p class="field-value"><span class="ai-prompt">Document cannabis/THC/CBD use, route, frequency, quantity, duration, last use, cessation/withdrawal, sleep/mood/anxiety impact, and consequences. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Nicotine / Vaping</h4><p class="field-value"><span class="ai-prompt">Document nicotine/tobacco/vaping use, delivery system, frequency, quit history, readiness to quit, and clinical impact. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Caffeine</h4><p class="field-value"><span class="ai-prompt">Document caffeine source, amount, timing, frequency, and impact on anxiety/sleep/panic. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div>
+<div class="clinical-field"><h4 class="field-label">Illicit / Other Substances</h4><p class="field-value"><span class="ai-prompt">Document stimulants, cocaine, opioids, benzodiazepines, sedatives, hallucinogens, inhalants, carts/unknown substances, route, frequency, last use, and consequences. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">MAT / Recovery</h4><p class="field-value"><span class="ai-prompt">Document detox, residential, IOP/PHP, MAT, 12-step/SMART, sponsor, sober supports, recovery status, and harm-reduction plans. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Consequences</h4><p class="field-value"><span class="ai-prompt">Document functional, legal, occupational, academic, interpersonal, financial, safety, and physiologic consequences of substance use. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Family History of Substance Use</h4><p class="field-value"><span class="ai-prompt">Document family substance-use history and degree of relation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+
+</div>
+</div><div class="clinical-field full-span-field"><h4 class="field-label">Substance Use Clinical Impact</h4><p class="field-value"><span class="ai-prompt">Summarize how substance use affects diagnosis, medication safety, anxiety, sleep, mood, cognition, risk, and treatment planning. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">4. Psychiatric, Medical &amp; Social History</h2>
+<div class="full-length-section">
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Clinical History</h3>
+<div class="clinical-field"><h4 class="field-label">Psychiatric History</h4><p class="field-value"><span class="ai-prompt">Document prior diagnoses, episodes, providers, therapy, hospitalizations, attempts/NSSI, higher levels of care, and treatment response. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Therapy History</h4><p class="field-value"><span class="ai-prompt">Document prior/current therapy, modality, dates/duration, engagement, response, barriers, and reasons for termination. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Trauma History</h4><p class="field-value"><span class="ai-prompt">Document trauma/ACEs, abuse/neglect, violence, systemic/developmental trauma, and trauma-related symptoms with sensitive language. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Hospitalizations &amp; IOP/PHP</h4><p class="field-value"><span class="ai-prompt">Document psychiatric hospitalizations, IOP/PHP, residential, crisis, detox, dates, reasons, and outcomes. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Medical / Surgical</h4><p class="field-value"><span class="ai-prompt">Document medical conditions, surgeries, neurological/endocrine/cardiac/metabolic issues, pain, pregnancy status if relevant, and medical considerations. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Social &amp; Developmental History</h4><p class="field-value"><span class="ai-prompt">Document upbringing, education, occupation, military/legal history, housing, relationships, supports, development, and social context. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Family History</h4><p class="field-value"><span class="ai-prompt">Document family psychiatric, substance-use, suicide, and major medical history relevant to treatment. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Current Medications</h3>
+<div class="clinical-field"><h4 class="field-label">Psychiatric Medications</h4><p class="field-value"><span class="ai-prompt">List current psychiatric medications with dose, route, frequency, indication, adherence, response, and side effects. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Non-Psychiatric Medications</h4><p class="field-value"><span class="ai-prompt">List non-psychiatric medications with dose, frequency, indication, and psychiatric relevance. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Supplements / OTC</h4><p class="field-value"><span class="ai-prompt">List supplements/OTC medications with dose, frequency, reason, overuse/misuse concerns, and safety implications. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Adherence / Side Effects</h4><p class="field-value"><span class="ai-prompt">Document adherence, missed doses, barriers, adverse effects, medication concerns, misuse/overuse, and response. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Prior Medication Trials</h4><p class="field-value"><span class="ai-prompt">List prior psychotropic trials with dose, duration, response, side effects, and reason for discontinuation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Allergies</h4><p class="field-value"><span class="ai-prompt">Document allergies and reaction types; include NKDA only when explicitly documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Pharmacy</h4><p class="field-value"><span class="ai-prompt">Insert pharmacy name, address, and phone if documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">5. Mental Status Examination</h2>
+<div class="clinical-card">
+<h3 class="subsection-title">Objective Mental Status</h3>
+<div class="grid-3">
+<div class="clinical-field"><h4 class="field-label">Appearance</h4><p class="field-value"><span class="ai-prompt">Describe grooming, hygiene, dress, posture, eye contact, apparent age, and observable presentation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Behavior / Motor</h4><p class="field-value"><span class="ai-prompt">Describe cooperation, rapport, psychomotor agitation/retardation, tremor, tics, gait, EPS/TD, and abnormal movements. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Speech</h4><p class="field-value"><span class="ai-prompt">Describe rate, rhythm, volume, tone, articulation, latency, spontaneity, and productivity. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Mood</h4><p class="field-value"><span class="ai-prompt">Document stated mood preferably in quotes plus observed mood context when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Affect</h4><p class="field-value"><span class="ai-prompt">Describe range, congruence, reactivity, stability, intensity, and appropriateness. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Thought Process</h4><p class="field-value"><span class="ai-prompt">Describe linearity, goal-directedness, associations, circumstantiality, tangentiality, flight of ideas, thought blocking, or disorganization. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Thought Content</h4><p class="field-value"><span class="ai-prompt">Document SI/HI, obsessions, phobias, preoccupations, delusions, hopelessness, guilt, and absence/denial only when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Perception</h4><p class="field-value"><span class="ai-prompt">Document hallucinations, illusions, depersonalization/derealization, perceptual disturbance, or denial only when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Cognition &amp; Sensorium</h4><p class="field-value"><span class="ai-prompt">Document alertness, orientation, attention, concentration, memory, fund of knowledge, and gross cognition. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Insight</h4><p class="field-value"><span class="ai-prompt">Rate and justify insight only when supported by documentation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Judgment</h4><p class="field-value"><span class="ai-prompt">Rate and justify judgment only when supported by documentation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Impulse Control</h4><p class="field-value"><span class="ai-prompt">Rate impulse control based on recent behavior, history, and observed regulation when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title danger">6. Risk Assessment &amp; Safety Planning</h2>
+<div class="clinical-card danger">
+<h3 class="subsection-title">Risk Assessment</h3>
+<div class="balanced-field-grid"><div><div class="clinical-field"><h4 class="field-label">Suicidality</h4><p class="field-value"><span class="ai-prompt">Document passive/active SI, method, intent, plan, means, preparatory behavior, attempts, frequency, controllability, protective factors, and denial only when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Self-Harm</h4><p class="field-value"><span class="ai-prompt">Document NSSI history, current urges, frequency, methods, medical severity, and denial only when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Risk Factors</h4><p class="field-value"><span class="ai-prompt">List static and dynamic risk factors in separate lines with bold labels when helpful. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Protective Factors</h4><p class="field-value"><span class="ai-prompt">List concrete protective factors, reasons for living, supports, treatment engagement, and future orientation. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div></div><div><div class="clinical-field"><h4 class="field-label">Homicidality / Violence</h4><p class="field-value"><span class="ai-prompt">Document HI, violent ideation, threats, targets, plans, aggression history, weapons access, or denial only when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Access to Means</h4><p class="field-value"><span class="ai-prompt">Document firearm, medication, vehicle, bridge, weapon, environmental, or other lethal-means access and counseling. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Abuse / Vulnerability</h4><p class="field-value"><span class="ai-prompt">Document abuse, domestic violence, exploitation, neglect, grave disability, vulnerability, or explicit denial when assessed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div><div class="clinical-field"><h4 class="field-label">Overall Acute Risk</h4><p class="field-value"><span class="ai-prompt">Assign LOW, MODERATE, or HIGH only when supported and include a concise clinical justification. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div></div></div><div class="clinical-field full-span-field"><h4 class="field-label">Safety Plan</h4><p class="field-value"><span class="ai-prompt">Document collaborative safety plan, warning signs, coping strategies, supports, crisis resources, emergency instructions, means restriction, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">7. Assessment, Diagnosis &amp; Medical Necessity</h2>
+<div class="clinical-card primary">
+<h3 class="subsection-title">Assessment &amp; Diagnosis</h3>
+<div class="block-list">
+<div class="mini-block"><h4><span class="ai-prompt">Insert DSM-5-TR diagnosis #4 with specifier and ICD-10 code when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the clinical justification linking documented symptoms, duration, impairment, and criteria to this diagnosis. Do not overstate certainty. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert DSM-5-TR diagnosis #5 with specifier and ICD-10 code when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the clinical justification linking documented symptoms, duration, impairment, and criteria to this diagnosis. Do not overstate certainty. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert DSM-5-TR diagnosis #6 with specifier and ICD-10 code when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the clinical justification linking documented symptoms, duration, impairment, and criteria to this diagnosis. Do not overstate certainty. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert DSM-5-TR diagnosis #7 with specifier and ICD-10 code when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the clinical justification linking documented symptoms, duration, impairment, and criteria to this diagnosis. Do not overstate certainty. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div class="clinical-field" style="margin-top:14px;">
+<h4 class="field-label">Differential Considerations</h4>
+<p class="field-value"><span class="ai-prompt">List differential diagnoses with bolded diagnosis names and each item on a new line. Include substance/medical/trauma/personality/neurodevelopmental considerations as supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Medical Necessity Statement</h4>
+<p class="field-value"><span class="ai-prompt">Write insurer-ready medical necessity language linking symptoms, impairment, risk, diagnostic complexity, and treatment needs to outpatient psychiatric care. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Prognosis / Barriers</h4>
+<p class="field-value"><span class="ai-prompt">Document prognosis, strengths, barriers, adherence risks, psychosocial/medical complications, and expected response. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">8. Treatment Goals, Objectives &amp; Interventions</h2>
+<div class="goal-card">
+<div class="goal-header">SMART Goal 1 — <span class="ai-prompt">Insert goal domain linked to diagnosis/symptom/functional impairment.</span></div>
+<div class="goal-body">
+<p class="field-value"><span class="ai-prompt">Write a SMART long-term goal with specific timeframe, measurable target, clinical relevance, and patient-centered outcome. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+<div class="smart-grid" style="margin-top:12px;">
+<div class="smart-item"><h4>Specific / Measurable</h4><p><span class="ai-prompt">Populate the Specific / Measurable portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Symptom Target</h4><p><span class="ai-prompt">Populate the Symptom Target portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Interventions</h4><p><span class="ai-prompt">Populate the Interventions portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Review Date</h4><p><span class="ai-prompt">Populate the Review Date portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</div>
+<div class="goal-card">
+<div class="goal-header">SMART Goal 2 — <span class="ai-prompt">Insert goal domain linked to diagnosis/symptom/functional impairment.</span></div>
+<div class="goal-body">
+<p class="field-value"><span class="ai-prompt">Write a SMART long-term goal with specific timeframe, measurable target, clinical relevance, and patient-centered outcome. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+<div class="smart-grid" style="margin-top:12px;">
+<div class="smart-item"><h4>Specific / Measurable</h4><p><span class="ai-prompt">Populate the Specific / Measurable portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Symptom Target</h4><p><span class="ai-prompt">Populate the Symptom Target portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Interventions</h4><p><span class="ai-prompt">Populate the Interventions portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Review Date</h4><p><span class="ai-prompt">Populate the Review Date portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</div>
+<div class="goal-card">
+<div class="goal-header">SMART Goal 3 — <span class="ai-prompt">Insert goal domain linked to diagnosis/symptom/functional impairment.</span></div>
+<div class="goal-body">
+<p class="field-value"><span class="ai-prompt">Write a SMART long-term goal with specific timeframe, measurable target, clinical relevance, and patient-centered outcome. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+<div class="smart-grid" style="margin-top:12px;">
+<div class="smart-item"><h4>Specific / Measurable</h4><p><span class="ai-prompt">Populate the Specific / Measurable portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Diagnostic Work</h4><p><span class="ai-prompt">Populate the Diagnostic Work portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Interventions</h4><p><span class="ai-prompt">Populate the Interventions portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="smart-item"><h4>Review Date</h4><p><span class="ai-prompt">Populate the Review Date portion of this SMART goal with measurable, time-bound language, intervention details, patient responsibility, and review interval. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</div>
+<div class="clinical-card info">
+<h3 class="subsection-title">Care Coordination Goal</h3>
+<p class="field-value"><span class="ai-prompt">Populate this field using only supported source material. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p>
+</div>
+</section>
+
+<section class="section added-clinical-section">
+<h2 class="section-title">8A. Goal Ownership / Patient Responsibilities</h2>
+<p class="added-note">Clarifies what the provider will do, what the patient is expected to do between sessions, how progress will be measured, and when each goal should be reviewed.</p>
+<div class="clinical-card success full-width-card">
+<table class="added-table">
+<thead>
+<tr>
+<th>Treatment Goal</th>
+<th>Provider Intervention</th>
+<th>Patient Action Step</th>
+<th>Between-Session Task</th>
+<th>Measurement / Review</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="ai-prompt">Identify active treatment goal 1 from the treatment plan using supported source material only.</span></td>
+<td><span class="ai-prompt">Describe the provider intervention tied to this goal, such as medication management, psychotherapy intervention, psychoeducation, coordination, safety planning, or skills coaching.</span></td>
+<td><span class="ai-prompt">Write the patient’s concrete action step in behaviorally specific language. If unsupported, leave blank and mark the relevant label red.</span></td>
+<td><span class="ai-prompt">List the between-session assignment, tracking task, exposure/practice task, medication adherence task, or coping strategy practice when clinically appropriate.</span></td>
+<td><span class="ai-prompt">State how progress will be measured and when it should be reviewed, including rating scales, symptom tracking, functional outcome, or next visit review.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">Identify active treatment goal 2 from the treatment plan using supported source material only.</span></td>
+<td><span class="ai-prompt">Describe the provider intervention tied to this goal.</span></td>
+<td><span class="ai-prompt">Write the patient’s concrete action step.</span></td>
+<td><span class="ai-prompt">List the between-session task or state not documented if unsupported.</span></td>
+<td><span class="ai-prompt">State the measurement method and review timing.</span></td>
+</tr>
+<tr>
+<td><span class="ai-prompt">Identify active treatment goal 3 if present. If no third goal is supported, leave blank and mark the label red.</span></td>
+<td><span class="ai-prompt">Describe the provider intervention tied to this goal.</span></td>
+<td><span class="ai-prompt">Write the patient’s concrete action step.</span></td>
+<td><span class="ai-prompt">List the between-session task or state not documented if unsupported.</span></td>
+<td><span class="ai-prompt">State the measurement method and review timing.</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="section added-clinical-section">
+<h2 class="section-title">8B. Measurement-Based Care Schedule</h2>
+<div class="grid-2">
+<div class="clinical-card info">
+<h3 class="subsection-title">Baseline and Follow-Up Measures</h3>
+<div class="clinical-field">
+<h4 class="field-label">Recommended Scales</h4>
+<p class="field-value"><span class="ai-prompt">List clinically appropriate measurement tools based on the documented presentation, such as PHQ-9, GAD-7, ASRS, PCL-5, MDQ, C-SSRS, AUDIT-C, DAST-10, insomnia scale, or other relevant scales. Do not include tools that are clinically irrelevant.</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Repeat Frequency</h4>
+<p class="field-value"><span class="ai-prompt">Specify how often each measure should be repeated, such as each visit, every 2-4 weeks, monthly, every 90 days, or when symptoms change. If unsupported, provide a clinically cautious recommendation.</span></p>
+</div>
+</div>
+<div class="clinical-card warning">
+<h3 class="subsection-title">Measurement Action Rules</h3>
+<div class="clinical-field">
+<h4 class="field-label">Target Change</h4>
+<p class="field-value"><span class="ai-prompt">Define the target improvement or stabilization markers for the selected scales and functional outcomes.</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Clinical Action if Scores Worsen</h4>
+<p class="field-value"><span class="ai-prompt">Describe what the provider should consider if scores worsen, including safety reassessment, medication review, therapy intensity, medical/substance review, collateral/ROI, or level-of-care reassessment.</span></p>
+</div>
+<div class="clinical-field">
+<h4 class="field-label">Clinical Action if Scores Improve</h4>
+<p class="field-value"><span class="ai-prompt">Describe how improvement should inform ongoing care, including maintaining current plan, relapse prevention, tapering visit frequency when appropriate, or revising goals.</span></p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2 class="section-title">9. Proposed Treatment Strategy</h2>
+<div class="grid-2">
+<div class="clinical-card success">
+<h3 class="subsection-title">Multimodal Plan</h3>
+<div class="block-list">
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #8 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #9 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #10 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #11 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert treatment strategy item #12 heading. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write the plan item with concrete actions, clinical rationale, patient responsibilities, monitoring, and follow-up. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+<div class="clinical-card purple">
+<h3 class="subsection-title">Pharmacotherapy Ideas</h3>
+<div class="block-list">
+<div class="mini-block"><h4><span class="ai-prompt">Insert medication class/option #13 only as a provider-consideration heading when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write rationale and considerations with risks, contraindications, monitoring, substance/safety cautions, and patient-specific fit. Frame as provider consideration, not an order, unless actually prescribed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert medication class/option #14 only as a provider-consideration heading when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write rationale and considerations with risks, contraindications, monitoring, substance/safety cautions, and patient-specific fit. Frame as provider consideration, not an order, unless actually prescribed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert medication class/option #15 only as a provider-consideration heading when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write rationale and considerations with risks, contraindications, monitoring, substance/safety cautions, and patient-specific fit. Frame as provider consideration, not an order, unless actually prescribed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="mini-block"><h4><span class="ai-prompt">Insert medication class/option #16 only as a provider-consideration heading when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></h4><p><span class="ai-prompt">Write rationale and considerations with risks, contraindications, monitoring, substance/safety cautions, and patient-specific fit. Frame as provider consideration, not an order, unless actually prescribed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</div>
+<div class="full-length-section">
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Medical Decision Making (MDM)</h3>
+<div class="clinical-field"><h4 class="field-label">Problems</h4><p class="field-value"><span class="ai-prompt">Document complexity/number of problems addressed, exacerbations, comorbidity, diagnostic uncertainty, risk, and functional impairment. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Data</h4><p class="field-value"><span class="ai-prompt">Document records/scales/labs/collateral reviewed or ordered, outside records, prescription history, coordination, and measurement data. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Risk</h4><p class="field-value"><span class="ai-prompt">Document treatment risk, medication risk, safety risk, substance/sleep risk, monitoring needs, and level-of-care decisions. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Selected E/M Level</h4><p class="field-value"><span class="ai-prompt">Select 99204 or 99205 for new-patient E/M when supported. 99204 = moderate MDM; 99205 = high MDM. Do not default to 90792 unless the template/user specifically requests psychiatric diagnostic evaluation coding. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Coding Rationale</h4><p class="field-value"><span class="ai-prompt">Provide 3–6 sentences linking Problems, Data, and Risk to the selected E/M code. Include psychotherapy add-on rationale only when separately identifiable psychotherapy time and content are documented. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div class="clinical-card full-width-card">
+<h3 class="subsection-title">Psychotherapy Add-On</h3>
+<div class="clinical-field"><h4 class="field-label">Modality</h4><p class="field-value"><span class="ai-prompt">Identify psychotherapy modality/framework such as supportive therapy, CBT, DBT skills, MI, psychoeducation, interpersonal therapy, trauma-informed therapy, or other documented modality. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Time Spent</h4><p class="field-value"><span class="ai-prompt">Document exact separately identifiable psychotherapy minutes. Select 90833 for 16–37 minutes, 90836 for 38–52 minutes, or 90838 for 53+ minutes. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Focus</h4><p class="field-value"><span class="ai-prompt">Document therapy focus: symptoms, behaviors, relational patterns, coping skills, cognitive distortions, safety, substance use, functioning, or other targets. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Interventions</h4><p class="field-value"><span class="ai-prompt">Document specific psychotherapy interventions used, such as validation, reflective listening, cognitive restructuring, behavioral activation, DBT skills, MI, psychoeducation, exposure, or supportive interventions. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Response</h4><p class="field-value"><span class="ai-prompt">Document patient engagement, receptiveness, insight, affective response, participation, and homework/plan acceptance. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+<div class="grid-2">
+<div class="clinical-card success">
+<h3 class="subsection-title">Prescription Plan &amp; Medical Interventions</h3>
+<div class="clinical-field"><h4 class="field-label">Initiated</h4><p class="field-value"><span class="ai-prompt">Document newly initiated medications with dose/frequency/route/titration/target symptoms/rationale and risks/benefits/alternatives discussed. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Continued</h4><p class="field-value"><span class="ai-prompt">Document medications continued with dose/frequency/adherence/response/rationale. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Discontinued</h4><p class="field-value"><span class="ai-prompt">Document discontinued medications and reason, taper plan, and safety instructions. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Monitoring / Safety</h4><p class="field-value"><span class="ai-prompt">Document monitoring, side effects, warning signs, labs/vitals, black-box counseling, substance/CNS depressant cautions, and follow-up plan. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Pharmacogenomics</h4><p class="field-value"><span class="ai-prompt">Document pharmacogenomic testing status, rationale, result, or whether not ordered. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+<div class="clinical-card info">
+<h3 class="subsection-title">Labs / Testing / Referrals</h3>
+<div class="clinical-field"><h4 class="field-label">Labs Ordered / Recommended</h4><p class="field-value"><span class="ai-prompt">Document labs/tests ordered or recommended with exact names when supported. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Indication</h4><p class="field-value"><span class="ai-prompt">Document clinical indication for each lab/test/referral. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Follow-Up</h4><p class="field-value"><span class="ai-prompt">Document follow-up interval, what will be reviewed, and escalation criteria. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+<div class="clinical-field"><h4 class="field-label">Referrals</h4><p class="field-value"><span class="ai-prompt">Document referrals, reason, urgency, ROI/coordination needs, and status. If unsupported or missing, leave this value blank and add the missing/not-documented class so the subtitle turns red; do not write “Missing.”</span></p></div>
+</div>
+</div>
+</section>
+<section class="section">
+<h2 class="section-title">10. Consent / Acknowledgment</h2>
+<div class="consent-grid">
+<div class="clinical-card signature-card">
+<h3 class="subsection-title">Provider Electronic Signature</h3>
+<h4 class="field-label">Douglas Zelisko, M.D. Signature</h4>
+<img alt="Douglas Zelisko, M.D. Signature" class="signature-image" onerror="this.style.display='none'" src="https://sxjxsoakdsiifrmjsdeb.supabase.co/storage/v1/object/public/Logo/dzsignature.png"/>
+<div class="sig-line">
+<p class="signature-name">Douglas Zelisko, M.D.</p>
+<p class="field-value bold">Board Certified Psychiatrist</p>
+<p class="field-value signature-date-line"><strong>Electronic authentication date:</strong> <span class="ai-prompt">Insert electronic authentication date. If unavailable, leave blank.</span></p>
+</div>
+</div>
+<div class="clinical-card primary acknowledgment-card">
+<h3 class="subsection-title">Patient / Guardian Virtual Acknowledgment</h3>
+<p class="field-value bold">Virtually Acknowledged</p>
+<p class="field-value" style="margin-top:10px;">The treatment plan was reviewed virtually with the patient/guardian. Patient had the opportunity to ask questions, participate in treatment planning, and acknowledge understanding of the plan, including goals, safety planning, follow-up expectations, and recommended treatment steps.</p>
+<p class="field-value signature-date-line" style="margin-top:10px;"><strong>Acknowledgment Date:</strong> <span class="ai-prompt">Insert virtual acknowledgment date. If unavailable, leave blank.</span></p>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>
