@@ -72,9 +72,10 @@ Deno.serve(async (req) => {
     return jsonResponse(req, { error: 'Missing Ollama API key (Authorization: Bearer <key>).' }, 401)
   }
 
-  let body: string
+  let bodyText: string
   try {
-    body = await req.text()
+    bodyText = await req.text()
+    JSON.parse(bodyText)
   } catch {
     return jsonResponse(req, { error: 'Invalid request body.' }, 400)
   }
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': authHeader,
       },
-      body,
+      body: bodyText,
     })
   } catch (error) {
     console.error('ollama-proxy: upstream fetch failed', error)

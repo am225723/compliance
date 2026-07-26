@@ -1,0 +1,7 @@
+project_id = "ysdbfpszitsqnvphbpza"
+
+[functions.ollama-proxy]
+# The browser sends an Ollama "Authorization: Bearer <key>" header, not a
+# Supabase JWT. Verification must stay disabled or the gateway rejects the
+# request with 401 before it ever reaches the proxy handler.
+verify_jwt = false
