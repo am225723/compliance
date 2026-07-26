@@ -7,6 +7,8 @@
  *   - Preserves all HTML structure, CSS, and DOM layout.
  */
 
+import { SUPABASE_URL } from './supabase';
+
 // ─────────────────────────────────────────────────────────────────
 // Provider Definitions
 // ─────────────────────────────────────────────────────────────────
@@ -276,7 +278,14 @@ async function generateOllama({ keys, model, systemPrompt, userPrompt, onChunk }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ollama Cloud  (https://ollama.com/api/chat  +  Bearer API key)
+// Ollama Cloud  (proxied through a Supabase Edge Function)
+//
+// Browsers can't call https://ollama.com/api/chat directly - Ollama Cloud
+// doesn't send Access-Control-Allow-Origin, so the CORS preflight fails no
+// matter what site is calling it. The `ollama-proxy` Edge Function makes the
+// request server-to-server (where CORS doesn't apply) and adds its own CORS
+// headers to the response, so it works from any origin/site sharing this
+// Supabase project.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateOllamaCloud({ keys, model, systemPrompt, userPrompt, onChunk }) {
@@ -285,7 +294,7 @@ async function generateOllamaCloud({ keys, model, systemPrompt, userPrompt, onCh
 
   const modelName = model || 'gemma4:27b-cloud';
 
-  const response = await fetch('https://ollama.com/api/chat', {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/ollama-proxy`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
