@@ -12,6 +12,7 @@
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
     "@supabase/supabase-js": "^2.109.0",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^1.25.0",
     "openai": "^6.48.0",
     "react": "^19.2.7",
