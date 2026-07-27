@@ -377,6 +377,44 @@ async function readNDJSONStream(response, onChunk) {
   return fullText;
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Real PDF rendering (client-side) — used so "PDF" output actually
+// produces a application/pdf file instead of an HTML file with a
+// misleading ".pdf.html" name.
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Render a generated clinical document's HTML into an actual PDF Blob.
+ * @param {string} html
+ * @returns {Promise<Blob>}
+ */
+export async function htmlToPdfBlob(html) {
+  const { default: html2pdf } = await import('html2pdf.js');
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-10000px';
+  container.style.top = '0';
+  container.style.width = '816px'; // ~8.5in @ 96dpi
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  try {
+    return await html2pdf()
+      .from(container)
+      .set({
+        margin: 10,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] },
+      })
+      .outputPdf('blob');
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
 export async function extractPdfText(arrayBuffer) {
   if (!window.pdfjsLib) {
     await new Promise((resolve, reject) => {

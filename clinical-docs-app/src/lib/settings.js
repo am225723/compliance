@@ -19,16 +19,36 @@ export const defaultSettings = {
   namingConvention: {
     treatmentPlan: '[LastName]_[Date]_TreatmentPlan',
     darp:          '[LastName]_[Date]_DARP',
+    preIntake:     '[LastName]_[Date]_PreIntake',
+    followUp:      '[LastName]_[Date]_FollowUp',
   },
 
   driveConnected: false,
+
+  // AutoPilot — autonomous watch-and-generate
+  autoPilot: {
+    enabled: false,
+    intervalMinutes: 30,
+    docTypes: ['treatment_plan'],   // one or more of: treatment_plan | session_note | pre_intake | follow_up
+    patientScope: 'all',            // 'all' | 'list'
+    patientList: [],                // used when patientScope === 'list'
+    lastCheckedByPatient: {},       // { [patientName]: isoTimestamp }
+  },
 };
 
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return { ...defaultSettings };
-    return { ...defaultSettings, ...JSON.parse(raw) };
+    const saved = JSON.parse(raw);
+    // Shallow-spread would let an older saved blob's nested objects (missing
+    // newer keys like namingConvention.preIntake) silently shadow the defaults.
+    return {
+      ...defaultSettings,
+      ...saved,
+      namingConvention: { ...defaultSettings.namingConvention, ...saved.namingConvention },
+      autoPilot: { ...defaultSettings.autoPilot, ...saved.autoPilot },
+    };
   } catch {
     return { ...defaultSettings };
   }

@@ -1,9 +1,10 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
-  FileCheck2, Clock, Trash2, Eye, Sparkles, Brain,
-  ExternalLink, AlertCircle
+  FileCheck2, Clock, Trash2, Sparkles, Brain,
+  ExternalLink, AlertCircle, Search, X, Zap
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
@@ -16,7 +17,7 @@ const DOC_TYPE_LABELS = {
   follow_up:      { label: 'Follow-Up',       color: 'from-rose-500 to-pink-600',    icon: Calendar,      tag: 'Follow-Up'  },
 };
 
-function DocCard({ doc, onDelete }) {
+function DocCard({ doc, onDelete, selected, onToggleSelect }) {
   const meta = DOC_TYPE_LABELS[doc.document_type] || DOC_TYPE_LABELS.darp;
   const Icon = meta.icon;
   const date = doc.created_at
@@ -24,14 +25,31 @@ function DocCard({ doc, onDelete }) {
     : '';
 
   return (
-    <div className="group bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 rounded-2xl p-4 transition-all">
-      <div className="flex items-start justify-between gap-2 mb-3">
+    <div className={`group relative bg-white/3 hover:bg-white/6 border rounded-2xl p-4 transition-all ${
+      selected ? 'border-teal-500/50 bg-teal-500/5' : 'border-white/8 hover:border-white/15'
+    }`}>
+      <button
+        onClick={() => onToggleSelect(doc.id)}
+        className="absolute top-3 left-3 z-10"
+        title="Select"
+      >
+        <input type="checkbox" checked={selected} readOnly className="w-3.5 h-3.5 rounded accent-teal-500" />
+      </button>
+
+      <div className="flex items-start justify-between gap-2 mb-3 pl-5">
         <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-md flex-shrink-0`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/8 text-slate-400 flex-shrink-0">
-          {meta.tag}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/8 text-slate-400 flex-shrink-0">
+            {meta.tag}
+          </span>
+          {doc.source === 'autopilot' && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 flex items-center gap-0.5">
+              <Zap className="w-2.5 h-2.5" /> auto
+            </span>
+          )}
+        </div>
       </div>
 
       <p className="text-sm font-black text-white mb-0.5 truncate">{doc.patient_name}</p>
@@ -68,7 +86,9 @@ function DocCard({ doc, onDelete }) {
 
 export default function HomeDashboard() {
   const navigate = useNavigate();
-  const { settings, driveConnected, documents, docsLoading, deleteDocument, fetchDocuments, user } = useApp();
+  const { settings, driveConnected, documents, docsLoading, deleteDocument, deleteDocuments, fetchDocuments, user } = useApp();
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const keys = getProviderKeys(settings);
   const activeProviderId = settings.aiProvider || 'openai';
@@ -87,8 +107,36 @@ export default function HomeDashboard() {
 
   // Stats
   const totalDocs = documents.length;
-  const recentDocs = documents.slice(0, 8);
   const uniquePatients = new Set(documents.map(d => d.patient_name)).size;
+
+  const visibleDocs = useMemo(() => {
+    if (!search.trim()) return documents.slice(0, 8);
+    const q = search.toLowerCase();
+    return documents.filter(d =>
+      d.patient_name?.toLowerCase().includes(q) ||
+      d.document_type?.toLowerCase().includes(q) ||
+      d.ai_provider?.toLowerCase().includes(q)
+    );
+  }, [documents, search]);
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(prev =>
+      prev.size === visibleDocs.length ? new Set() : new Set(visibleDocs.map(d => d.id))
+    );
+  }
+
+  async function handleBulkDelete() {
+    await deleteDocuments(Array.from(selectedIds));
+    setSelectedIds(new Set());
+  }
 
   return (
     <div className="min-h-full bg-slate-950 pb-16">
@@ -222,12 +270,13 @@ export default function HomeDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
           {[
-            { label: 'Batch Generate',  icon: ClipboardList, to: '/batch',    color: 'from-teal-600 to-emerald-600',  desc: 'Process patient files'   },
-            { label: 'View Reports',    icon: BarChart3,     to: '/reports',  color: 'from-blue-600 to-indigo-600',   desc: 'Billing & visit data'    },
-            { label: 'Templates',       icon: FileText,      to: '/template/session_note', color: 'from-violet-600 to-purple-600', desc: 'View DARP template' },
-            { label: 'Settings',        icon: Settings,      to: '/settings', color: 'from-slate-600 to-slate-700',   desc: 'Configure AI & Drive'    },
+            { label: 'Batch Generate',  icon: ClipboardList, to: '/batch',     color: 'from-teal-600 to-emerald-600',  desc: 'Process patient files'   },
+            { label: 'AutoPilot',       icon: Zap,           to: '/autopilot', color: 'from-amber-500 to-orange-600',  desc: 'Watch & auto-generate'   },
+            { label: 'View Reports',    icon: BarChart3,     to: '/reports',   color: 'from-blue-600 to-indigo-600',   desc: 'Billing & visit data'    },
+            { label: 'Templates',       icon: FileText,      to: '/templates', color: 'from-violet-600 to-purple-600', desc: 'Edit document templates' },
+            { label: 'Settings',        icon: Settings,      to: '/settings',  color: 'from-slate-600 to-slate-700',   desc: 'Configure AI & Drive'    },
           ].map(({ label, icon: Icon, to, color, desc }) => (
             <button
               key={to}
@@ -244,51 +293,101 @@ export default function HomeDashboard() {
         </div>
 
         {/* Recent Documents */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <FileCheck2 className="w-4 h-4 text-teal-400" />
             <h2 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-              Recent Documents
+              {search ? 'Search Results' : 'Recent Documents'}
               {totalDocs > 0 && <span className="ml-2 text-teal-400 font-black">{totalDocs}</span>}
             </h2>
           </div>
-          <button
-            onClick={fetchDocuments}
-            disabled={docsLoading}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 font-bold transition-colors"
-          >
-            <RefreshCw className={`w-3 h-3 ${docsLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
+            <div className="relative flex-1 sm:flex-none sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search documents…"
+                className="w-full pl-8 pr-7 py-1.5 bg-slate-900 border border-white/10 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-teal-500/50"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={fetchDocuments}
+              disabled={docsLoading}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 font-bold transition-colors"
+            >
+              <RefreshCw className={`w-3 h-3 ${docsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
+
+        {/* Bulk actions toolbar */}
+        {visibleDocs.length > 0 && (
+          <div className="flex items-center gap-3 mb-3 text-xs">
+            <label className="flex items-center gap-1.5 text-slate-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.size > 0 && selectedIds.size === visibleDocs.length}
+                onChange={toggleSelectAll}
+                className="w-3.5 h-3.5 rounded accent-teal-500"
+              />
+              Select all
+            </label>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold transition-colors"
+              >
+                <Trash2 className="w-3 h-3" /> Delete {selectedIds.size} selected
+              </button>
+            )}
+          </div>
+        )}
 
         {docsLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
           </div>
-        ) : recentDocs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-              <FileText className="w-7 h-7 text-slate-600" />
+        ) : visibleDocs.length === 0 ? (
+          search ? (
+            <div className="text-center py-16">
+              <p className="text-sm text-slate-500">No documents match "{search}"</p>
             </div>
-            <p className="text-sm font-bold text-slate-500">No documents yet</p>
-            <p className="text-xs text-slate-700 mt-1 mb-5">Generated documents will appear here</p>
-            <button
-              onClick={() => navigate('/batch')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-black transition-all"
-            >
-              <Plus className="w-4 h-4" /> Generate First Document
-            </button>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                <FileText className="w-7 h-7 text-slate-600" />
+              </div>
+              <p className="text-sm font-bold text-slate-500">No documents yet</p>
+              <p className="text-xs text-slate-700 mt-1 mb-5">Generated documents will appear here</p>
+              <button
+                onClick={() => navigate('/batch')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-black transition-all"
+              >
+                <Plus className="w-4 h-4" /> Generate First Document
+              </button>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-            {recentDocs.map(doc => (
-              <DocCard key={doc.id} doc={doc} onDelete={deleteDocument} />
+            {visibleDocs.map(doc => (
+              <DocCard
+                key={doc.id}
+                doc={doc}
+                onDelete={deleteDocument}
+                selected={selectedIds.has(doc.id)}
+                onToggleSelect={toggleSelect}
+              />
             ))}
           </div>
         )}
 
-        {totalDocs > 8 && (
+        {!search && totalDocs > 8 && (
           <div className="flex justify-center mb-8">
             <button
               onClick={() => navigate('/reports')}

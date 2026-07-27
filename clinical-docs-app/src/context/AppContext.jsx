@@ -1,9 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings';
-import { getAccessToken, setAccessToken } from '../lib/googleDrive';
+import { getAccessToken, isTokenValid, ensureValidToken, clearToken } from '../lib/googleDrive';
 import { supabase } from '../lib/supabase';
 
 const AppContext = createContext(null);
+
+// How often to proactively check/refresh the Drive token while the app is open.
+const DRIVE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function AppProvider({ children }) {
   const [settings, setSettingsState] = useState(loadSettings);
@@ -22,6 +25,10 @@ export function AppProvider({ children }) {
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
 
+  // Templates cache (Supabase-backed, editable clinical document templates)
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -37,20 +44,41 @@ export function AppProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Drive ─────────────────────────────────────────────
+  // ── Drive: rehydrate persisted session on load ─────────
   useEffect(() => {
-    const token = getAccessToken();
-    if (token) { setDriveConnected(true); setDriveToken(token); }
+    if (isTokenValid()) {
+      setDriveConnected(true);
+      setDriveToken(getAccessToken());
+    }
   }, []);
 
-  // ── Load documents when logged in ────────────────────
+  // ── Drive: keep the token fresh while the app is open ──
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!driveConnected) return;
+      try {
+        const token = await ensureValidToken();
+        setDriveToken(token);
+      } catch {
+        // Silent refresh failed (no active Google session) — reflect reality in the UI
+        // rather than showing a stale "Connected" badge.
+        setDriveConnected(false);
+        setDriveToken(null);
+      }
+    }, DRIVE_REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [driveConnected]);
+
+  // ── Load documents/reports/templates when logged in ────
   useEffect(() => {
     if (session?.user) {
       fetchDocuments();
       fetchReports();
+      fetchTemplates();
     } else {
       setDocuments([]);
       setReports([]);
+      setTemplates([]);
     }
   }, [session]);
 
@@ -80,7 +108,7 @@ export function AppProvider({ children }) {
     if (!session?.user) return null;
     const { data, error } = await supabase
       .from('documents')
-      .insert({ ...docData, user_id: session.user.id })
+      .insert({ source: 'manual', ...docData, user_id: session.user.id })
       .select()
       .single();
     if (!error && data) {
@@ -116,6 +144,74 @@ export function AppProvider({ children }) {
     setReports(prev => prev.filter(r => r.id !== id));
   }
 
+  async function deleteDocuments(ids) {
+    if (!ids.length) return;
+    await supabase.from('documents').delete().in('id', ids);
+    setDocuments(prev => prev.filter(d => !ids.includes(d.id)));
+  }
+
+  async function deleteReports(ids) {
+    if (!ids.length) return;
+    await supabase.from('reports').delete().in('id', ids);
+    setReports(prev => prev.filter(r => !ids.includes(r.id)));
+  }
+
+  /** Most recent saved document of a given canonical type for a patient — used to chain
+   *  the Treatment Plan into the DARP note prompt automatically. */
+  const fetchLatestDocument = useCallback(async (patientName, documentType) => {
+    if (!patientName || !documentType) return null;
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('patient_name', patientName)
+      .eq('document_type', documentType)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) { console.error('fetchLatestDocument error:', error); return null; }
+    return data;
+  }, []);
+
+  // ── Templates ───────────────────────────────────────────
+  async function fetchTemplates() {
+    setTemplatesLoading(true);
+    const { data, error } = await supabase.from('templates').select('*').order('key');
+    if (!error && data) setTemplates(data);
+    setTemplatesLoading(false);
+  }
+
+  async function saveTemplate(key, html, label) {
+    if (!session?.user) return null;
+    const { data, error } = await supabase
+      .from('templates')
+      .upsert({ key, html, label, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .select()
+      .single();
+    if (!error && data) {
+      setTemplates(prev => {
+        const next = prev.filter(t => t.key !== key);
+        return [...next, data].sort((a, b) => a.key.localeCompare(b.key));
+      });
+      return data;
+    }
+    console.error('saveTemplate error:', error);
+    return null;
+  }
+
+  async function deleteTemplate(key) {
+    const { error } = await supabase.from('templates').delete().eq('key', key);
+    if (!error) {
+      setTemplates(prev => prev.filter(t => t.key !== key));
+      return true;
+    }
+    console.error('deleteTemplate error:', error);
+    return false;
+  }
+
+  function getTemplateHtml(key) {
+    return templates.find(t => t.key === key)?.html || null;
+  }
+
   // ── Settings ──────────────────────────────────────────
   function updateSettings(patch) {
     setSettingsState(prev => {
@@ -127,14 +223,15 @@ export function AppProvider({ children }) {
 
   // ── Drive ─────────────────────────────────────────────
   function connectDrive(token) {
-    setAccessToken(token);
+    // The token has already been persisted (with accurate expiry) by
+    // initGoogleAuth() by the time this is called — just reflect it in state.
     setDriveToken(token);
     setDriveConnected(true);
     updateSettings({ driveConnected: true });
   }
 
   function disconnectDrive() {
-    setAccessToken(null);
+    clearToken();
     setDriveToken(null);
     setDriveConnected(false);
     updateSettings({ driveConnected: false });
@@ -150,9 +247,11 @@ export function AppProvider({ children }) {
       session, authLoading,
       user: session?.user ?? null,
       // Documents
-      documents, docsLoading, saveDocument, deleteDocument, fetchDocuments,
+      documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
       // Reports
-      reports, reportsLoading, saveReport, deleteReport, fetchReports,
+      reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports,
+      // Templates
+      templates, templatesLoading, fetchTemplates, saveTemplate, deleteTemplate, getTemplateHtml,
     }}>
       {children}
     </AppContext.Provider>

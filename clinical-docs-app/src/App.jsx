@@ -7,6 +7,8 @@ import TemplateViewer from './pages/TemplateViewer';
 import BatchProcessor from './pages/BatchProcessor';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
+import AutoPilotPage from './pages/AutoPilotPage';
+import TemplatesPage from './pages/TemplatesPage';
 import { Loader2 } from 'lucide-react';
 
 function AuthGuard({ children }) {
@@ -62,7 +64,9 @@ function AppRoutes() {
               <Routes>
                 <Route path="/"                element={<HomeDashboard />} />
                 <Route path="/batch"           element={<BatchProcessor />} />
+                <Route path="/autopilot"       element={<AutoPilotPage />} />
                 <Route path="/reports"         element={<ReportsPage />} />
+                <Route path="/templates"       element={<TemplatesPage />} />
                 <Route path="/settings"        element={<SettingsPage />} />
                 <Route path="/template/:id"    element={<TemplateViewer />} />
                 <Route path="*"                element={<Navigate to="/" replace />} />

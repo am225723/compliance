@@ -266,11 +266,12 @@ function AddReportModal({ onClose, onSave }) {
 
 export default function ReportsPage() {
   const navigate = useNavigate();
-  const { reports, reportsLoading, saveReport, deleteReport, fetchReports } = useApp();
+  const { reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports } = useApp();
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [sortField, setSortField] = useState('date_of_service');
   const [sortDir, setSortDir] = useState('desc');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -298,6 +299,25 @@ export default function ReportsPage() {
   function SortIcon({ field }) {
     if (sortField !== field) return <ChevronDown className="w-3 h-3 text-slate-600" />;
     return sortDir === 'asc' ? <ChevronUp className="w-3 h-3 text-teal-400" /> : <ChevronDown className="w-3 h-3 text-teal-400" />;
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(prev =>
+      prev.size === filtered.length ? new Set() : new Set(filtered.map(r => r.id))
+    );
+  }
+
+  async function handleBulkDelete() {
+    await deleteReports(Array.from(selectedIds));
+    setSelectedIds(new Set());
   }
 
   function exportCSV() {
@@ -414,15 +434,33 @@ export default function ReportsPage() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-600 mb-3">
-              Showing {filtered.length} of {reports.length} entries
-            </p>
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <p className="text-xs text-slate-600">
+                Showing {filtered.length} of {reports.length} entries
+              </p>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete {selectedIds.size} selected
+                </button>
+              )}
+            </div>
 
             {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-white/8">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-900 border-b border-white/8">
+                    <th className="px-4 py-3 w-8">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size > 0 && selectedIds.size === filtered.length}
+                        onChange={toggleSelectAll}
+                        className="w-3.5 h-3.5 rounded accent-teal-500"
+                      />
+                    </th>
                     {[
                       { key: 'patient_name',          label: 'Patient Name'           },
                       { key: 'icd10_codes',            label: 'ICD-10 Code'            },
@@ -451,6 +489,14 @@ export default function ReportsPage() {
                       key={report.id}
                       className={`border-b border-white/5 hover:bg-white/3 transition-colors group ${idx % 2 === 0 ? 'bg-white/1' : ''}`}
                     >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(report.id)}
+                          onChange={() => toggleSelect(report.id)}
+                          className="w-3.5 h-3.5 rounded accent-teal-500"
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <p className="text-sm font-bold text-white whitespace-nowrap">{report.patient_name}</p>
                       </td>
