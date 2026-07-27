@@ -172,6 +172,19 @@ export function AppProvider({ children }) {
     return data;
   }, []);
 
+  /** All calendar-linked documents already generated for the given calendars —
+   *  used by Calendar Notes to detect and skip duplicate generation. */
+  const fetchExistingCalendarNotes = useCallback(async (calendarIds) => {
+    if (!calendarIds?.length) return [];
+    const { data, error } = await supabase
+      .from('documents')
+      .select('calendar_id, calendar_event_id, calendar_occurrence_start, document_type, drive_file_url, created_at')
+      .in('calendar_id', calendarIds)
+      .not('calendar_event_id', 'is', null);
+    if (error) { console.error('fetchExistingCalendarNotes error:', error); return []; }
+    return data || [];
+  }, []);
+
   // ── Templates ───────────────────────────────────────────
   async function fetchTemplates() {
     setTemplatesLoading(true);
@@ -248,6 +261,7 @@ export function AppProvider({ children }) {
       user: session?.user ?? null,
       // Documents
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
+      fetchExistingCalendarNotes,
       // Reports
       reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports,
       // Templates

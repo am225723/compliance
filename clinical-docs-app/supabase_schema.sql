@@ -33,6 +33,14 @@ CREATE TABLE IF NOT EXISTS public.documents (
   output_format     text        DEFAULT 'Both',
   drive_file_url    text,                  -- Google Drive URL if saved there
 
+  -- Generation source (added by clinical_docs_templates_and_doc_source migration)
+  source            text        NOT NULL DEFAULT 'manual',  -- 'manual' | 'autopilot'
+
+  -- Calendar Notes linkage (added by calendar_notes_dedup_columns migration)
+  calendar_id                 text,          -- Google Calendar ID the appointment came from
+  calendar_event_id           text,          -- Google Calendar event ID
+  calendar_occurrence_start   timestamptz,    -- start time of this specific occurrence (distinguishes recurring instances)
+
   created_at        timestamptz DEFAULT now(),
   updated_at        timestamptz DEFAULT now()
 );
@@ -125,12 +133,62 @@ CREATE TRIGGER reports_updated_at
 CREATE INDEX IF NOT EXISTS idx_documents_user_id    ON public.documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_documents_created_at ON public.documents(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_documents_type       ON public.documents(document_type);
+CREATE INDEX IF NOT EXISTS idx_documents_source     ON public.documents(source);
 CREATE INDEX IF NOT EXISTS idx_reports_user_id      ON public.reports(user_id);
 CREATE INDEX IF NOT EXISTS idx_reports_date         ON public.reports(date_of_service DESC);
 CREATE INDEX IF NOT EXISTS idx_reports_patient      ON public.reports(patient_name);
+
+-- Prevent generating a duplicate note for the same calendar appointment
+-- occurrence + document type (calendar_occurrence_start distinguishes
+-- individual instances of a recurring event; document_type is included so
+-- e.g. a Treatment Plan and a DARP note can both be generated for the same
+-- appointment without tripping the dedup check).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_documents_calendar_occurrence_unique
+  ON public.documents (calendar_id, calendar_event_id, calendar_occurrence_start, document_type)
+  WHERE calendar_event_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_documents_calendar_event
+  ON public.documents (calendar_event_id)
+  WHERE calendar_event_id IS NOT NULL;
+
+-- --------------------------------------------------------
+-- 6.  templates  — clinic-wide editable overrides for the 4 built-in
+--     clinical document templates. A missing row means "use the static
+--     default shipped in public/templates/*.html".
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.templates (
+  key         text        PRIMARY KEY,   -- 'treatment_plan' | 'session_note' | 'pre_intake' | 'follow_up'
+  label       text,
+  html        text        NOT NULL,
+  updated_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can view templates"
+  ON public.templates FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can insert templates"
+  ON public.templates FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update templates"
+  ON public.templates FOR UPDATE
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can delete templates"
+  ON public.templates FOR DELETE
+  USING (auth.role() = 'authenticated');
+
+CREATE TRIGGER templates_updated_at
+  BEFORE UPDATE ON public.templates
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- --------------------------------------------------------
 -- Done! Tables created:
 --   public.documents  — AI-generated clinical documents
 --   public.reports    — Billing/clinical report rows
+--   public.templates  — Clinic-wide template overrides
 -- --------------------------------------------------------

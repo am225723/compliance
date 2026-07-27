@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Settings, Key, HardDrive, FileOutput, AlignLeft, Tag, CheckCircle,
   Eye, EyeOff, Wifi, WifiOff, AlertTriangle, Bot, ChevronDown, ExternalLink,
-  Save, Lock
+  Save, Lock, Calendar as CalendarIcon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { initGoogleAuth, saveClientId, loadClientId } from '../lib/googleDrive';
+import {
+  initGoogleAuth, saveClientId, loadClientId, hasCalendarScope, reconnectGoogleAuth,
+} from '../lib/googleDrive';
 import { applyNamingConvention } from '../lib/settings';
 import { AI_PROVIDERS } from '../lib/aiEngine';
 
@@ -112,6 +114,8 @@ export default function SettingsPage() {
   const [driveClientId, setDriveClientId] = useState(loadClientId);
   const [driveConnecting, setDriveConnecting] = useState(false);
   const [driveError, setDriveError]       = useState('');
+  const [calendarConnecting, setCalendarConnecting] = useState(false);
+  const [calendarError, setCalendarError] = useState('');
 
   const [form, setForm] = useState(() => {
     // Resolve aiModel: if empty, use the provider's default so it's always explicit
@@ -187,6 +191,21 @@ export default function SettingsPage() {
       setDriveError(`Connection failed: ${e.message || e.error || 'Unknown error'}`);
     } finally {
       setDriveConnecting(false);
+    }
+  }
+
+  async function handleConnectCalendar() {
+    const clientId = loadClientId();
+    if (!clientId) { setCalendarError('Connect Google Drive first — Calendar reuses the same OAuth Client ID.'); return; }
+    setCalendarError('');
+    setCalendarConnecting(true);
+    try {
+      const token = await reconnectGoogleAuth(clientId);
+      connectDrive(token); // same token now covers both scopes; keeps context state in sync
+    } catch (e) {
+      setCalendarError(`Connection failed: ${e.message || e.error || 'Unknown error'}`);
+    } finally {
+      setCalendarConnecting(false);
     }
   }
 
@@ -431,11 +450,11 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ── GOOGLE DRIVE ── */}
+          {/* ── GOOGLE DRIVE & CALENDAR ── */}
           <div className="bg-slate-900 border border-white/10 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <HardDrive className="w-4 h-4 text-blue-400" />
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Google Drive</h2>
+              <h2 className="text-sm font-black text-white uppercase tracking-wider">Google Drive &amp; Calendar</h2>
               {driveConnected && (
                 <span className="ml-auto flex items-center gap-1 text-xs text-emerald-400 font-bold">
                   <Wifi className="w-3 h-3" /> Connected
@@ -446,7 +465,8 @@ export default function SettingsPage() {
               <>
                 <p className="text-xs text-slate-400 mb-3">
                   Enter your <strong className="text-white">Google OAuth2 Client ID</strong> from the Google Cloud Console
-                  (Credentials → OAuth 2.0 Client ID, Application type: Web). The app needs Drive scope to read patient files and save generated documents.
+                  (Credentials → OAuth 2.0 Client ID, Application type: Web). The app requests Drive access (to read patient
+                  files and save generated documents) and read-only Calendar access (for Calendar Notes) together.
                 </p>
                 <PlainInput value={driveClientId} onChange={setDriveClientId}
                   placeholder="xxxx.apps.googleusercontent.com" label="Google OAuth2 Client ID" />
@@ -466,14 +486,46 @@ export default function SettingsPage() {
                 </button>
               </>
             ) : (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-emerald-400 flex items-center gap-2">
-                  <Wifi className="w-4 h-4" /> Drive connected — PatientForms accessible
-                </p>
-                <button onClick={disconnectDrive} className="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1">
-                  <WifiOff className="w-3 h-3" /> Disconnect
-                </button>
-              </div>
+              <>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-emerald-400 flex items-center gap-2">
+                    <Wifi className="w-4 h-4" /> Drive connected — PatientForms accessible
+                  </p>
+                  <button onClick={disconnectDrive} className="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1">
+                    <WifiOff className="w-3 h-3" /> Disconnect
+                  </button>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className={`text-sm flex items-center gap-2 ${hasCalendarScope() ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      <CalendarIcon className="w-4 h-4" />
+                      {hasCalendarScope() ? 'Calendar connected (read-only)' : 'Calendar not connected yet'}
+                    </p>
+                    {!hasCalendarScope() && (
+                      <button
+                        onClick={handleConnectCalendar}
+                        disabled={calendarConnecting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors disabled:opacity-50 flex-shrink-0"
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        {calendarConnecting ? 'Connecting…' : 'Connect Calendar'}
+                      </button>
+                    )}
+                  </div>
+                  {calendarError && (
+                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5 mt-3">
+                      <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-300">{calendarError}</p>
+                    </div>
+                  )}
+                  {!hasCalendarScope() && (
+                    <p className="text-[11px] text-slate-600 mt-2">
+                      Grants read-only access to your calendars for the Calendar Notes feature — Drive access is preserved.
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </div>
 

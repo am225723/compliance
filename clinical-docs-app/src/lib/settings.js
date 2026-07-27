@@ -34,6 +34,16 @@ export const defaultSettings = {
     patientList: [],                // used when patientScope === 'list'
     lastCheckedByPatient: {},       // { [patientName]: isoTimestamp }
   },
+
+  // Calendar Notes defaults
+  calendar: {
+    defaultPreset: 'last7',         // one of dateRanges.DATE_PRESETS ids
+    calendarIds: [],                // Google Calendar IDs selected by default
+    docTypes: ['session_note'],     // default document type(s) to generate per appointment
+    aliases: {},                    // { rawAppointmentText: canonicalPatientName }
+    timeZone: '',                   // IANA zone; '' = use the browser's local zone
+    useAiFallback: true,            // allow AI fallback when deterministic parsing is uncertain
+  },
 };
 
 export function loadSettings() {
@@ -48,6 +58,11 @@ export function loadSettings() {
       ...saved,
       namingConvention: { ...defaultSettings.namingConvention, ...saved.namingConvention },
       autoPilot: { ...defaultSettings.autoPilot, ...saved.autoPilot },
+      calendar: {
+        ...defaultSettings.calendar,
+        ...saved.calendar,
+        aliases: { ...defaultSettings.calendar.aliases, ...saved.calendar?.aliases },
+      },
     };
   } catch {
     return { ...defaultSettings };
@@ -62,6 +77,13 @@ export function applyNamingConvention(template, lastName, date) {
   return template
     .replace(/\[LastName\]/g, lastName)
     .replace(/\[Date\]/g, date);
+}
+
+/** Resolve the IANA time zone to use for Calendar Notes date-range math. */
+export function getEffectiveTimeZone(settings) {
+  return settings?.calendar?.timeZone
+    || Intl.DateTimeFormat().resolvedOptions().timeZone
+    || 'UTC';
 }
 
 /** Return the keys object needed by aiEngine.generateClinicalDocument */

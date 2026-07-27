@@ -89,6 +89,7 @@ export async function generateDocumentForPatient({
 /** Upload a generated document to Drive (HTML and/or a real PDF) and save its record to Supabase. */
 export async function saveGeneratedDocument({
   patient, docTypeKey, outputHtml, settings, provider, model, saveDocument, source = 'manual',
+  calendarLink = null, // { calendarId, eventId, occurrenceStart } | null — set by Calendar Notes
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -122,6 +123,11 @@ export async function saveGeneratedDocument({
     output_format:  settings.outputFormat,
     drive_file_url: driveLink,
     source,
+    ...(calendarLink ? {
+      calendar_id: calendarLink.calendarId,
+      calendar_event_id: calendarLink.eventId,
+      calendar_occurrence_start: calendarLink.occurrenceStart,
+    } : {}),
   });
 
   return { savedOutputs, saved };
