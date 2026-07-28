@@ -244,7 +244,9 @@ export default function HomeDashboard() {
               <p className="text-sm font-black text-white">{activeProvider?.label || 'No provider selected'}</p>
               {isConfigured && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-black border border-teal-500/30">
-                  ✓ Ready
+                  {/* Server-managed providers can't be verified from the client — this
+                      reflects "should be ready", not a live check of the server secret. */}
+                  {activeProvider?.serverManaged ? 'Server-managed' : '✓ Ready'}
                 </span>
               )}
             </div>

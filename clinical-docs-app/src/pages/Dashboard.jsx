@@ -37,7 +37,9 @@ export default function Dashboard() {
     const configured = isProviderConfigured(p.id, keys);
     let detail;
     if (p.id === 'ollama') detail = keys.ollamaUrl || 'localhost:11434';
-    else if (p.serverManaged) detail = configured ? 'Configured on server' : 'No server key set';
+    // Server-managed providers: the client can't verify the Edge Function
+    // secret is actually set, so this is "should be ready", not a live check.
+    else if (p.serverManaged) detail = 'Server-managed (set by admin)';
     else detail = configured ? 'API key set' : 'No API key';
     const isActive = p.id === activeProviderId;
     const model = isActive && settings.aiModel ? settings.aiModel : p.defaultModel;
