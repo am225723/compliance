@@ -130,6 +130,14 @@ export async function saveGeneratedDocument({
     } : {}),
   });
 
+  if (!saved) {
+    // The Drive upload(s) above already succeeded, but the Supabase insert
+    // failed (e.g. blocked by the calendar-occurrence dedup constraint, or a
+    // transient DB error) — treat this as a failure rather than resolving
+    // silently, or callers will mark the item "done" with no DB record.
+    throw new Error('Document uploaded to Drive but the database record could not be saved.');
+  }
+
   return { savedOutputs, saved };
 }
 

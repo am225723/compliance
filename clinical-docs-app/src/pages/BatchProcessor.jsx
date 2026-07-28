@@ -724,6 +724,7 @@ export default function BatchProcessor() {
                         ) : (
                           <iframe
                             title={`preview-${p.name}`}
+                            sandbox=""
                             srcDoc={p.generatedOutput.html}
                             className="w-full h-64 rounded-lg border border-white/10 bg-white"
                           />

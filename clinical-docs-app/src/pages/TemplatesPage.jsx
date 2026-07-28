@@ -128,7 +128,7 @@ export default function TemplatesPage() {
                   spellCheck={false}
                   className="w-full h-[560px] bg-slate-950 border border-white/10 rounded-xl px-3 py-3 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-teal-500/40 resize-none"
                 />
-                <iframe title="template-preview" srcDoc={html} className="w-full h-[560px] rounded-xl border border-white/10 bg-white" />
+                <iframe title="template-preview" sandbox="" srcDoc={html} className="w-full h-[560px] rounded-xl border border-white/10 bg-white" />
               </div>
             )}
           </div>

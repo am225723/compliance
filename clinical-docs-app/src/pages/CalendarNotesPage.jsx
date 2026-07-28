@@ -173,7 +173,7 @@ export default function CalendarNotesPage() {
   // ── Resumable runs ───────────────────────────────────────────────────
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const snap = JSON.parse(raw);
       if (snap?.phase && snap.phase !== PHASE.IDLE && snap.appointments?.length) {
@@ -184,11 +184,11 @@ export default function CalendarNotesPage() {
 
   useEffect(() => {
     if (phase === PHASE.IDLE || phase === PHASE.LOADING) {
-      if (phase === PHASE.IDLE) localStorage.removeItem(STORAGE_KEY);
+      if (phase === PHASE.IDLE) sessionStorage.removeItem(STORAGE_KEY);
       return;
     }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
         phase, appointments, selectedCalendarIds, preset, customStart, customEnd,
         selectedDocTypes, summary, ts: Date.now(),
       }));
@@ -209,7 +209,7 @@ export default function CalendarNotesPage() {
     addLog('Resumed previous Calendar Notes session.');
   }
   function handleDiscardResume() {
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     setResumeBanner(null);
   }
 
@@ -255,18 +255,24 @@ export default function CalendarNotesPage() {
 
     try {
       addLog(`Fetching appointments (${DATE_PRESETS.find((p) => p.id === preset)?.label})…`);
-      const [{ events, errors }, root] = await Promise.all([
-        listEventsForCalendars(selectedCalendarIds, { ...range, timeZone }),
-        findPatientFormsFolder(),
-      ]);
+      const [{ events, errors }, root] = await withRetry(
+        () => Promise.all([
+          listEventsForCalendars(selectedCalendarIds, { ...range, timeZone }),
+          findPatientFormsFolder(),
+        ]),
+        { retries: 2, onRetry: (e, n) => addLog(`⟳ Retry ${n}/2 loading appointments: ${e.message}`, 'warn') },
+      );
       errors.forEach((e) => addLog(`⚠ Calendar ${e.calendarId}: ${e.message}`, 'warn'));
       addLog(`Found ${events.length} appointment(s) across ${selectedCalendarIds.length} calendar(s).`);
 
-      const subfolders = await listSubfolders(root.id);
+      const subfolders = await withRetry(
+        () => listSubfolders(root.id),
+        { retries: 2, onRetry: (e, n) => addLog(`⟳ Retry ${n}/2 loading patient folders: ${e.message}`, 'warn') },
+      );
       knownPatientsRef.current = subfolders;
       addLog(`Found ${subfolders.length} patient folder(s) in Drive.`);
 
-      const existingRaw = await fetchExistingCalendarNotes(selectedCalendarIds);
+      const existingRaw = await fetchExistingCalendarNotes(selectedCalendarIds, range);
       const existingIndex = buildExistingNoteIndex(existingRaw);
 
       const provider = settings.aiProvider || 'openai';
@@ -285,8 +291,14 @@ export default function CalendarNotesPage() {
         });
 
         const parsedName = parsed.name || '';
-        const candidates = parsedName ? matchPatientFolders(parsedName, subfolders) : [];
-        const folderStatus = parsedName ? classifyMatch(candidates) : 'pending';
+        // 'known-patient-ambiguous' means the parser found multiple known-patient
+        // name mentions in the text but couldn't pick one — surface those directly
+        // as folder candidates instead of leaving the reviewer with nothing to pick.
+        let candidates = parsedName ? matchPatientFolders(parsedName, subfolders) : [];
+        if (!parsedName && parsed.candidates?.length) {
+          candidates = subfolders.filter((f) => parsed.candidates.includes(f.name));
+        }
+        const folderStatus = candidates.length ? classifyMatch(candidates) : (parsedName ? 'not_found' : 'pending');
         let files = [];
         if (folderStatus === 'matched') {
           try { files = await listPatientFiles(candidates[0].id); } catch (e) {
@@ -361,7 +373,6 @@ export default function CalendarNotesPage() {
 
   function handleNameEdit(id, name) {
     updateAppointment(id, { parsedName: name, needsNameReview: false, parseConfidence: 'high', parseMethod: 'manual' });
-    rematchAppointment(id, name);
   }
 
   async function resolveAmbiguousFolder(id, folderId) {
@@ -370,7 +381,13 @@ export default function CalendarNotesPage() {
     if (!candidate) return;
     try {
       const files = await listPatientFiles(candidate.id);
-      updateAppointment(id, { folderStatus: 'matched', folderId: candidate.id, folderName: candidate.name, files });
+      updateAppointment(id, {
+        folderStatus: 'matched', folderId: candidate.id, folderName: candidate.name, files,
+        // The known-patient-ambiguous parse path leaves parsedName blank (no single
+        // confident name) — picking a candidate here resolves the name too, so the
+        // reviewer doesn't also have to retype it before generating.
+        ...(appt.parsedName ? {} : { parsedName: candidate.name, needsNameReview: false }),
+      });
     } catch (e) {
       updateAppointment(id, { folderStatus: 'not_found' });
       addLog(`Could not resolve folder: ${e.message}`, 'error');
@@ -474,7 +491,7 @@ export default function CalendarNotesPage() {
     addLog('\n✅ Generation complete — review before saving.');
   }
 
-  function reviewItems() {
+  const reviewItemsList = useMemo(() => {
     const rows = [];
     for (const appt of appointments) {
       for (const [docKey, dt] of Object.entries(appt.perDocType)) {
@@ -484,7 +501,7 @@ export default function CalendarNotesPage() {
       }
     }
     return rows;
-  }
+  }, [appointments]);
 
   function toggleApprove(apptId, docKey) {
     const appt = appointments.find((a) => a.id === apptId);
@@ -556,7 +573,7 @@ export default function CalendarNotesPage() {
     setAppointments([]);
     setLog([]);
     setSummary(null);
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }
 
   const busy = phase === PHASE.LOADING || phase === PHASE.GENERATING || phase === PHASE.SAVING;
@@ -794,6 +811,7 @@ export default function CalendarNotesPage() {
                         <input
                           value={appt.parsedName}
                           onChange={(e) => handleNameEdit(appt.id, e.target.value)}
+                          onBlur={(e) => rematchAppointment(appt.id, e.target.value)}
                           placeholder="Patient name…"
                           className="flex-1 min-w-0 bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500/40"
                         />
@@ -865,7 +883,7 @@ export default function CalendarNotesPage() {
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
                 <h2 className="text-sm font-black text-white mb-3">Review Before Saving</h2>
                 <div className="space-y-3">
-                  {reviewItems().map(({ apptId, docKey, appt, dt, meta }) => {
+                  {reviewItemsList.map(({ apptId, docKey, appt, dt, meta }) => {
                     const rowKey = `${apptId}__${docKey}`;
                     return (
                       <div key={rowKey} className={`rounded-xl border p-3 ${dt.status === 'error' ? 'border-red-500/30 bg-red-500/5' : 'border-white/10 bg-white/3'}`}>
@@ -889,7 +907,7 @@ export default function CalendarNotesPage() {
                             <textarea value={dt.generatedOutput.html} onChange={(e) => updateGeneratedHtml(apptId, docKey, e.target.value)} rows={10}
                               className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-teal-500/40 resize-y" />
                           ) : (
-                            <iframe title={`preview-${rowKey}`} srcDoc={dt.generatedOutput.html} className="w-full h-64 rounded-lg border border-white/10 bg-white" />
+                            <iframe title={`preview-${rowKey}`} sandbox="" srcDoc={dt.generatedOutput.html} className="w-full h-64 rounded-lg border border-white/10 bg-white" />
                           )
                         )}
                       </div>
@@ -898,7 +916,7 @@ export default function CalendarNotesPage() {
                 </div>
                 <button
                   onClick={handleSaveApproved}
-                  disabled={!reviewItems().some((r) => r.dt.status === 'generated' && r.dt.approved)}
+                  disabled={!reviewItemsList.some((r) => r.dt.status === 'generated' && r.dt.approved)}
                   className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
                 >
                   <Save className="w-4 h-4" /> Save Approved Documents to Drive

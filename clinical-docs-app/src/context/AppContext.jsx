@@ -172,15 +172,22 @@ export function AppProvider({ children }) {
     return data;
   }, []);
 
-  /** All calendar-linked documents already generated for the given calendars —
-   *  used by Calendar Notes to detect and skip duplicate generation. */
-  const fetchExistingCalendarNotes = useCallback(async (calendarIds) => {
+  /** Calendar-linked documents already generated for the given calendars within
+   *  a date range — used by Calendar Notes to detect and skip duplicate
+   *  generation. Bounded by {timeMin, timeMax} so this doesn't silently get
+   *  truncated by PostgREST's row cap as the clinic accumulates more notes
+   *  over time — an unbounded query here would let real duplicates slip
+   *  through undetected. */
+  const fetchExistingCalendarNotes = useCallback(async (calendarIds, { timeMin, timeMax } = {}) => {
     if (!calendarIds?.length) return [];
-    const { data, error } = await supabase
+    let query = supabase
       .from('documents')
       .select('calendar_id, calendar_event_id, calendar_occurrence_start, document_type, drive_file_url, created_at')
       .in('calendar_id', calendarIds)
       .not('calendar_event_id', 'is', null);
+    if (timeMin) query = query.gte('calendar_occurrence_start', timeMin);
+    if (timeMax) query = query.lte('calendar_occurrence_start', timeMax);
+    const { data, error } = await query;
     if (error) { console.error('fetchExistingCalendarNotes error:', error); return []; }
     return data || [];
   }, []);

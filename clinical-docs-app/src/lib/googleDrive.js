@@ -3,8 +3,13 @@
  * Uses gapi/GIS loaded dynamically.
  *
  * Token lifecycle:
- *   - The OAuth access token + its expiry are persisted to localStorage so a page
- *     refresh doesn't silently drop the "Connected" state.
+ *   - The OAuth access token + its expiry are persisted to sessionStorage so a
+ *     page refresh doesn't silently drop the "Connected" state, while still
+ *     bounding how long a token (now covering Drive + Calendar read access)
+ *     sits on disk — it's gone once the tab/browser closes, unlike
+ *     localStorage. Any script on the page can still read it (that's true of
+ *     both storages equally), so this narrows the exposure window rather
+ *     than eliminating it.
  *   - Every Drive request goes through `ensureValidToken()`, which transparently
  *     performs a silent (no-popup) token refresh when the current token is
  *     missing or close to expiring, so long-running batches don't die mid-run
@@ -35,13 +40,13 @@ function persistToken(token, expiresInSec, scope) {
   tokenExpiresAt = Date.now() + (expiresInSec ? expiresInSec * 1000 : DEFAULT_TTL_MS);
   if (scope) grantedScope = scope;
   try {
-    localStorage.setItem(TOKEN_KEY, JSON.stringify({ access_token: token, expires_at: tokenExpiresAt, scope: grantedScope }));
-  } catch { /* localStorage unavailable — token just won't survive a refresh */ }
+    sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ access_token: token, expires_at: tokenExpiresAt, scope: grantedScope }));
+  } catch { /* sessionStorage unavailable — token just won't survive a refresh */ }
 }
 
 function rehydrateToken() {
   try {
-    const raw = localStorage.getItem(TOKEN_KEY);
+    const raw = sessionStorage.getItem(TOKEN_KEY);
     if (!raw) return;
     const { access_token, expires_at, scope } = JSON.parse(raw);
     if (access_token && expires_at && expires_at - Date.now() > REFRESH_BUFFER_MS) {
@@ -78,11 +83,16 @@ export function clearToken() {
   accessToken = null;
   tokenExpiresAt = 0;
   grantedScope = '';
-  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
 /** Has the current Drive connection also been granted Calendar read access? */
 export function hasCalendarScope() {
+  // Prefer Google's own scope-check helper when GIS is loaded — it's more
+  // robust to scope-string formatting than a manual split/includes.
+  if (window.google?.accounts?.oauth2?.hasGrantedAllScopes) {
+    return window.google.accounts.oauth2.hasGrantedAllScopes({ scope: grantedScope }, CALENDAR_READONLY_SCOPE);
+  }
   return grantedScope.split(' ').includes(CALENDAR_READONLY_SCOPE);
 }
 

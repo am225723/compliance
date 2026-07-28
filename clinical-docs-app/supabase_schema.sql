@@ -33,10 +33,10 @@ CREATE TABLE IF NOT EXISTS public.documents (
   output_format     text        DEFAULT 'Both',
   drive_file_url    text,                  -- Google Drive URL if saved there
 
-  -- Generation source (added by clinical_docs_templates_and_doc_source migration)
+  -- Generation source
   source            text        NOT NULL DEFAULT 'manual',  -- 'manual' | 'autopilot'
 
-  -- Calendar Notes linkage (added by calendar_notes_dedup_columns migration)
+  -- Calendar Notes linkage
   calendar_id                 text,          -- Google Calendar ID the appointment came from
   calendar_event_id           text,          -- Google Calendar event ID
   calendar_occurrence_start   timestamptz,    -- start time of this specific occurrence (distinguishes recurring instances)
@@ -44,6 +44,14 @@ CREATE TABLE IF NOT EXISTS public.documents (
   created_at        timestamptz DEFAULT now(),
   updated_at        timestamptz DEFAULT now()
 );
+
+-- Columns added after the initial CREATE TABLE shipped (clinical_docs_templates_and_doc_source
+-- and calendar_notes_dedup_columns migrations) — explicit so re-running this script against an
+-- existing deployment actually adds them, since CREATE TABLE IF NOT EXISTS above is a no-op there.
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'manual';
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS calendar_id text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS calendar_event_id text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS calendar_occurrence_start timestamptz;
 
 -- --------------------------------------------------------
 -- 2.  reports  — clinical billing info per document/visit
@@ -139,17 +147,21 @@ CREATE INDEX IF NOT EXISTS idx_reports_date         ON public.reports(date_of_se
 CREATE INDEX IF NOT EXISTS idx_reports_patient      ON public.reports(patient_name);
 
 -- Prevent generating a duplicate note for the same calendar appointment
--- occurrence + document type (calendar_occurrence_start distinguishes
--- individual instances of a recurring event; document_type is included so
--- e.g. a Treatment Plan and a DARP note can both be generated for the same
--- appointment without tripping the dedup check).
+-- occurrence + document type, scoped per user (calendar_occurrence_start
+-- distinguishes individual instances of a recurring event; document_type is
+-- included so e.g. a Treatment Plan and a DARP note can both be generated
+-- for the same appointment without tripping the dedup check).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_documents_calendar_occurrence_unique
-  ON public.documents (calendar_id, calendar_event_id, calendar_occurrence_start, document_type)
+  ON public.documents (user_id, calendar_id, calendar_event_id, calendar_occurrence_start, document_type)
   WHERE calendar_event_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_documents_calendar_event
   ON public.documents (calendar_event_id)
   WHERE calendar_event_id IS NOT NULL;
+
+-- Serves the bounded fetchExistingCalendarNotes lookup (calendar_id + occurrence range).
+CREATE INDEX IF NOT EXISTS idx_documents_calendar_id_occurrence
+  ON public.documents (calendar_id, calendar_occurrence_start);
 
 -- --------------------------------------------------------
 -- 6.  templates  — clinic-wide editable overrides for the 4 built-in
@@ -165,23 +177,28 @@ CREATE TABLE IF NOT EXISTS public.templates (
 
 ALTER TABLE public.templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view templates" ON public.templates;
 CREATE POLICY "Authenticated users can view templates"
   ON public.templates FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can insert templates" ON public.templates;
 CREATE POLICY "Authenticated users can insert templates"
   ON public.templates FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can update templates" ON public.templates;
 CREATE POLICY "Authenticated users can update templates"
   ON public.templates FOR UPDATE
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can delete templates" ON public.templates;
 CREATE POLICY "Authenticated users can delete templates"
   ON public.templates FOR DELETE
   USING (auth.role() = 'authenticated');
 
+DROP TRIGGER IF EXISTS templates_updated_at ON public.templates;
 CREATE TRIGGER templates_updated_at
   BEFORE UPDATE ON public.templates
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
