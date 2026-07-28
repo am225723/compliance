@@ -1,7 +1,20 @@
 project_id = "ysdbfpszitsqnvphbpza"
 
-[functions.ollama-proxy]
-# The browser sends an Ollama "Authorization: Bearer <key>" header, not a
-# Supabase JWT. Verification must stay disabled or the gateway rejects the
-# request with 401 before it ever reaches the proxy handler.
-verify_jwt = false
+# All three functions require the caller to present a valid Supabase user
+# session JWT (verify_jwt = true, the platform default) — they hold real
+# provider API keys as server-side secrets and must not be reachable by
+# anyone who isn't logged into this app. Set these secrets in the Supabase
+# Dashboard (Project Settings -> Edge Functions -> Secrets), never in this
+# repo:
+#   GEMINI_API_KEY        - for notes_gemini-proxy
+#   CLAUDE_API_KEY        - for notes_claude-proxy
+#   OLLAMA_CLOUD_API_KEY  - for notes_ollama-proxy
+
+[functions.notes_gemini-proxy]
+verify_jwt = true
+
+[functions.notes_claude-proxy]
+verify_jwt = true
+
+[functions.notes_ollama-proxy]
+verify_jwt = true

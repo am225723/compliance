@@ -7,7 +7,7 @@
  *   - Preserves all HTML structure, CSS, and DOM layout.
  */
 
-import { SUPABASE_URL } from './supabase';
+import { SUPABASE_URL, supabase } from './supabase';
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Definitions
@@ -28,7 +28,8 @@ export const AI_PROVIDERS = {
     logo: '🔵',
     defaultModel: 'gemini-2.0-flash',
     models: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
-    fields: [{ key: 'geminiApiKey', label: 'Google AI Studio API Key', placeholder: 'AIza...', secret: true }],
+    // Key lives server-side as a Supabase Edge Function secret (notes_gemini-proxy) — no client field.
+    serverManaged: true,
   },
   claude: {
     id: 'claude',
@@ -36,7 +37,8 @@ export const AI_PROVIDERS = {
     logo: '🟠',
     defaultModel: 'claude-opus-4-5',
     models: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
-    fields: [{ key: 'claudeApiKey', label: 'Anthropic API Key', placeholder: 'sk-ant-...', secret: true }],
+    // Key lives server-side as a Supabase Edge Function secret (notes_claude-proxy) — no client field.
+    serverManaged: true,
   },
   ollama: {
     id: 'ollama',
@@ -68,14 +70,27 @@ export const AI_PROVIDERS = {
       'gemini-3-flash-preview:cloud',
       'mistral-large-3:cloud',
     ],
-    fields: [
-      { key: 'ollamaCloudApiKey', label: 'Ollama API Key', placeholder: 'ollama_...', secret: true,
-        hint: 'Create a key at ollama.com/settings/keys' },
-    ],
+    // Key lives server-side as a Supabase Edge Function secret (notes_ollama-proxy) — no client field.
+    serverManaged: true,
   },
 };
 
 export const PROVIDER_IDS = Object.keys(AI_PROVIDERS);
+
+/**
+ * Auth header for the server-managed provider proxies (notes_*-proxy Edge
+ * Functions). These functions hold the real provider API key as a secret
+ * and gate access with Supabase's platform-level JWT verification, so the
+ * caller must be a logged-in user of this app — never the provider's own
+ * key, which the browser no longer has.
+ */
+async function getProxyAuthHeader() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Not signed in — please log in again to use this AI provider.');
+  }
+  return `Bearer ${session.access_token}`;
+}
 
 // ─────────────────────────────────────────────────────────────────
 // System & User Prompts
@@ -142,8 +157,9 @@ ${templateHtml}`;
  * Generate clinical document using the configured AI provider.
  *
  * @param {object} params
- * @param {string} params.provider   - 'openai' | 'gemini' | 'claude' | 'ollama'
- * @param {object} params.keys       - { openaiApiKey, geminiApiKey, claudeApiKey, ollamaUrl, ollamaModel }
+ * @param {string} params.provider   - 'openai' | 'gemini' | 'claude' | 'ollama' | 'ollama_cloud'
+ * @param {object} params.keys       - { openaiApiKey, ollamaUrl, ollamaModel } — gemini/claude/ollama_cloud
+ *   keys live server-side (Supabase Edge Function secrets) and aren't passed here.
  * @param {string} params.model      - override model (optional)
  * @param {string} params.systemPrompt
  * @param {string} params.userPrompt
@@ -191,17 +207,15 @@ async function generateOpenAI({ keys, model, systemPrompt, userPrompt, onChunk }
 // Gemini  (Google AI Studio)
 // ─────────────────────────────────────────────────────────────────
 
-async function generateGemini({ keys, model, systemPrompt, userPrompt, onChunk }) {
-  const apiKey = keys.geminiApiKey;
-  if (!apiKey) throw new Error('Gemini API key not configured.');
-
+async function generateGemini({ model, systemPrompt, userPrompt, onChunk }) {
   const modelId = model || 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const authHeader = await getProxyAuthHeader();
 
-  const response = await fetch(url, {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_gemini-proxy`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: authHeader },
     body: JSON.stringify({
+      model: modelId,
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       generationConfig: { maxOutputTokens: 16000 },
@@ -216,19 +230,17 @@ async function generateGemini({ keys, model, systemPrompt, userPrompt, onChunk }
 // Claude  (Anthropic)
 // ─────────────────────────────────────────────────────────────────
 
-async function generateClaude({ keys, model, systemPrompt, userPrompt, onChunk }) {
-  const apiKey = keys.claudeApiKey;
-  if (!apiKey) throw new Error('Claude API key not configured.');
+async function generateClaude({ model, systemPrompt, userPrompt, onChunk }) {
+  // Relayed through notes_claude-proxy, which holds the real Anthropic key
+  // server-side and injects it — the browser only authenticates with its
+  // own Supabase session.
+  const authHeader = await getProxyAuthHeader();
 
-  // Anthropic API requires a CORS proxy in the browser due to strict CORS policy.
-  // We use the direct Anthropic endpoint — works in Electron/Node or when CORS is allowed.
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_claude-proxy`, {
     method: 'POST',
     headers: {
-      'Content-Type':         'application/json',
-      'x-api-key':            apiKey,
-      'anthropic-version':    '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Content-Type': 'application/json',
+      Authorization:  authHeader,
     },
     body: JSON.stringify({
       model:      model || 'claude-opus-4-5',
@@ -282,23 +294,22 @@ async function generateOllama({ keys, model, systemPrompt, userPrompt, onChunk }
 //
 // Browsers can't call https://ollama.com/api/chat directly - Ollama Cloud
 // doesn't send Access-Control-Allow-Origin, so the CORS preflight fails no
-// matter what site is calling it. The `ollama-proxy` Edge Function makes the
-// request server-to-server (where CORS doesn't apply) and adds its own CORS
-// headers to the response, so it works from any origin/site sharing this
-// Supabase project.
+// matter what site is calling it. The `notes_ollama-proxy` Edge Function
+// makes the request server-to-server (where CORS doesn't apply), holds the
+// real Ollama Cloud key as a secret, and adds its own CORS headers to the
+// response. The browser only ever authenticates with its own Supabase
+// session — it never sees the Ollama Cloud key.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function generateOllamaCloud({ keys, model, systemPrompt, userPrompt, onChunk }) {
-  const apiKey = keys.ollamaCloudApiKey;
-  if (!apiKey) throw new Error('Ollama Cloud API key not configured. Create one at ollama.com/settings/keys');
-
+async function generateOllamaCloud({ model, systemPrompt, userPrompt, onChunk }) {
   const modelName = model || 'gemma4:27b-cloud';
+  const authHeader = await getProxyAuthHeader();
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/ollama-proxy`, {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_ollama-proxy`, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': authHeader,
     },
     body: JSON.stringify({
       model:    modelName,

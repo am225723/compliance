@@ -6,7 +6,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { findPatientFormsFolder, listSubfolders, listPatientFiles } from '../lib/googleDrive';
 import { buildSystemPrompt } from '../lib/aiEngine';
-import { getProviderKeys } from '../lib/settings';
+import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES } from '../lib/documentTypes';
 import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
@@ -44,12 +44,9 @@ export default function AutoPilotPage() {
 
     const provider = settings.aiProvider || 'openai';
     const keys = getProviderKeys(settings);
-    const hasKey = provider === 'openai' ? !!keys.openaiApiKey
-      : provider === 'gemini' ? !!keys.geminiApiKey
-      : provider === 'claude' ? !!keys.claudeApiKey
-      : provider === 'ollama_cloud' ? !!keys.ollamaCloudApiKey
-      : true;
-    if (!hasKey) { addLog(`AI provider "${provider}" has no API key configured — skipping run.`, 'error'); return; }
+    if (!isProviderConfigured(provider, keys)) {
+      addLog(`AI provider "${provider}" has no API key configured — skipping run.`, 'error'); return;
+    }
 
     runningRef.current = true;
     setRunning(true);

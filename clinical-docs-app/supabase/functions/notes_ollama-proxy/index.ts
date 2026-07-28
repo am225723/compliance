@@ -1,10 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 // Ollama Cloud does not send CORS headers, so browsers can never call
-// https://ollama.com/api/chat directly cross-origin (see the preflight
-// failure this function fixes). This function relays the request
-// server-to-server (no CORS applies between two servers) and attaches our
-// own CORS headers to the response we send back to the browser.
+// https://ollama.com/api/chat directly cross-origin. This function relays
+// the request server-to-server (no CORS applies between two servers) and
+// attaches our own CORS headers to the response we send back to the
+// browser.
+//
+// Unlike the original version of this proxy, the Ollama Cloud API key is
+// now a server-side secret (OLLAMA_CLOUD_API_KEY) rather than something the
+// browser sends — the browser authenticates with its own Supabase user
+// session instead (see verify_jwt in the deploy config), and this function
+// injects the real key before relaying to Ollama Cloud.
 //
 // ALLOWED_ORIGINS (optional): comma-separated list of allowed origins, e.g.
 //   "https://notes.docz.space,https://app.example.com"
@@ -12,6 +18,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 // backs many independent repos/sites and the calling origins aren't fixed.
 
 const OLLAMA_API_URL = 'https://ollama.com/api/chat'
+const OLLAMA_CLOUD_API_KEY = Deno.env.get('OLLAMA_CLOUD_API_KEY') ?? ''
 
 const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
   .split(',')
@@ -67,9 +74,8 @@ Deno.serve(async (req) => {
     return jsonResponse(req, { error: 'Origin is not allowed.' }, 403)
   }
 
-  const authHeader = req.headers.get('authorization')
-  if (!authHeader) {
-    return jsonResponse(req, { error: 'Missing Ollama API key (Authorization: Bearer <key>).' }, 401)
+  if (!OLLAMA_CLOUD_API_KEY) {
+    return jsonResponse(req, { error: 'Server is not configured with an Ollama Cloud API key.' }, 500)
   }
 
   let bodyText: string
@@ -86,12 +92,12 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader,
+        'Authorization': `Bearer ${OLLAMA_CLOUD_API_KEY}`,
       },
       body: bodyText,
     })
   } catch (error) {
-    console.error('ollama-proxy: upstream fetch failed', error)
+    console.error('notes_ollama-proxy: upstream fetch failed', error)
     return jsonResponse(req, { error: 'Failed to reach Ollama Cloud.' }, 502)
   }
 

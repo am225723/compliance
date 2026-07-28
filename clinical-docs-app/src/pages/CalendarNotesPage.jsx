@@ -15,8 +15,8 @@ import { parseAppointment } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
 import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
-import { buildSystemPrompt } from '../lib/aiEngine';
-import { getProviderKeys, getEffectiveTimeZone } from '../lib/settings';
+import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
+import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../lib/settings';
 import { buildExistingNoteIndex, findExistingNote } from '../lib/calendarDedup';
 
 const PHASE = {
@@ -422,10 +422,9 @@ export default function CalendarNotesPage() {
 
     const provider = settings.aiProvider || 'openai';
     const keys = getProviderKeys(settings);
-    if (provider === 'openai' && !keys.openaiApiKey) { addLog('OpenAI API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'gemini' && !keys.geminiApiKey) { addLog('Gemini API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'claude' && !keys.claudeApiKey) { addLog('Claude API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'ollama_cloud' && !keys.ollamaCloudApiKey) { addLog('Ollama Cloud API key not configured. Go to Settings.', 'error'); return; }
+    if (!isProviderConfigured(provider, keys)) {
+      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error'); return;
+    }
 
     const workItems = [];
     for (const appt of appointments) {

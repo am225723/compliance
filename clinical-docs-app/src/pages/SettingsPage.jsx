@@ -106,8 +106,26 @@ function PlainInput({ value, onChange, placeholder, label }) {
   );
 }
 
+/** Shown in place of a key input for providers whose API key lives server-side
+ *  as a Supabase Edge Function secret — there is nothing for the user to enter. */
+function ServerManagedNotice({ providerLabel, secretName, functionName }) {
+  return (
+    <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-4 py-3 flex gap-3 items-start">
+      <Lock className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+      <p className="text-xs text-emerald-300/90 leading-relaxed">
+        <strong className="text-emerald-300">{providerLabel} is configured on the server</strong> — no key needed here.
+        The <code className="font-mono text-emerald-200">{secretName}</code> secret is set on the{' '}
+        <code className="font-mono text-emerald-200">{functionName}</code> Supabase Edge Function, so this key never
+        reaches the browser.
+      </p>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { settings, updateSettings, driveConnected, connectDrive, disconnectDrive, user } = useApp();
+
+  const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   const [saved, setSaved]                 = useState(false);
   const [providerSaved, setProviderSaved] = useState(false);
@@ -125,11 +143,8 @@ export default function SettingsPage() {
       aiProvider:        provider,
       aiModel:           resolvedModel,
       openaiApiKey:      settings.openaiApiKey,
-      geminiApiKey:      settings.geminiApiKey,
-      claudeApiKey:      settings.claudeApiKey,
       ollamaUrl:         settings.ollamaUrl,
       ollamaModel:       settings.ollamaModel,
-      ollamaCloudApiKey: settings.ollamaCloudApiKey || '',
       outputFormat:      settings.outputFormat,
       detailLevel:       settings.detailLevel,
       namingTreatmentPlan: settings.namingConvention.treatmentPlan,
@@ -147,11 +162,8 @@ export default function SettingsPage() {
       aiProvider:        f.aiProvider,
       aiModel:           resolvedModel,
       openaiApiKey:      f.openaiApiKey,
-      geminiApiKey:      f.geminiApiKey,
-      claudeApiKey:      f.claudeApiKey,
       ollamaUrl:         f.ollamaUrl,
       ollamaModel:       f.ollamaModel,
-      ollamaCloudApiKey: f.ollamaCloudApiKey,
       outputFormat:      f.outputFormat,
       detailLevel:       f.detailLevel,
       namingConvention: {
@@ -350,41 +362,15 @@ export default function SettingsPage() {
                 />
               </>)}
 
-              {/* Gemini */}
-              {form.aiProvider === 'gemini' && (<>
-                <p className="text-xs text-slate-500">
-                  Get your API key at{' '}
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer"
-                    className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
-                    Google AI Studio <ExternalLink className="w-3 h-3" />
-                  </a>
-                </p>
-                <SecretInput
-                  value={form.geminiApiKey}
-                  onChange={v => set('geminiApiKey', v)}
-                  onBlurSave={v => autoSaveKey('geminiApiKey', v)}
-                  placeholder="AIza..."
-                  label="Google AI Studio API Key"
-                />
-              </>)}
+              {/* Gemini — key is a Supabase Edge Function secret, not entered here */}
+              {form.aiProvider === 'gemini' && (
+                <ServerManagedNotice providerLabel="Gemini" secretName="GEMINI_API_KEY" functionName="notes_gemini-proxy" />
+              )}
 
-              {/* Claude */}
-              {form.aiProvider === 'claude' && (<>
-                <p className="text-xs text-slate-500">
-                  Get your API key at{' '}
-                  <a href="https://console.anthropic.com/account/keys" target="_blank" rel="noreferrer"
-                    className="text-orange-400 hover:underline inline-flex items-center gap-0.5">
-                    console.anthropic.com <ExternalLink className="w-3 h-3" />
-                  </a>
-                </p>
-                <SecretInput
-                  value={form.claudeApiKey}
-                  onChange={v => set('claudeApiKey', v)}
-                  onBlurSave={v => autoSaveKey('claudeApiKey', v)}
-                  placeholder="sk-ant-..."
-                  label="Anthropic API Key"
-                />
-              </>)}
+              {/* Claude — key is a Supabase Edge Function secret, not entered here */}
+              {form.aiProvider === 'claude' && (
+                <ServerManagedNotice providerLabel="Claude" secretName="CLAUDE_API_KEY" functionName="notes_claude-proxy" />
+              )}
 
               {/* Ollama Local */}
               {form.aiProvider === 'ollama' && (<>
@@ -412,22 +398,10 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Create an API key at{' '}
-                  <a href="https://ollama.com/settings/keys" target="_blank" rel="noreferrer"
-                    className="text-sky-400 hover:underline inline-flex items-center gap-0.5">
-                    ollama.com/settings/keys <ExternalLink className="w-3 h-3" />
-                  </a>
-                  . You must also have pulled the cloud model via{' '}
+                  You must have pulled the cloud model via{' '}
                   <code className="font-mono text-slate-400">ollama pull &lt;model&gt;:cloud</code>.
                 </p>
-                <SecretInput
-                  value={form.ollamaCloudApiKey}
-                  onChange={v => set('ollamaCloudApiKey', v)}
-                  onBlurSave={v => autoSaveKey('ollamaCloudApiKey', v)}
-                  placeholder="ollama_..."
-                  label="Ollama Cloud API Key"
-                  hint="Create a key at ollama.com/settings/keys"
-                />
+                <ServerManagedNotice providerLabel="Ollama Cloud" secretName="OLLAMA_CLOUD_API_KEY" functionName="notes_ollama-proxy" />
                 <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3">
                   <p className="text-xs font-bold text-slate-400 mb-2">Popular Cloud Models</p>
                   <div className="grid grid-cols-2 gap-1">
@@ -464,12 +438,19 @@ export default function SettingsPage() {
             {!driveConnected ? (
               <>
                 <p className="text-xs text-slate-400 mb-3">
-                  Enter your <strong className="text-white">Google OAuth2 Client ID</strong> from the Google Cloud Console
-                  (Credentials → OAuth 2.0 Client ID, Application type: Web). The app requests Drive access (to read patient
-                  files and save generated documents) and read-only Calendar access (for Calendar Notes) together.
+                  {envClientId
+                    ? <>The <strong className="text-white">Google OAuth2 Client ID</strong> is configured via the{' '}
+                        <code className="font-mono text-slate-300">VITE_GOOGLE_CLIENT_ID</code> environment variable —
+                        just click connect below.</>
+                    : <>Enter your <strong className="text-white">Google OAuth2 Client ID</strong> from the Google Cloud Console
+                        (Credentials → OAuth 2.0 Client ID, Application type: Web).</>}
+                  {' '}The app requests Drive access (to read patient files and save generated documents) and read-only
+                  Calendar access (for Calendar Notes) together.
                 </p>
-                <PlainInput value={driveClientId} onChange={setDriveClientId}
-                  placeholder="xxxx.apps.googleusercontent.com" label="Google OAuth2 Client ID" />
+                {!envClientId && (
+                  <PlainInput value={driveClientId} onChange={setDriveClientId}
+                    placeholder="xxxx.apps.googleusercontent.com" label="Google OAuth2 Client ID" />
+                )}
                 {driveError && (
                   <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5 mt-3">
                     <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
@@ -607,8 +588,10 @@ export default function SettingsPage() {
         <div className="mt-5 rounded-xl border border-slate-700/60 bg-slate-900/60 px-4 py-3 flex gap-3 items-start">
           <Lock className="w-3.5 h-3.5 text-slate-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-slate-500 leading-relaxed">
-            <strong className="text-slate-400">API keys are stored in your browser's localStorage</strong> — they stay on this device and are never sent to any server except the AI provider you select.
-            Keys auto-save when you click out of the field. Use <strong className="text-slate-400">Save Settings</strong> to persist all other options.
+            <strong className="text-slate-400">Gemini, Claude, and Ollama Cloud keys are configured once on the server</strong> and
+            never touch the browser. <strong className="text-slate-400">OpenAI's key is stored in your browser's localStorage</strong> —
+            it stays on this device and auto-saves when you click out of the field.
+            Use <strong className="text-slate-400">Save Settings</strong> to persist all other options.
           </p>
         </div>
 
