@@ -89,6 +89,7 @@ export async function generateDocumentForPatient({
 /** Upload a generated document to Drive (HTML and/or a real PDF) and save its record to Supabase. */
 export async function saveGeneratedDocument({
   patient, docTypeKey, outputHtml, settings, provider, model, saveDocument, source = 'manual',
+  calendarLink = null, // { calendarId, eventId, occurrenceStart } | null — set by Calendar Notes
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -122,7 +123,20 @@ export async function saveGeneratedDocument({
     output_format:  settings.outputFormat,
     drive_file_url: driveLink,
     source,
+    ...(calendarLink ? {
+      calendar_id: calendarLink.calendarId,
+      calendar_event_id: calendarLink.eventId,
+      calendar_occurrence_start: calendarLink.occurrenceStart,
+    } : {}),
   });
+
+  if (!saved) {
+    // The Drive upload(s) above already succeeded, but the Supabase insert
+    // failed (e.g. blocked by the calendar-occurrence dedup constraint, or a
+    // transient DB error) — treat this as a failure rather than resolving
+    // silently, or callers will mark the item "done" with no DB record.
+    throw new Error('Document uploaded to Drive but the database record could not be saved.');
+  }
 
   return { savedOutputs, saved };
 }

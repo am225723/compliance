@@ -3,8 +3,13 @@
  * Uses gapi/GIS loaded dynamically.
  *
  * Token lifecycle:
- *   - The OAuth access token + its expiry are persisted to localStorage so a page
- *     refresh doesn't silently drop the "Connected" state.
+ *   - The OAuth access token + its expiry are persisted to sessionStorage so a
+ *     page refresh doesn't silently drop the "Connected" state, while still
+ *     bounding how long a token (now covering Drive + Calendar read access)
+ *     sits on disk — it's gone once the tab/browser closes, unlike
+ *     localStorage. Any script on the page can still read it (that's true of
+ *     both storages equally), so this narrows the exposure window rather
+ *     than eliminating it.
  *   - Every Drive request goes through `ensureValidToken()`, which transparently
  *     performs a silent (no-popup) token refresh when the current token is
  *     missing or close to expiring, so long-running batches don't die mid-run
@@ -14,6 +19,11 @@
 const CLIENT_ID_KEY = 'gd_client_id';
 const TOKEN_KEY = 'gd_token';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+export const CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+// Every token request asks for both scopes together. Existing connections
+// made before Calendar support was added won't have the calendar scope on
+// their cached token — see hasCalendarScope()/needsCalendarReconnect() below.
+const COMBINED_SCOPE = `${DRIVE_SCOPE} ${CALENDAR_READONLY_SCOPE}`;
 // Refresh proactively this many ms before actual expiry.
 const REFRESH_BUFFER_MS = 3 * 60 * 1000;
 // Google access tokens are typically valid ~1hr; fall back to a conservative default
@@ -23,23 +33,26 @@ const DEFAULT_TTL_MS = 55 * 60 * 1000;
 let tokenClient = null;
 let accessToken = null;
 let tokenExpiresAt = 0; // epoch ms
+let grantedScope = '';
 
-function persistToken(token, expiresInSec) {
+function persistToken(token, expiresInSec, scope) {
   accessToken = token;
   tokenExpiresAt = Date.now() + (expiresInSec ? expiresInSec * 1000 : DEFAULT_TTL_MS);
+  if (scope) grantedScope = scope;
   try {
-    localStorage.setItem(TOKEN_KEY, JSON.stringify({ access_token: token, expires_at: tokenExpiresAt }));
-  } catch { /* localStorage unavailable — token just won't survive a refresh */ }
+    sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ access_token: token, expires_at: tokenExpiresAt, scope: grantedScope }));
+  } catch { /* sessionStorage unavailable — token just won't survive a refresh */ }
 }
 
 function rehydrateToken() {
   try {
-    const raw = localStorage.getItem(TOKEN_KEY);
+    const raw = sessionStorage.getItem(TOKEN_KEY);
     if (!raw) return;
-    const { access_token, expires_at } = JSON.parse(raw);
+    const { access_token, expires_at, scope } = JSON.parse(raw);
     if (access_token && expires_at && expires_at - Date.now() > REFRESH_BUFFER_MS) {
       accessToken = access_token;
       tokenExpiresAt = expires_at;
+      grantedScope = scope || '';
     }
   } catch { /* ignore malformed cache */ }
 }
@@ -69,7 +82,23 @@ export function getTokenExpiry() {
 export function clearToken() {
   accessToken = null;
   tokenExpiresAt = 0;
-  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  grantedScope = '';
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+}
+
+/** Has the current Drive connection also been granted Calendar read access? */
+export function hasCalendarScope() {
+  // Prefer Google's own scope-check helper when GIS is loaded — it's more
+  // robust to scope-string formatting than a manual split/includes.
+  if (window.google?.accounts?.oauth2?.hasGrantedAllScopes) {
+    return window.google.accounts.oauth2.hasGrantedAllScopes({ scope: grantedScope }, CALENDAR_READONLY_SCOPE);
+  }
+  return grantedScope.split(' ').includes(CALENDAR_READONLY_SCOPE);
+}
+
+/** True when Drive is connected but the user still needs to (re)consent to add Calendar access. */
+export function needsCalendarReconnect() {
+  return isTokenValid() && !hasCalendarScope();
 }
 
 function loadScript(src) {
@@ -92,7 +121,7 @@ function getTokenClient(clientId) {
   if (!tokenClient) {
     tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      scope: DRIVE_SCOPE,
+      scope: COMBINED_SCOPE,
       callback: () => {}, // overridden per-request below
     });
   }
@@ -111,11 +140,21 @@ export async function initGoogleAuth(clientId, { silent = false } = {}) {
     const client = getTokenClient(clientId);
     client.callback = (resp) => {
       if (resp.error) { reject(resp); return; }
-      persistToken(resp.access_token, resp.expires_in);
+      persistToken(resp.access_token, resp.expires_in, resp.scope);
       resolve(resp.access_token);
     };
     client.requestAccessToken({ prompt: silent ? '' : 'consent' });
   });
+}
+
+/**
+ * Re-prompt for consent so an existing Drive-only connection (made before
+ * Calendar support existed) can pick up the Calendar read-only scope,
+ * without losing Drive access — the token client always requests both
+ * scopes together, so a single consent grants whichever are still missing.
+ */
+export async function reconnectGoogleAuth(clientId) {
+  return initGoogleAuth(clientId, { silent: false });
 }
 
 /**

@@ -14,6 +14,7 @@ import { getProviderKeys } from '../lib/settings';
 import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
 import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
+import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
@@ -155,27 +156,24 @@ export default function BatchProcessor() {
       addLog(`Found ${subfolders.length} patient subfolders`);
 
       const result = await Promise.all(names.map(async (name) => {
-        const lower = name.toLowerCase();
-        const candidates = subfolders.filter(f =>
-          f.name.toLowerCase().includes(lower) || lower.includes(f.name.toLowerCase())
-        );
-
+        const candidates = matchPatientFolders(name, subfolders);
+        const status = classifyMatch(candidates);
         const base = { name, candidates, outputs: [], generatedOutput: null, approved: true, error: null };
 
-        if (candidates.length === 0) {
+        if (status === 'not_found') {
           addLog(`⚠ "${name}" — Folder Not Found`, 'warn');
-          return { ...base, status: 'not_found', folderId: null, folderName: null, files: [], error: 'Folder Not Found' };
+          return { ...base, status, folderId: null, folderName: null, files: [], error: 'Folder Not Found' };
         }
 
-        if (candidates.length > 1) {
+        if (status === 'ambiguous') {
           addLog(`⚠ "${name}" matched ${candidates.length} folders (${candidates.map(c => c.name).join(', ')}) — resolve manually`, 'warn');
-          return { ...base, status: 'ambiguous', folderId: null, folderName: null, files: [] };
+          return { ...base, status, folderId: null, folderName: null, files: [] };
         }
 
         const match = candidates[0];
         const files = await listPatientFiles(match.id);
         addLog(`✓ "${name}" → "${match.name}" (${files.length} target files)`);
-        return { ...base, status: 'matched', folderId: match.id, folderName: match.name, files };
+        return { ...base, status, folderId: match.id, folderName: match.name, files };
       }));
 
       setPatients(result);
@@ -726,6 +724,7 @@ export default function BatchProcessor() {
                         ) : (
                           <iframe
                             title={`preview-${p.name}`}
+                            sandbox=""
                             srcDoc={p.generatedOutput.html}
                             className="w-full h-64 rounded-lg border border-white/10 bg-white"
                           />

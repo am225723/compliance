@@ -4,7 +4,7 @@ import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
   FileCheck2, Clock, Trash2, Sparkles, Brain,
-  ExternalLink, AlertCircle, Search, X, Zap
+  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
@@ -270,13 +270,14 @@ export default function HomeDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
           {[
-            { label: 'Batch Generate',  icon: ClipboardList, to: '/batch',     color: 'from-teal-600 to-emerald-600',  desc: 'Process patient files'   },
-            { label: 'AutoPilot',       icon: Zap,           to: '/autopilot', color: 'from-amber-500 to-orange-600',  desc: 'Watch & auto-generate'   },
-            { label: 'View Reports',    icon: BarChart3,     to: '/reports',   color: 'from-blue-600 to-indigo-600',   desc: 'Billing & visit data'    },
-            { label: 'Templates',       icon: FileText,      to: '/templates', color: 'from-violet-600 to-purple-600', desc: 'Edit document templates' },
-            { label: 'Settings',        icon: Settings,      to: '/settings',  color: 'from-slate-600 to-slate-700',   desc: 'Configure AI & Drive'    },
+            { label: 'Batch Generate',  icon: ClipboardList, to: '/batch',          color: 'from-teal-600 to-emerald-600',  desc: 'Process patient files'   },
+            { label: 'Calendar Notes',  icon: CalendarDays,  to: '/calendar-notes', color: 'from-sky-600 to-cyan-600',      desc: 'Generate from appointments' },
+            { label: 'AutoPilot',       icon: Zap,           to: '/autopilot',      color: 'from-amber-500 to-orange-600',  desc: 'Watch & auto-generate'   },
+            { label: 'View Reports',    icon: BarChart3,     to: '/reports',        color: 'from-blue-600 to-indigo-600',   desc: 'Billing & visit data'    },
+            { label: 'Templates',       icon: FileText,      to: '/templates',      color: 'from-violet-600 to-purple-600', desc: 'Edit document templates' },
+            { label: 'Settings',        icon: Settings,      to: '/settings',       color: 'from-slate-600 to-slate-700',   desc: 'Configure AI & Drive'    },
           ].map(({ label, icon: Icon, to, color, desc }) => (
             <button
               key={to}

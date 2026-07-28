@@ -2,19 +2,20 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Settings, FileText, LayoutDashboard,
   ClipboardList, ChevronRight, Wifi, WifiOff, Menu, X,
-  BarChart3, LogOut, ChevronDown, Zap
+  BarChart3, LogOut, ChevronDown, Zap, CalendarDays
 } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
 const navItems = [
-  { to: '/',          icon: LayoutDashboard, label: 'Dashboard',       sub: 'Home & Recent Docs'      },
-  { to: '/batch',     icon: ClipboardList,   label: 'Batch Processor', sub: 'Generate Clinical Docs'  },
-  { to: '/autopilot', icon: Zap,             label: 'AutoPilot',       sub: 'Watch & Auto-Generate'   },
-  { to: '/reports',   icon: BarChart3,       label: 'Reports',         sub: 'Billing & Visit Data'    },
-  { to: '/templates', icon: FileText,        label: 'Templates',       sub: 'Edit Document Templates' },
-  { to: '/settings',  icon: Settings,        label: 'Settings',        sub: 'AI Keys & Preferences'   },
+  { to: '/',              icon: LayoutDashboard, label: 'Dashboard',        sub: 'Home & Recent Docs'      },
+  { to: '/batch',         icon: ClipboardList,   label: 'Batch Processor',  sub: 'Generate Clinical Docs'  },
+  { to: '/calendar-notes', icon: CalendarDays,   label: 'Calendar Notes',   sub: 'Generate From Appointments' },
+  { to: '/autopilot',     icon: Zap,             label: 'AutoPilot',        sub: 'Watch & Auto-Generate'   },
+  { to: '/reports',       icon: BarChart3,       label: 'Reports',          sub: 'Billing & Visit Data'    },
+  { to: '/templates',     icon: FileText,        label: 'Templates',        sub: 'Edit Document Templates' },
+  { to: '/settings',      icon: Settings,        label: 'Settings',         sub: 'AI Keys & Preferences'   },
 ];
 
 export default function Layout({ children }) {

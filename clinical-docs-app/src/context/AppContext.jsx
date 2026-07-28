@@ -172,6 +172,26 @@ export function AppProvider({ children }) {
     return data;
   }, []);
 
+  /** Calendar-linked documents already generated for the given calendars within
+   *  a date range — used by Calendar Notes to detect and skip duplicate
+   *  generation. Bounded by {timeMin, timeMax} so this doesn't silently get
+   *  truncated by PostgREST's row cap as the clinic accumulates more notes
+   *  over time — an unbounded query here would let real duplicates slip
+   *  through undetected. */
+  const fetchExistingCalendarNotes = useCallback(async (calendarIds, { timeMin, timeMax } = {}) => {
+    if (!calendarIds?.length) return [];
+    let query = supabase
+      .from('documents')
+      .select('calendar_id, calendar_event_id, calendar_occurrence_start, document_type, drive_file_url, created_at')
+      .in('calendar_id', calendarIds)
+      .not('calendar_event_id', 'is', null);
+    if (timeMin) query = query.gte('calendar_occurrence_start', timeMin);
+    if (timeMax) query = query.lte('calendar_occurrence_start', timeMax);
+    const { data, error } = await query;
+    if (error) { console.error('fetchExistingCalendarNotes error:', error); return []; }
+    return data || [];
+  }, []);
+
   // ── Templates ───────────────────────────────────────────
   async function fetchTemplates() {
     setTemplatesLoading(true);
@@ -248,6 +268,7 @@ export function AppProvider({ children }) {
       user: session?.user ?? null,
       // Documents
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
+      fetchExistingCalendarNotes,
       // Reports
       reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports,
       // Templates
