@@ -7,7 +7,7 @@ import {
 import { templates } from '../data/templates';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
-import { getProviderKeys } from '../lib/settings';
+import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 
 const iconMap = {
   pre_intake:     FileText,
@@ -34,24 +34,11 @@ export default function Dashboard() {
 
   // Build status for every provider
   const providerStatuses = Object.values(AI_PROVIDERS).map(p => {
-    let configured = false;
-    let detail = '';
-    if (p.id === 'openai') {
-      configured = !!keys.openaiApiKey;
-      detail = configured ? 'API key set' : 'No API key';
-    } else if (p.id === 'gemini') {
-      configured = !!keys.geminiApiKey;
-      detail = configured ? 'API key set' : 'No API key';
-    } else if (p.id === 'claude') {
-      configured = !!keys.claudeApiKey;
-      detail = configured ? 'API key set' : 'No API key';
-    } else if (p.id === 'ollama') {
-      configured = true; // no key needed
-      detail = keys.ollamaUrl || 'localhost:11434';
-    } else if (p.id === 'ollama_cloud') {
-      configured = !!keys.ollamaCloudApiKey;
-      detail = configured ? 'API key set' : 'No API key';
-    }
+    const configured = isProviderConfigured(p.id, keys);
+    let detail;
+    if (p.id === 'ollama') detail = keys.ollamaUrl || 'localhost:11434';
+    else if (p.serverManaged) detail = configured ? 'Configured on server' : 'No server key set';
+    else detail = configured ? 'API key set' : 'No API key';
     const isActive = p.id === activeProviderId;
     const model = isActive && settings.aiModel ? settings.aiModel : p.defaultModel;
     return { ...p, configured, detail, isActive, model };

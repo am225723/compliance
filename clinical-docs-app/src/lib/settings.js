@@ -1,3 +1,5 @@
+import { AI_PROVIDERS } from './aiEngine';
+
 const SETTINGS_KEY = 'clinicaldocs_settings';
 
 export const defaultSettings = {
@@ -5,13 +7,12 @@ export const defaultSettings = {
   aiProvider:   'openai',      // 'openai' | 'gemini' | 'claude' | 'ollama'
   aiModel:      '',            // override model; empty = use provider default
 
-  // Per-provider keys / config
-  openaiApiKey:      '',
-  geminiApiKey:      '',
-  claudeApiKey:      '',
-  ollamaUrl:         'http://localhost:11434',
-  ollamaModel:       'gemma3:latest',
-  ollamaCloudApiKey: '',
+  // Per-provider keys / config. Gemini, Claude, and Ollama Cloud keys are
+  // NOT stored here — they live server-side as Supabase Edge Function
+  // secrets (see notes_gemini-proxy / notes_claude-proxy / notes_ollama-proxy).
+  openaiApiKey: '',
+  ollamaUrl:    'http://localhost:11434',
+  ollamaModel:  'gemma3:latest',
 
   // Output options
   outputFormat: 'Both',          // 'HTML' | 'PDF' | 'Both'
@@ -89,11 +90,22 @@ export function getEffectiveTimeZone(settings) {
 /** Return the keys object needed by aiEngine.generateClinicalDocument */
 export function getProviderKeys(settings) {
   return {
-    openaiApiKey:      settings.openaiApiKey,
-    geminiApiKey:      settings.geminiApiKey,
-    claudeApiKey:      settings.claudeApiKey,
-    ollamaUrl:         settings.ollamaUrl,
-    ollamaModel:       settings.ollamaModel,
-    ollamaCloudApiKey: settings.ollamaCloudApiKey,
+    openaiApiKey: settings.openaiApiKey,
+    ollamaUrl:    settings.ollamaUrl,
+    ollamaModel:  settings.ollamaModel,
   };
+}
+
+/**
+ * Is this provider ready to use? Server-managed providers (Gemini, Claude,
+ * Ollama Cloud) hold their API key as a Supabase Edge Function secret and
+ * are always "configured" from the client's point of view — readiness there
+ * is a deployment concern, not something the browser can check. OpenAI still
+ * needs a client-side key; Ollama (local) needs no key at all.
+ */
+export function isProviderConfigured(provider, keys) {
+  if (AI_PROVIDERS[provider]?.serverManaged) return true;
+  if (provider === 'openai') return !!keys.openaiApiKey;
+  if (provider === 'ollama') return true;
+  return false;
 }

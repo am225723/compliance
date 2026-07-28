@@ -10,7 +10,7 @@ import {
   findPatientFormsFolder, listSubfolders, listPatientFiles,
 } from '../lib/googleDrive';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
-import { getProviderKeys } from '../lib/settings';
+import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
 import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
@@ -227,11 +227,9 @@ export default function BatchProcessor() {
 
     const provider = settings.aiProvider || 'openai';
     const keys = getProviderKeys(settings);
-
-    if (provider === 'openai' && !keys.openaiApiKey) { addLog('OpenAI API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'gemini' && !keys.geminiApiKey) { addLog('Gemini API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'claude' && !keys.claudeApiKey) { addLog('Claude API key not configured. Go to Settings.', 'error'); return; }
-    if (provider === 'ollama_cloud' && !keys.ollamaCloudApiKey) { addLog('Ollama Cloud API key not configured. Go to Settings.', 'error'); return; }
+    if (!isProviderConfigured(provider, keys)) {
+      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error'); return;
+    }
 
     setPhase(PHASE.GENERATING);
     abortRef.current = false;
@@ -436,23 +434,10 @@ export default function BatchProcessor() {
               value: (() => {
                 const provider = settings.aiProvider || 'openai';
                 const providerLabel = AI_PROVIDERS[provider]?.label || provider;
-                const keys = getProviderKeys(settings);
-                const hasKey = provider === 'openai' ? !!keys.openaiApiKey
-                  : provider === 'gemini' ? !!keys.geminiApiKey
-                  : provider === 'claude' ? !!keys.claudeApiKey
-                  : provider === 'ollama_cloud' ? !!keys.ollamaCloudApiKey
-                  : true;
+                const hasKey = isProviderConfigured(provider, getProviderKeys(settings));
                 return `${providerLabel}${hasKey ? '' : ' (no key)'}`;
               })(),
-              warn: (() => {
-                const provider = settings.aiProvider || 'openai';
-                const keys = getProviderKeys(settings);
-                return provider === 'openai' ? !keys.openaiApiKey
-                  : provider === 'gemini' ? !keys.geminiApiKey
-                  : provider === 'claude' ? !keys.claudeApiKey
-                  : provider === 'ollama_cloud' ? !keys.ollamaCloudApiKey
-                  : false;
-              })(),
+              warn: !isProviderConfigured(settings.aiProvider || 'openai', getProviderKeys(settings)),
             },
           ].map(({ label, value, warn }) => (
             <div key={label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${warn ? 'bg-red-500/10 border-red-500/25 text-red-400' : 'bg-white/5 border-white/10 text-slate-300'}`}>

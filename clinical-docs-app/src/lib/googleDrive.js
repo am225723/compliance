@@ -58,11 +58,19 @@ function rehydrateToken() {
 }
 rehydrateToken();
 
+// VITE_GOOGLE_CLIENT_ID, when set at build time, makes the Client ID
+// "permanent" for the whole deployment rather than something each browser
+// has to be told about separately — it's safe to bake into the client
+// bundle since Google Identity Services client IDs are public identifiers
+// (security comes from the "Authorized origins" allowlist in Google Cloud
+// Console, not secrecy). It always wins over a locally saved value.
+const ENV_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 export function saveClientId(id) {
   localStorage.setItem(CLIENT_ID_KEY, id);
 }
 export function loadClientId() {
-  return localStorage.getItem(CLIENT_ID_KEY) || '';
+  return ENV_CLIENT_ID || localStorage.getItem(CLIENT_ID_KEY) || '';
 }
 export function getAccessToken() {
   return accessToken;

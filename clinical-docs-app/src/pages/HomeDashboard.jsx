@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
-import { getProviderKeys } from '../lib/settings';
+import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 
 const DOC_TYPE_LABELS = {
   treatment_plan: { label: 'Treatment Plan', color: 'from-blue-500 to-indigo-600',  icon: Heart,         tag: 'Tx Plan'    },
@@ -94,13 +94,7 @@ export default function HomeDashboard() {
   const activeProviderId = settings.aiProvider || 'openai';
   const activeProvider = AI_PROVIDERS[activeProviderId];
 
-  // Check if active provider is configured
-  let isConfigured = false;
-  if (activeProviderId === 'openai')       isConfigured = !!keys.openaiApiKey;
-  else if (activeProviderId === 'gemini')  isConfigured = !!keys.geminiApiKey;
-  else if (activeProviderId === 'claude')  isConfigured = !!keys.claudeApiKey;
-  else if (activeProviderId === 'ollama')  isConfigured = true;
-  else if (activeProviderId === 'ollama_cloud') isConfigured = !!keys.ollamaCloudApiKey;
+  const isConfigured = isProviderConfigured(activeProviderId, keys);
 
   const currentModel = settings.aiModel || activeProvider?.defaultModel || '';
   const isReady = isConfigured;
