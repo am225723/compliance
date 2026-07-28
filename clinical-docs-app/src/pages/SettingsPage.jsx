@@ -110,13 +110,14 @@ function PlainInput({ value, onChange, placeholder, label }) {
  *  as a Supabase Edge Function secret — there is nothing for the user to enter. */
 function ServerManagedNotice({ providerLabel, secretName, functionName }) {
   return (
-    <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-4 py-3 flex gap-3 items-start">
-      <Lock className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-      <p className="text-xs text-emerald-300/90 leading-relaxed">
-        <strong className="text-emerald-300">{providerLabel} is configured on the server</strong> — no key needed here.
-        The <code className="font-mono text-emerald-200">{secretName}</code> secret is set on the{' '}
-        <code className="font-mono text-emerald-200">{functionName}</code> Supabase Edge Function, so this key never
-        reaches the browser.
+    <div className="rounded-xl bg-sky-500/10 border border-sky-500/25 px-4 py-3 flex gap-3 items-start">
+      <Lock className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+      <p className="text-xs text-sky-300/90 leading-relaxed">
+        <strong className="text-sky-300">{providerLabel}'s key is managed by the server</strong> — there's nothing to
+        enter here. It must be configured once by the deployment administrator as the{' '}
+        <code className="font-mono text-sky-200">{secretName}</code> secret on the{' '}
+        <code className="font-mono text-sky-200">{functionName}</code> Supabase Edge Function; this browser can't
+        verify that it's been set, only the app maintainer can confirm it.
       </p>
     </div>
   );

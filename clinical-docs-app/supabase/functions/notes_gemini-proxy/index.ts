@@ -26,7 +26,7 @@ function corsHeaders(req: Request) {
 
   return {
     'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   }
@@ -80,13 +80,16 @@ Deno.serve(async (req) => {
     return jsonResponse(req, { error: 'Missing "model" in request body.' }, 400)
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`
+  // Key goes in a header, not the query string — a failed fetch below logs
+  // the error object, which for Deno network errors typically includes the
+  // request URL; keeping the key out of the URL keeps it out of those logs.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`
 
   let upstream: Response
   try {
     upstream = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
       body: JSON.stringify(upstreamBody),
     })
   } catch (error) {

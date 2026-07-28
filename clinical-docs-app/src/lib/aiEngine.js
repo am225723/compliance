@@ -7,7 +7,7 @@
  *   - Preserves all HTML structure, CSS, and DOM layout.
  */
 
-import { SUPABASE_URL, supabase } from './supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, supabase } from './supabase';
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Definitions
@@ -78,18 +78,33 @@ export const AI_PROVIDERS = {
 export const PROVIDER_IDS = Object.keys(AI_PROVIDERS);
 
 /**
- * Auth header for the server-managed provider proxies (notes_*-proxy Edge
+ * Call one of the server-managed provider proxies (notes_*-proxy Edge
  * Functions). These functions hold the real provider API key as a secret
  * and gate access with Supabase's platform-level JWT verification, so the
  * caller must be a logged-in user of this app — never the provider's own
- * key, which the browser no longer has.
+ * key, which the browser no longer has. `apikey` is the project's
+ * publishable key, required for Supabase to route the request at all;
+ * `Authorization` carries the user's session JWT, which is what
+ * verify_jwt actually checks.
  */
-async function getProxyAuthHeader() {
+async function callProxy(functionName, label, body) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
     throw new Error('Not signed in — please log in again to use this AI provider.');
   }
-  return `Bearer ${session.access_token}`;
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':        SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) throw new Error(`${label} error ${response.status}: ${await response.text()}`);
+  return response;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -208,21 +223,12 @@ async function generateOpenAI({ keys, model, systemPrompt, userPrompt, onChunk }
 // ─────────────────────────────────────────────────────────────────
 
 async function generateGemini({ model, systemPrompt, userPrompt, onChunk }) {
-  const modelId = model || 'gemini-2.0-flash';
-  const authHeader = await getProxyAuthHeader();
-
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_gemini-proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: authHeader },
-    body: JSON.stringify({
-      model: modelId,
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: { maxOutputTokens: 16000 },
-    }),
+  const response = await callProxy('notes_gemini-proxy', 'Gemini', {
+    model: model || 'gemini-2.0-flash',
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: { maxOutputTokens: 16000 },
   });
-
-  if (!response.ok) throw new Error(`Gemini error ${response.status}: ${await response.text()}`);
   return readSSEStream(response, onChunk, (json) => json.candidates?.[0]?.content?.parts?.[0]?.text || '');
 }
 
@@ -234,24 +240,13 @@ async function generateClaude({ model, systemPrompt, userPrompt, onChunk }) {
   // Relayed through notes_claude-proxy, which holds the real Anthropic key
   // server-side and injects it — the browser only authenticates with its
   // own Supabase session.
-  const authHeader = await getProxyAuthHeader();
-
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_claude-proxy`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization:  authHeader,
-    },
-    body: JSON.stringify({
-      model:      model || 'claude-opus-4-5',
-      max_tokens: 16000,
-      stream:     true,
-      system:     systemPrompt,
-      messages:   [{ role: 'user', content: userPrompt }],
-    }),
+  const response = await callProxy('notes_claude-proxy', 'Claude', {
+    model:      model || 'claude-opus-4-5',
+    max_tokens: 16000,
+    stream:     true,
+    system:     systemPrompt,
+    messages:   [{ role: 'user', content: userPrompt }],
   });
-
-  if (!response.ok) throw new Error(`Claude error ${response.status}: ${await response.text()}`);
 
   // Claude SSE uses event: content_block_delta
   return readSSEStream(response, onChunk, (json) => {
@@ -302,26 +297,14 @@ async function generateOllama({ keys, model, systemPrompt, userPrompt, onChunk }
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function generateOllamaCloud({ model, systemPrompt, userPrompt, onChunk }) {
-  const modelName = model || 'gemma4:27b-cloud';
-  const authHeader = await getProxyAuthHeader();
-
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/notes_ollama-proxy`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': authHeader,
-    },
-    body: JSON.stringify({
-      model:    modelName,
-      stream:   true,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt },
-      ],
-    }),
+  const response = await callProxy('notes_ollama-proxy', 'Ollama Cloud', {
+    model:    model || 'gemma4:27b-cloud',
+    stream:   true,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt },
+    ],
   });
-
-  if (!response.ok) throw new Error(`Ollama Cloud error ${response.status}: ${await response.text()}`);
   return readNDJSONStream(response, onChunk);
 }
 
