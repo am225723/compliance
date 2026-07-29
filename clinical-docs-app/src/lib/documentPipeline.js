@@ -24,11 +24,16 @@ export function buildFileName(namingConvention, docTypeKey, lastName, dateStr) {
   return applyNamingConvention(template, lastName, dateStr);
 }
 
-/** Read every source file for a patient into one combined text blob. */
-export async function collectSourceText(patient, onLog) {
+/**
+ * Read source files for a patient into one combined text blob. When
+ * `selectedFiles` is provided (Source File Selection feature), only those
+ * files are read; otherwise every discovered file is read (prior behavior).
+ */
+export async function collectSourceText(patient, onLog, selectedFiles = null) {
   let sourceText = `PATIENT: ${patient.name}\n\n`;
   const sourceFileList = [];
-  for (const file of patient.files) {
+  const filesToRead = Array.isArray(selectedFiles) ? selectedFiles : patient.files;
+  for (const file of filesToRead) {
     try {
       onLog?.(`Reading: ${file.name}`, 'info');
       const content = await downloadFileText(file.id, file.mimeType);

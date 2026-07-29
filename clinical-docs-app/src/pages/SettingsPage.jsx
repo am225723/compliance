@@ -10,6 +10,7 @@ import {
 } from '../lib/googleDrive';
 import { applyNamingConvention } from '../lib/settings';
 import { AI_PROVIDERS } from '../lib/aiEngine';
+import { DOCUMENT_TYPES } from '../lib/documentTypes';
 
 const OUTPUT_FORMATS = ['HTML', 'PDF', 'Both'];
 const DETAIL_LEVELS  = ['Standard', 'Highly Detailed', 'Bulleted Summary'];
@@ -123,6 +124,92 @@ function ServerManagedNotice({ providerLabel, secretName, functionName }) {
   );
 }
 
+/** Per-document-type approximate filename matching rules editor. */
+function SourceFileRulesEditor({ value, onChange }) {
+  function updateType(key, rules) {
+    onChange({ ...value, [key]: rules });
+  }
+
+  function addRule(key, rules) {
+    updateType(key, [...rules, { id: `rule_${Date.now()}`, label: 'New rule', enabled: true, required: false, patterns: [] }]);
+  }
+
+  function updateRule(key, rules, index, patch) {
+    const next = [...rules];
+    next[index] = { ...next[index], ...patch };
+    updateType(key, next);
+  }
+
+  function removeRule(key, rules, index) {
+    updateType(key, rules.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="space-y-4">
+      {DOCUMENT_TYPES.map(type => {
+        const rules = value?.[type.key] || [];
+        return (
+          <div key={type.key} className="rounded-xl border border-white/10 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-black text-white">{type.label}</h3>
+                <p className="text-[11px] text-slate-500">Approximate filename patterns, separated by commas.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => addRule(type.key, rules)}
+                className="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-colors"
+              >
+                Add Rule
+              </button>
+            </div>
+            {rules.length === 0 && (
+              <p className="text-xs text-slate-600 italic">No rules — every discovered file will be preselected.</p>
+            )}
+            <div className="space-y-3">
+              {rules.map((rule, index) => (
+                <div key={rule.id || index} className="rounded-lg bg-slate-950/50 border border-white/5 p-3">
+                  <input
+                    type="text"
+                    value={rule.label || ''}
+                    onChange={e => updateRule(type.key, rules, index, { label: e.target.value })}
+                    placeholder="Rule name"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40"
+                  />
+                  <input
+                    type="text"
+                    value={(rule.patterns || []).join(', ')}
+                    onChange={e => updateRule(type.key, rules, index, { patterns: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })}
+                    placeholder="zoom note, transcript, session summary"
+                    className="mt-2 w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500/40"
+                  />
+                  <div className="mt-2 flex items-center gap-4">
+                    <label className="flex items-center gap-1.5 text-xs text-slate-300">
+                      <input type="checkbox" checked={rule.enabled !== false} onChange={e => updateRule(type.key, rules, index, { enabled: e.target.checked })} className="accent-teal-500" />
+                      Enabled
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-slate-300">
+                      <input type="checkbox" checked={Boolean(rule.required)} onChange={e => updateRule(type.key, rules, index, { required: e.target.checked })} className="accent-rose-500" />
+                      Required
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeRule(type.key, rules, index)}
+                      className="ml-auto text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { settings, updateSettings, driveConnected, connectDrive, disconnectDrive, user } = useApp();
 
@@ -150,6 +237,7 @@ export default function SettingsPage() {
       detailLevel:       settings.detailLevel,
       namingTreatmentPlan: settings.namingConvention.treatmentPlan,
       namingDarp:          settings.namingConvention.darp,
+      sourceFiles:         settings.sourceFiles || {},
     };
   });
 
@@ -171,6 +259,7 @@ export default function SettingsPage() {
         treatmentPlan: f.namingTreatmentPlan,
         darp:          f.namingDarp,
       },
+      sourceFiles: f.sourceFiles,
     };
   }
 
@@ -582,6 +671,20 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewDarp}</span></p>
               </div>
             </div>
+          </div>
+
+          {/* ── SOURCE FILE SELECTION ── */}
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <FileOutput className="w-4 h-4 text-teal-400" />
+              <h2 className="text-sm font-black text-white uppercase tracking-wider">Source File Selection</h2>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Configure approximate filename rules per document type. Matching files are preselected on the Batch
+              Processor's generator page, where every discovered file can still be checked or unchecked by hand.
+              Optional rules only warn when nothing matches; only a rule marked <strong className="text-slate-300">Required</strong> blocks generation.
+            </p>
+            <SourceFileRulesEditor value={form.sourceFiles} onChange={sourceFiles => set('sourceFiles', sourceFiles)} />
           </div>
         </div>
 

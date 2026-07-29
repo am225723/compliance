@@ -15,6 +15,7 @@ import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
 import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
+import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
@@ -97,6 +98,23 @@ export default function BatchProcessor() {
     setPatients(prev => prev.map(p => p.name === name ? { ...p, ...patch } : p));
   }
 
+  function togglePatientSourceFile(patientName, fileId) {
+    setPatients(prev => prev.map(patient => {
+      if (patient.name !== patientName) return patient;
+      const selected = new Set(patient.selectedFileIds || []);
+      if (selected.has(fileId)) selected.delete(fileId); else selected.add(fileId);
+      return { ...patient, selectedFileIds: [...selected] };
+    }));
+  }
+
+  function applyConfiguredFileRules(patientName) {
+    setPatients(prev => prev.map(patient => {
+      if (patient.name !== patientName) return patient;
+      const resolution = resolveSourceFiles(patient.files, getSourceRules(settings, selectedTemplate));
+      return { ...patient, selectedFileIds: resolution.selectedFileIds, sourceRuleResults: resolution.ruleResults };
+    }));
+  }
+
   // ── Resumable batches: offer to restore an interrupted run ──────────────
   useEffect(() => {
     try {
@@ -158,7 +176,7 @@ export default function BatchProcessor() {
       const result = await Promise.all(names.map(async (name) => {
         const candidates = matchPatientFolders(name, subfolders);
         const status = classifyMatch(candidates);
-        const base = { name, candidates, outputs: [], generatedOutput: null, approved: true, error: null };
+        const base = { name, candidates, outputs: [], generatedOutput: null, approved: true, error: null, selectedFileIds: [], sourceRuleResults: [] };
 
         if (status === 'not_found') {
           addLog(`⚠ "${name}" — Folder Not Found`, 'warn');
@@ -172,8 +190,12 @@ export default function BatchProcessor() {
 
         const match = candidates[0];
         const files = await listPatientFiles(match.id);
+        const sourceResolution = resolveSourceFiles(files, getSourceRules(settings, selectedTemplate));
         addLog(`✓ "${name}" → "${match.name}" (${files.length} target files)`);
-        return { ...base, status, folderId: match.id, folderName: match.name, files };
+        return {
+          ...base, status, folderId: match.id, folderName: match.name, files,
+          selectedFileIds: sourceResolution.selectedFileIds, sourceRuleResults: sourceResolution.ruleResults,
+        };
       }));
 
       setPatients(result);
@@ -190,7 +212,11 @@ export default function BatchProcessor() {
     if (!candidate) return;
     try {
       const files = await listPatientFiles(candidate.id);
-      updatePatientByName(name, { status: 'matched', folderId: candidate.id, folderName: candidate.name, files, error: null });
+      const sourceResolution = resolveSourceFiles(files, getSourceRules(settings, selectedTemplate));
+      updatePatientByName(name, {
+        status: 'matched', folderId: candidate.id, folderName: candidate.name, files, error: null,
+        selectedFileIds: sourceResolution.selectedFileIds, sourceRuleResults: sourceResolution.ruleResults,
+      });
       addLog(`✓ Resolved "${name}" → "${candidate.name}"`);
     } catch (e) {
       updatePatientByName(name, { status: 'error', error: e.message });
@@ -249,10 +275,18 @@ export default function BatchProcessor() {
       addLog(`\n━━━ ${stepNum}/${total}: ${patient.name} ━━━`);
 
       try {
-        const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type));
+        const rules = getSourceRules(settings, docTypeKey);
+        const validation = validateSelectedSourceFiles(patient.files, patient.selectedFileIds, rules);
+        if (validation.missingRequired.length > 0) {
+          throw new Error(`Required source file missing: ${validation.missingRequired.map(x => x.rule.label).join(', ')}`);
+        }
+        validation.missingOptional.forEach(({ rule }) => addLog(`  ⚠ Optional source not found: ${rule.label}`, 'warn'));
+
+        const selectedFiles = validation.selectedFiles;
+        const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type), selectedFiles);
 
         if (sourceFileList.length === 0) {
-          addLog(`  ✅ No source files found for ${patient.name}, skipping.`);
+          addLog(`  ✅ No source files selected for ${patient.name}, skipping.`);
           updatePatientByName(patient.name, { status: 'skipped', error: 'No source files' });
           continue;
         }
@@ -579,16 +613,42 @@ export default function BatchProcessor() {
                         </div>
                       </div>
 
-                      {/* File list */}
+                      {/* File list — checkbox per file lets the preselected match be verified or overridden */}
                       {(expandedFiles[p.name] || phase !== PHASE.PREVIEW) && p.files.length > 0 && (
                         <div className="mt-2 pl-6 space-y-1">
+                          {phase === PHASE.PREVIEW && (
+                            <button
+                              type="button"
+                              onClick={() => applyConfiguredFileRules(p.name)}
+                              className="mb-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/25 text-teal-300 text-[10px] font-bold hover:bg-teal-500/20 transition-colors"
+                            >
+                              Re-apply Settings Rules
+                            </button>
+                          )}
                           {p.files.map(f => (
-                            <div key={f.id} className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <label key={f.id} className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(p.selectedFileIds || []).includes(f.id)}
+                                onChange={() => togglePatientSourceFile(p.name, f.id)}
+                                disabled={phase !== PHASE.PREVIEW}
+                                className="accent-teal-500"
+                              />
                               <FileText className="w-3 h-3 flex-shrink-0" />
                               {f.name}
                               <span className="text-slate-600 text-[10px]">({f.mimeType?.split('/').pop()})</span>
-                            </div>
+                            </label>
                           ))}
+                          {p.sourceRuleResults?.some(r => r.rule.required && r.matches.length === 0) && (
+                            <p className="text-[10px] text-red-400 flex items-center gap-1 pt-1">
+                              <AlertTriangle className="w-3 h-3" /> Missing required: {p.sourceRuleResults.filter(r => r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
+                            </p>
+                          )}
+                          {p.sourceRuleResults?.some(r => !r.rule.required && r.matches.length === 0) && (
+                            <p className="text-[10px] text-amber-400 flex items-center gap-1 pt-1">
+                              <Info className="w-3 h-3" /> Missing optional: {p.sourceRuleResults.filter(r => !r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
+                            </p>
+                          )}
                         </div>
                       )}
 
