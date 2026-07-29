@@ -79,13 +79,14 @@ export const PROVIDER_IDS = Object.keys(AI_PROVIDERS);
 
 /**
  * Call one of the server-managed provider proxies (notes_*-proxy Edge
- * Functions). These functions hold the real provider API key as a secret
- * and gate access with Supabase's platform-level JWT verification, so the
- * caller must be a logged-in user of this app — never the provider's own
+ * Functions). These functions hold the real provider API key as a secret and
+ * verify the caller's session JWT themselves (not via Supabase's
+ * platform-level verify_jwt — that rejects CORS preflight requests before
+ * the function's own OPTIONS handling runs, see supabase/config.toml), so
+ * the caller must be a logged-in user of this app — never the provider's own
  * key, which the browser no longer has. `apikey` is the project's
  * publishable key, required for Supabase to route the request at all;
- * `Authorization` carries the user's session JWT, which is what
- * verify_jwt actually checks.
+ * `Authorization` carries the user's session JWT, which the function checks.
  */
 async function callProxy(functionName, label, body) {
   const { data: { session } } = await supabase.auth.getSession();

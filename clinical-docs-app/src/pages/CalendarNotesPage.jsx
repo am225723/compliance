@@ -81,7 +81,7 @@ function effectiveApptStatus(appt) {
   if (appt.folderStatus === 'ambiguous') return 'ambiguous';
   if (appt.folderStatus === 'not_found') return 'not_found';
   if (appt.folderStatus === 'matched') {
-    const types = Object.values(appt.perDocType);
+    const types = Object.values(appt.perDocType || {});
     if (types.length && types.every((t) => t.status === 'duplicate')) return 'duplicate';
     return 'ready';
   }
@@ -342,6 +342,7 @@ export default function CalendarNotesPage() {
           folderId: folderStatus === 'matched' ? candidates[0].id : null,
           folderName: folderStatus === 'matched' ? candidates[0].name : null,
           files,
+          perDocType,
         });
       }
 
@@ -493,7 +494,7 @@ export default function CalendarNotesPage() {
   const reviewItemsList = useMemo(() => {
     const rows = [];
     for (const appt of appointments) {
-      for (const [docKey, dt] of Object.entries(appt.perDocType)) {
+      for (const [docKey, dt] of Object.entries(appt.perDocType || {})) {
         if (dt.status === 'generated' || dt.status === 'error') {
           rows.push({ apptId: appt.id, docKey, appt, dt, meta: getDocumentTypeMeta(docKey) });
         }
@@ -518,7 +519,7 @@ export default function CalendarNotesPage() {
   async function handleSaveApproved() {
     const workItems = [];
     for (const appt of appointments) {
-      for (const [docKey, dt] of Object.entries(appt.perDocType)) {
+      for (const [docKey, dt] of Object.entries(appt.perDocType || {})) {
         if (dt.status === 'generated' && dt.approved) workItems.push({ apptId: appt.id, docKey });
       }
     }

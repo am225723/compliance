@@ -1,20 +1,27 @@
 project_id = "ysdbfpszitsqnvphbpza"
 
-# All three functions require the caller to present a valid Supabase user
-# session JWT (verify_jwt = true, the platform default) — they hold real
-# provider API keys as server-side secrets and must not be reachable by
-# anyone who isn't logged into this app. Set these secrets in the Supabase
-# Dashboard (Project Settings -> Edge Functions -> Secrets), never in this
-# repo:
+# All three functions hold real provider API keys as server-side secrets and
+# must not be reachable by anyone who isn't logged into this app. They do
+# their OWN JWT verification in code (via supabase-js auth.getUser()) rather
+# than relying on the platform's verify_jwt setting, because verify_jwt=true
+# rejects the browser's CORS preflight (OPTIONS) request before the
+# function's own OPTIONS handling ever runs — browsers never attach
+# Authorization to a preflight, so the platform-level check has nothing to
+# verify and blocks it, which surfaces to the browser as a missing
+# Access-Control-Allow-Origin header. See:
+# https://github.com/orgs/supabase/discussions/38832
+#
+# Set these secrets in the Supabase Dashboard (Project Settings -> Edge
+# Functions -> Secrets), never in this repo:
 #   GEMINI_API_KEY        - for notes_gemini-proxy
 #   CLAUDE_API_KEY        - for notes_claude-proxy
 #   OLLAMA_CLOUD_API_KEY  - for notes_ollama-proxy
 
 [functions.notes_gemini-proxy]
-verify_jwt = true
+verify_jwt = false
 
 [functions.notes_claude-proxy]
-verify_jwt = true
+verify_jwt = false
 
 [functions.notes_ollama-proxy]
-verify_jwt = true
+verify_jwt = false
