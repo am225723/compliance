@@ -45,6 +45,26 @@ export const defaultSettings = {
     timeZone: '',                   // IANA zone; '' = use the browser's local zone
     useAiFallback: true,            // allow AI fallback when deterministic parsing is uncertain
   },
+
+  // Approximate filename-matching rules per document type, used to preselect
+  // source files on the Batch Processor generator page. { [docTypeKey]: Rule[] }
+  // where Rule = { id, label, enabled, required, patterns: string[] }.
+  sourceFiles: {
+    treatment_plan: [
+      { id: 'intake', label: 'Intake / Pre-Intake', enabled: true, required: false, patterns: ['intake', 'pre intake', 'pre-intake', 'headway intake'] },
+      { id: 'assessment', label: 'Assessment / Evaluation', enabled: true, required: false, patterns: ['assessment', 'evaluation', 'psych eval', 'initial evaluation'] },
+    ],
+    session_note: [
+      { id: 'session_source', label: 'Session transcript or Zoom note', enabled: true, required: false, patterns: ['zoomnote', 'zoom note', 'transcript', 'session summary', 'session note'] },
+      { id: 'treatment_plan', label: 'Treatment Plan source file', enabled: false, required: false, patterns: ['treatment plan', 'treatmentplan'] },
+    ],
+    pre_intake: [
+      { id: 'intake', label: 'Intake form', enabled: true, required: false, patterns: ['intake', 'headway intake', 'new patient', 'questionnaire'] },
+    ],
+    follow_up: [
+      { id: 'follow_up_source', label: 'Follow-up source', enabled: true, required: false, patterns: ['follow up', 'follow-up', 'zoomnote', 'zoom note', 'transcript', 'session'] },
+    ],
+  },
 };
 
 export function loadSettings() {
@@ -64,6 +84,7 @@ export function loadSettings() {
         ...saved.calendar,
         aliases: { ...defaultSettings.calendar.aliases, ...saved.calendar?.aliases },
       },
+      sourceFiles: { ...defaultSettings.sourceFiles, ...saved.sourceFiles },
     };
   } catch {
     return { ...defaultSettings };
