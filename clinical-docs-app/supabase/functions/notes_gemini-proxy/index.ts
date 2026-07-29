@@ -1,14 +1,27 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 // Keeps the Gemini (Google AI Studio) API key server-side. The browser never
 // holds this key — it authenticates to this function with its own Supabase
-// user session (see verify_jwt in the deploy config), and this function
-// injects the real Gemini key from the GEMINI_API_KEY secret before relaying
-// the request to Google. The client sends the same body shape it used to
-// send directly to Gemini (minus the key), plus `model`, which this function
-// pulls out to build the upstream URL.
+// user session, and this function injects the real Gemini key from the
+// GEMINI_API_KEY secret before relaying the request to Google. The client
+// sends the same body shape it used to send directly to Gemini (minus the
+// key), plus `model`, which this function pulls out to build the upstream
+// URL.
+//
+// verify_jwt is deliberately OFF for this function (see deploy config). The
+// platform's own JWT verification runs before ANY of our code, including the
+// OPTIONS branch below — and browsers never attach Authorization to a CORS
+// preflight, so turning it on causes every preflight to be rejected with no
+// CORS headers at all (looks like "No 'Access-Control-Allow-Origin' header
+// is present" in the browser, since the request never reaches this handler).
+// Instead we verify the caller's session JWT ourselves, after handling
+// OPTIONS, using supabase-js against the project's own auth server.
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? ''
+// Supabase injects these into every Edge Function automatically.
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
 const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
   .split(',')
@@ -62,6 +75,16 @@ Deno.serve(async (req) => {
 
   if (!isAllowedOrigin(req)) {
     return jsonResponse(req, { error: 'Origin is not allowed.' }, 403)
+  }
+
+  const jwt = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!jwt) {
+    return jsonResponse(req, { error: 'Not signed in.' }, 401)
+  }
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  const { data: { user }, error: authError } = await authClient.auth.getUser(jwt)
+  if (authError || !user) {
+    return jsonResponse(req, { error: 'Not signed in.' }, 401)
   }
 
   if (!GEMINI_API_KEY) {
