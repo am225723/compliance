@@ -9,10 +9,7 @@ function normalize(value = '') {
   return value
     .toLowerCase()
     .replace(/\.[a-z0-9]+$/i, '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/[^a-z0-9]/g, '');
 }
 
 export function fileMatchesPattern(fileName, pattern) {

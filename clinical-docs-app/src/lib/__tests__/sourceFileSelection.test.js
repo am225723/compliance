@@ -10,6 +10,13 @@ describe('fileMatchesPattern', () => {
     expect(fileMatchesPattern('pre-intake_form.pdf', 'pre intake')).toBe(true);
   });
 
+  it('matches regardless of which separator form the file vs. the pattern use', () => {
+    // Underscore/hyphen in the file name vs. no separator in the pattern.
+    expect(fileMatchesPattern('Zoom_Note-2024.pdf', 'zoomnote')).toBe(true);
+    // No separator in the file name vs. a space-separated pattern.
+    expect(fileMatchesPattern('ZOOMNOTE.pdf', 'zoom note')).toBe(true);
+  });
+
   it('is a substring match, not exact', () => {
     expect(fileMatchesPattern('Smith Session Note Jan 2026.pdf', 'session note')).toBe(true);
   });
