@@ -115,6 +115,20 @@ export default function BatchProcessor() {
     }));
   }
 
+  // The document-type selector stays enabled through Preview, so switching it
+  // after matching must re-resolve every matched patient's source-file
+  // selection against the new type's rules — otherwise handleGenerate would
+  // validate a selection that was resolved for the previous document type.
+  useEffect(() => {
+    if (phase !== PHASE.PREVIEW) return;
+    setPatients(prev => prev.map(patient => {
+      if (patient.status !== 'matched') return patient;
+      const resolution = resolveSourceFiles(patient.files, getSourceRules(settings, selectedTemplate));
+      return { ...patient, selectedFileIds: resolution.selectedFileIds, sourceRuleResults: resolution.ruleResults };
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplate]);
+
   // ── Resumable batches: offer to restore an interrupted run ──────────────
   useEffect(() => {
     try {
