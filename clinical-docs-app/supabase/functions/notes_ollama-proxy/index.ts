@@ -22,10 +22,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 // Instead we verify the caller's session JWT ourselves, after handling
 // OPTIONS, using supabase-js against the project's own auth server.
 //
-// ALLOWED_ORIGINS (optional): comma-separated list of allowed origins, e.g.
-//   "https://notes.docz.space,https://app.example.com"
-// Leave unset to allow any origin - useful when this one Supabase project
-// backs many independent repos/sites and the calling origins aren't fixed.
+// CORS is intentionally wide open (reflects any Origin) rather than gated by
+// an ALLOWED_ORIGINS allowlist: Supabase secrets are shared across every
+// Edge Function in a project, and this project backs several unrelated
+// integrations, so a restrictive ALLOWED_ORIGINS set for one of them would
+// silently break this one too. CORS isn't the real access-control boundary
+// here anyway — it only affects whether a browser lets its own JS read the
+// response, not whether the request executes. The actual gate is the
+// Supabase session JWT check below.
 
 const OLLAMA_API_URL = 'https://ollama.com/api/chat'
 const OLLAMA_CLOUD_API_KEY = Deno.env.get('OLLAMA_CLOUD_API_KEY') ?? ''
@@ -33,31 +37,14 @@ const OLLAMA_CLOUD_API_KEY = Deno.env.get('OLLAMA_CLOUD_API_KEY') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
-const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
-
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') ?? ''
-  const allowOrigin =
-    allowedOrigins.length === 0
-      ? origin || '*'
-      : allowedOrigins.includes(origin)
-        ? origin
-        : ''
-
   return {
-    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   }
-}
-
-function isAllowedOrigin(req: Request) {
-  const origin = req.headers.get('origin') ?? ''
-  return allowedOrigins.length === 0 || !origin || allowedOrigins.includes(origin)
 }
 
 function jsonResponse(req: Request, body: unknown, status = 200) {
@@ -73,18 +60,11 @@ function jsonResponse(req: Request, body: unknown, status = 200) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    if (!isAllowedOrigin(req)) {
-      return new Response(null, { status: 403, headers: corsHeaders(req) })
-    }
     return new Response(null, { headers: corsHeaders(req) })
   }
 
   if (req.method !== 'POST') {
     return jsonResponse(req, { error: 'Method not allowed.' }, 405)
-  }
-
-  if (!isAllowedOrigin(req)) {
-    return jsonResponse(req, { error: 'Origin is not allowed.' }, 403)
   }
 
   const jwt = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
