@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw } from 'lucide-react';
+import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
@@ -14,6 +14,7 @@ export default function GenerationHistoryPage() {
   const [loading, setLoading] = useState(false);
   const [expandedLog, setExpandedLog] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [retryingErrors, setRetryingErrors] = useState({});
 
   useEffect(() => {
     if (user?.id) {
@@ -52,6 +53,20 @@ export default function GenerationHistoryPage() {
 
   function toggleExpandLog(logId) {
     setExpandedLog(expandedLog === logId ? null : logId);
+  }
+
+  async function handleRetryError(errorId) {
+    setRetryingErrors(prev => ({ ...prev, [errorId]: true }));
+    try {
+      // TODO: Implement retry workflow - for now show message
+      // This would involve:
+      // 1. Finding the original batch configuration
+      // 2. Re-running generation for just this patient
+      // 3. Creating a new document or new version
+      console.log('Retry functionality coming soon');
+    } finally {
+      setRetryingErrors(prev => ({ ...prev, [errorId]: false }));
+    }
   }
 
   const filteredLogs = logs.filter(log =>
@@ -172,10 +187,17 @@ export default function GenerationHistoryPage() {
                                   </div>
                                   {err.retry_eligible && (
                                     <button
-                                      className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors flex-shrink-0"
+                                      onClick={() => handleRetryError(err.id)}
+                                      disabled={retryingErrors[err.id]}
+                                      className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 disabled:opacity-50 transition-colors flex-shrink-0"
                                       title="Retry this patient"
+                                      aria-label={`Retry generation for ${err.patient_name}`}
                                     >
-                                      <RotateCw className="w-3 h-3" />
+                                      {retryingErrors[err.id] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <RotateCw className="w-3 h-3" />
+                                      )}
                                     </button>
                                   )}
                                 </div>

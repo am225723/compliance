@@ -10,6 +10,7 @@ import ReportsPage from './pages/ReportsPage';
 import AutoPilotPage from './pages/AutoPilotPage';
 import TemplatesPage from './pages/TemplatesPage';
 import CalendarNotesPage from './pages/CalendarNotesPage';
+import GenerationHistoryPage from './pages/GenerationHistoryPage';
 import { Loader2 } from 'lucide-react';
 
 function AuthGuard({ children }) {
@@ -65,6 +66,7 @@ function AppRoutes() {
               <Routes>
                 <Route path="/"                element={<HomeDashboard />} />
                 <Route path="/batch"           element={<BatchProcessor />} />
+                <Route path="/history"         element={<GenerationHistoryPage />} />
                 <Route path="/autopilot"       element={<AutoPilotPage />} />
                 <Route path="/calendar-notes"  element={<CalendarNotesPage />} />
                 <Route path="/reports"         element={<ReportsPage />} />
