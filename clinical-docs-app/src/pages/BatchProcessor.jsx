@@ -21,6 +21,7 @@ import {
   detectDuplicateSourceFiles, validateBatchBefore, generateBatchId,
   saveGenerationLog, saveGenerationError, completeGenerationLog,
 } from '../lib/generationAudit';
+import DeduplicationWarning from '../components/DeduplicationWarning';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
@@ -743,6 +744,10 @@ export default function BatchProcessor() {
                               <Info className="w-3 h-3" /> Missing optional: {p.sourceRuleResults.filter(r => !r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
                             </p>
                           )}
+                          <DeduplicationWarning
+                            duplicates={detectDuplicateSourceFiles(p.files, p.sourceRuleResults || [])}
+                            patientName={p.name}
+                          />
                         </div>
                       )}
 
