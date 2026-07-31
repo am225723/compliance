@@ -3,9 +3,10 @@ import {
   ClipboardList, Search, CheckCircle2, AlertTriangle,
   Play, Loader2, FileText, FilePlus, SkipForward, Eye,
   FolderOpen, List, RefreshCw, XCircle, Info, Heart, Calendar,
-  HelpCircle, Code, Save, History, Ban
+  HelpCircle, Code, Save, History, Ban, AlertCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import {
   findPatientFormsFolder, listSubfolders, listPatientFiles,
 } from '../lib/googleDrive';
@@ -16,6 +17,11 @@ import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } 
 import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
+import {
+  detectDuplicateSourceFiles, validateBatchBefore, generateBatchId,
+  saveGenerationLog, saveGenerationError, completeGenerationLog,
+} from '../lib/generationAudit';
+import DeduplicationWarning from '../components/DeduplicationWarning';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
@@ -76,7 +82,7 @@ function resumeStablePhase(storedPhase) {
 }
 
 export default function BatchProcessor() {
-  const { settings, driveConnected, saveDocument, getTemplateHtml, fetchLatestDocument } = useApp();
+  const { settings, driveConnected, saveDocument, getTemplateHtml, fetchLatestDocument, user } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [batchInput, setBatchInput] = useState('');
   const [patients, setPatients] = useState([]);
@@ -85,6 +91,9 @@ export default function BatchProcessor() {
   const [expandedFiles, setExpandedFiles] = useState({});
   const [previewMode, setPreviewMode] = useState({}); // { [name]: 'rendered' | 'raw' }
   const [resumeBanner, setResumeBanner] = useState(null);
+  const [batchPreValidationErrors, setBatchPreValidationErrors] = useState([]);
+  const [batchPreValidationWarnings, setBatchPreValidationWarnings] = useState([]);
+  const [generationLogId, setGenerationLogId] = useState(null);
   const abortRef = useRef(false);
 
   const [selectedTemplate, setSelectedTemplate] = useState('treatment_plan');
@@ -249,27 +258,52 @@ export default function BatchProcessor() {
     setProgress({ percent, current, total, step });
   }
 
-  // ── Phase 2: Generate (in memory only — nothing is saved yet) ───────────
-  async function handleGenerate() {
+  // ── Pre-generation validation ────────────────────────────────────────
+  async function preValidateAndPrepare() {
     const confirmed = patients.filter(p => p.status === 'matched');
     if (confirmed.length === 0) {
       addLog('No matched patients to generate for.', 'error');
-      return;
+      return null;
     }
     if (patients.some(p => p.status === 'ambiguous')) {
       addLog('Resolve all ambiguous folder matches before generating.', 'error');
-      return;
+      return null;
     }
 
     const docTypeKey = selectedTemplate;
     const meta = getDocumentTypeMeta(docTypeKey);
-    if (!meta) { addLog('No template selected.', 'error'); return; }
+    if (!meta) { addLog('No template selected.', 'error'); return null; }
 
     const provider = settings.aiProvider || 'openai';
     const keys = getProviderKeys(settings);
     if (!isProviderConfigured(provider, keys)) {
-      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error'); return;
+      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error');
+      return null;
     }
+
+    // Check for duplicates and pre-collect errors/warnings
+    const rules = getSourceRules(settings, docTypeKey);
+    let hasDedupeWarnings = false;
+    confirmed.forEach(patient => {
+      const duplicates = detectDuplicateSourceFiles(patient.files, patient.sourceRuleResults || []);
+      if (duplicates.length > 0) {
+        addLog(`⚠ ${patient.name}: ${duplicates.length} file(s) match multiple rules and will be included twice`, 'warn');
+        hasDedupeWarnings = true;
+      }
+    });
+
+    if (hasDedupeWarnings) {
+      addLog('💡 Tip: Modify source file rules to avoid duplication, or manually adjust file selection per patient', 'info');
+    }
+
+    return { confirmed, docTypeKey, meta, provider, keys };
+  }
+
+  // ── Phase 2: Generate (in memory only — nothing is saved yet) ───────────
+  async function handleGenerate() {
+    const prep = await preValidateAndPrepare();
+    if (!prep) return;
+    const { confirmed, docTypeKey, meta, provider, keys } = prep;
 
     setPhase(PHASE.GENERATING);
     abortRef.current = false;
@@ -277,7 +311,27 @@ export default function BatchProcessor() {
     const total = confirmed.length;
     updateProgress(0, 0, total, 'Starting...');
 
+    // Create generation log for audit trail
+    const batchId = generateBatchId();
+    const batchLog = await saveGenerationLog(supabase, {
+      userId: user?.id,
+      batchId,
+      batchName: `Batch ${docTypeKey} ${new Date().toLocaleDateString()}`,
+      docTypeKey,
+      settingsSnapshot: {
+        aiProvider: provider,
+        aiModel: settings.aiModel,
+        detailLevel: settings.detailLevel,
+        sourceFileRules: settings.sourceFiles,
+      },
+    });
+    setGenerationLogId(batchLog?.id);
+    if (!batchLog) addLog('⚠ Warning: Could not create audit log', 'warn');
+
     const systemPrompt = buildSystemPrompt(settings.detailLevel);
+    let successCount = 0;
+    let failureCount = 0;
+    let skipCount = 0;
 
     for (let i = 0; i < confirmed.length; i++) {
       const patient = confirmed[i];
@@ -325,12 +379,36 @@ export default function BatchProcessor() {
           approved: true,
           error: null,
         });
+        successCount += 1;
       } catch (e) {
         addLog(`  ❌ Error for ${patient.name}: ${e.message}`, 'error');
         updatePatientByName(patient.name, { status: 'error', error: e.message, approved: false });
+        failureCount += 1;
+
+        // Log error to audit table if we have a generation log
+        if (batchLog?.id) {
+          await saveGenerationError(supabase, {
+            userId: user?.id,
+            generationLogId: batchLog.id,
+            patientName: patient.name,
+            error: e,
+            docTypeKey,
+          });
+        }
       }
 
       updateProgress(Math.round(((i + 1) / total) * 100), stepNum, total, 'Done');
+    }
+
+    // Update generation log with final stats
+    if (batchLog?.id) {
+      skipCount = total - successCount - failureCount;
+      await completeGenerationLog(supabase, {
+        generationLogId: batchLog.id,
+        successfulCount: successCount,
+        failedCount: failureCount,
+        skippedCount: skipCount,
+      });
     }
 
     setPhase(PHASE.REVIEW);
@@ -414,6 +492,9 @@ export default function BatchProcessor() {
     setSummary(null);
     setBatchInput('');
     setExpandedFiles({});
+    setGenerationLogId(null);
+    setBatchPreValidationErrors([]);
+    setBatchPreValidationWarnings([]);
     localStorage.removeItem(BATCH_STORAGE_KEY);
   }
 
@@ -663,6 +744,10 @@ export default function BatchProcessor() {
                               <Info className="w-3 h-3" /> Missing optional: {p.sourceRuleResults.filter(r => !r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
                             </p>
                           )}
+                          <DeduplicationWarning
+                            duplicates={detectDuplicateSourceFiles(p.files, p.sourceRuleResults || [])}
+                            patientName={p.name}
+                          />
                         </div>
                       )}
 

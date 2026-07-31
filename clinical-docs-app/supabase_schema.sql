@@ -204,8 +204,196 @@ CREATE TRIGGER templates_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- --------------------------------------------------------
--- Done! Tables created:
---   public.documents  — AI-generated clinical documents
+-- 7.  Extended document metadata — for regeneration, cost tracking, review workflows
+-- --------------------------------------------------------
+-- Cost tracking: tokens used + cost estimation
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  prompt_tokens integer;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  completion_tokens integer;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  total_tokens integer;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  estimated_cost_cents integer;  -- cost in cents for easy integer storage
+
+-- Document versioning: regeneration metadata
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  version_number integer DEFAULT 1;  -- incremented on regeneration
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  previous_version_id uuid REFERENCES public.documents(id) ON DELETE SET NULL;  -- link to prior version
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  generation_metadata jsonb;  -- { selectedFileIds, sourceFiles, settingsSnapshot: {...} }
+
+-- Review workflow
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  review_status text DEFAULT 'generated';  -- 'generated' | 'approved' | 'rejected'
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  reviewed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  reviewed_at timestamptz;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS
+  review_notes text;
+
+-- --------------------------------------------------------
+-- 8.  generation_logs  — audit trail for batch runs + error recovery
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.generation_logs (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             uuid        REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Batch metadata
+  batch_id            text        NOT NULL,  -- unique identifier for this batch run
+  batch_name          text,                  -- user-friendly name (optional)
+  document_type       text        NOT NULL,  -- which template was used
+  started_at          timestamptz DEFAULT now(),
+  completed_at        timestamptz,
+  status              text        NOT NULL DEFAULT 'in_progress',  -- 'in_progress' | 'completed' | 'failed' | 'partial'
+
+  -- Summary stats
+  total_patients      integer     NOT NULL DEFAULT 0,
+  successful_count    integer     NOT NULL DEFAULT 0,
+  failed_count        integer     NOT NULL DEFAULT 0,
+  skipped_count       integer     NOT NULL DEFAULT 0,
+
+  -- Settings snapshot for reproducibility
+  settings_snapshot   jsonb,  -- { aiProvider, aiModel, detailLevel, sourceFileRules }
+
+  created_at          timestamptz DEFAULT now()
+);
+
+-- --------------------------------------------------------
+-- 9.  generation_errors  — per-patient error details for audit + recovery
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.generation_errors (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid        REFERENCES auth.users(id) ON DELETE CASCADE,
+  generation_log_id uuid        REFERENCES public.generation_logs(id) ON DELETE CASCADE,
+
+  patient_name      text        NOT NULL,
+  error_message     text        NOT NULL,
+  error_type        text,  -- 'missing_files' | 'api_error' | 'validation_error' | 'unknown'
+  error_detail      jsonb,  -- full error object for debugging
+
+  document_type     text,
+  attempted_at      timestamptz DEFAULT now(),
+  retry_eligible    boolean     DEFAULT true,  -- can this error be retried?
+
+  created_at        timestamptz DEFAULT now()
+);
+
+-- --------------------------------------------------------
+-- 10. generation_presets  — saved configuration templates for batch generation
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.generation_presets (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid        REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Preset metadata
+  name              text        NOT NULL,  -- e.g. "Treatment Plan - Standard"
+  description       text,
+  document_type     text        NOT NULL,  -- 'treatment_plan' | 'session_note' | 'pre_intake' | 'follow_up'
+  is_default        boolean     DEFAULT false,
+
+  -- Saved settings
+  ai_provider       text        NOT NULL,
+  ai_model          text,
+  detail_level      text        NOT NULL,  -- 'Standard' | 'Highly Detailed' | 'Bulleted Summary'
+  output_format     text        NOT NULL,  -- 'HTML' | 'PDF' | 'Both'
+  source_file_rules jsonb,               -- per-doc-type rules (same structure as settings.sourceFiles)
+
+  created_at        timestamptz DEFAULT now(),
+  updated_at        timestamptz DEFAULT now()
+);
+
+-- --------------------------------------------------------
+-- Enable RLS and create policies for new tables
+-- --------------------------------------------------------
+ALTER TABLE public.generation_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.generation_errors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.generation_presets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own generation logs"
+  ON public.generation_logs FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own generation logs"
+  ON public.generation_logs FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own generation logs"
+  ON public.generation_logs FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own generation errors"
+  ON public.generation_errors FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own generation errors"
+  ON public.generation_errors FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own generation presets"
+  ON public.generation_presets FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own generation presets"
+  ON public.generation_presets FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own generation presets"
+  ON public.generation_presets FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own generation presets"
+  ON public.generation_presets FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- --------------------------------------------------------
+-- Create triggers for updated_at
+-- --------------------------------------------------------
+CREATE TRIGGER generation_presets_updated_at
+  BEFORE UPDATE ON public.generation_presets
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- --------------------------------------------------------
+-- Indexes for performance
+-- --------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_generation_logs_user_id
+  ON public.generation_logs(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_generation_logs_batch_id
+  ON public.generation_logs(batch_id);
+
+CREATE INDEX IF NOT EXISTS idx_generation_logs_created_at
+  ON public.generation_logs(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_generation_errors_user_id
+  ON public.generation_errors(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_generation_errors_log_id
+  ON public.generation_errors(generation_log_id);
+
+CREATE INDEX IF NOT EXISTS idx_generation_errors_patient
+  ON public.generation_errors(patient_name);
+
+CREATE INDEX IF NOT EXISTS idx_generation_presets_user_id
+  ON public.generation_presets(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_generation_presets_doc_type
+  ON public.generation_presets(document_type);
+
+CREATE INDEX IF NOT EXISTS idx_documents_review_status
+  ON public.documents(review_status);
+
+CREATE INDEX IF NOT EXISTS idx_documents_version_number
+  ON public.documents(version_number);
+
+-- --------------------------------------------------------
+-- Done! Tables created/extended:
+--   public.documents  — AI-generated clinical documents (extended with versioning, cost, review)
 --   public.reports    — Billing/clinical report rows
 --   public.templates  — Clinic-wide template overrides
+--   public.generation_logs  — Batch run audit trail
+--   public.generation_errors  — Per-patient error details
+--   public.generation_presets  — Saved configuration presets
 -- --------------------------------------------------------
