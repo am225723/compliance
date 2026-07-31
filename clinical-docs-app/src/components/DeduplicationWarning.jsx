@@ -10,9 +10,9 @@ export default function DeduplicationWarning({ duplicates, patientName }) {
   }
 
   return (
-    <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3">
+    <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3" role="alert">
       <div className="flex items-start gap-2">
-        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div>
           <p className="text-xs font-bold text-amber-300">⚠ Duplicate Source Files</p>
           <p className="text-xs text-amber-200 mt-1">

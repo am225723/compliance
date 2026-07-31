@@ -11,6 +11,7 @@ import {
 import { applyNamingConvention } from '../lib/settings';
 import { AI_PROVIDERS } from '../lib/aiEngine';
 import { DOCUMENT_TYPES } from '../lib/documentTypes';
+import PresetManager from '../components/PresetManager';
 
 const OUTPUT_FORMATS = ['HTML', 'PDF', 'Both'];
 const DETAIL_LEVELS  = ['Standard', 'Highly Detailed', 'Bulleted Summary'];
@@ -222,6 +223,7 @@ export default function SettingsPage() {
   const [driveError, setDriveError]       = useState('');
   const [calendarConnecting, setCalendarConnecting] = useState(false);
   const [calendarError, setCalendarError] = useState('');
+  const [selectedDocTypeForPreset, setSelectedDocTypeForPreset] = useState('session_note');
 
   const [form, setForm] = useState(() => {
     // Resolve aiModel: if empty, use the provider's default so it's always explicit
@@ -345,6 +347,21 @@ export default function SettingsPage() {
     setSaved(false);
     setProviderSaved(true);
     setTimeout(() => setProviderSaved(false), 2000);
+  }
+
+  function handleApplyPreset(presetSettings) {
+    const next = {
+      ...form,
+      aiProvider: presetSettings.aiProvider || form.aiProvider,
+      aiModel: presetSettings.aiModel || form.aiModel,
+      detailLevel: presetSettings.detailLevel || form.detailLevel,
+      outputFormat: presetSettings.outputFormat || form.outputFormat,
+      sourceFiles: presetSettings.sourceFileRules || form.sourceFiles,
+    };
+    setForm(next);
+    updateSettings(buildSettingsFromForm(next));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -685,6 +702,39 @@ export default function SettingsPage() {
               Optional rules only warn when nothing matches; only a rule marked <strong className="text-slate-300">Required</strong> blocks generation.
             </p>
             <SourceFileRulesEditor value={form.sourceFiles} onChange={sourceFiles => set('sourceFiles', sourceFiles)} />
+          </div>
+
+          {/* ── GENERATION PRESETS ── */}
+          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Tag className="w-4 h-4 text-indigo-400" />
+              <h2 className="text-sm font-black text-white uppercase tracking-wider">Generation Presets</h2>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Save and reuse your favorite AI settings, detail levels, and source file rules as named presets.
+            </p>
+            <div className="mb-4">
+              <label htmlFor="preset-doc-type" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Document Type</label>
+              <div className="relative">
+                <select
+                  id="preset-doc-type"
+                  value={selectedDocTypeForPreset}
+                  onChange={e => setSelectedDocTypeForPreset(e.target.value)}
+                  className="w-full appearance-none bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-violet-500/50"
+                >
+                  {Object.entries(DOCUMENT_TYPES).map(([key, type]) => (
+                    <option key={key} value={key}>{type.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+              </div>
+            </div>
+            <PresetManager
+              docTypeKey={selectedDocTypeForPreset}
+              settings={form}
+              onApplyPreset={handleApplyPreset}
+              userId={user?.id}
+            />
           </div>
         </div>
 

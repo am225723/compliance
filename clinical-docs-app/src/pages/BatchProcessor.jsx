@@ -22,6 +22,7 @@ import {
   saveGenerationLog, saveGenerationError, completeGenerationLog,
 } from '../lib/generationAudit';
 import DeduplicationWarning from '../components/DeduplicationWarning';
+import DocumentReviewQueue from '../components/DocumentReviewQueue';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
@@ -82,7 +83,7 @@ function resumeStablePhase(storedPhase) {
 }
 
 export default function BatchProcessor() {
-  const { settings, driveConnected, saveDocument, getTemplateHtml, fetchLatestDocument, user } = useApp();
+  const { settings, driveConnected, saveDocument, getTemplateHtml, fetchLatestDocument, user, updateDocumentReview, regenerateDocument } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [batchInput, setBatchInput] = useState('');
   const [patients, setPatients] = useState([]);
@@ -427,6 +428,21 @@ export default function BatchProcessor() {
 
   function togglePreviewMode(name) {
     setPreviewMode(prev => ({ ...prev, [name]: prev[name] === 'raw' ? 'rendered' : 'raw' }));
+  }
+
+  function handleReviewStatusChange(patientName, status) {
+    const patient = patients.find(p => p.name === patientName);
+    if (!patient) return;
+
+    if (status === 'approved') {
+      updatePatientByName(patientName, { approved: true });
+    } else if (status === 'rejected') {
+      updatePatientByName(patientName, { approved: false });
+    }
+  }
+
+  function handleRegenerateClick(patientName) {
+    addLog(`ℹ Regeneration not yet supported within batch. Use the Generate History page to retry failed items.`, 'info');
   }
 
   // ── Phase 3: Save approved documents to Drive + Supabase ────────────────
@@ -824,25 +840,21 @@ export default function BatchProcessor() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                {/* Document review queue */}
+                <DocumentReviewQueue
+                  patients={generatedForReview}
+                  onReviewStatusChange={handleReviewStatusChange}
+                  onRegenerateClick={handleRegenerateClick}
+                  phase={phase}
+                />
+
+                {/* Review items with HTML edit mode */}
+                <div className="space-y-3 mt-5">
                   {generatedForReview.map(p => (
-                    <div key={p.name} className={`rounded-xl border p-3 ${
-                      p.status === 'error' ? 'border-red-500/30 bg-red-500/5' : 'border-white/10 bg-white/3'
-                    }`}>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {p.status === 'generated' && (
-                            <input
-                              type="checkbox"
-                              checked={p.approved}
-                              onChange={() => toggleApprove(p.name)}
-                              className="w-4 h-4 rounded accent-teal-500 flex-shrink-0"
-                            />
-                          )}
+                    p.status === 'generated' && (
+                      <div key={p.name} className="rounded-xl border border-white/10 bg-white/3 p-3">
+                        <div className="flex items-center justify-between gap-2 mb-2">
                           <span className="text-sm font-bold text-white truncate">{p.name}</span>
-                          <StatusBadge status={p.status} />
-                        </div>
-                        {p.status === 'generated' && (
                           <button
                             onClick={() => togglePreviewMode(p.name)}
                             className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors flex-shrink-0"
@@ -850,15 +862,9 @@ export default function BatchProcessor() {
                             <Code className="w-3.5 h-3.5" />
                             {previewMode[p.name] === 'raw' ? 'Preview' : 'Edit HTML'}
                           </button>
-                        )}
-                      </div>
+                        </div>
 
-                      {p.status === 'error' && (
-                        <p className="text-xs text-red-400">{p.error}</p>
-                      )}
-
-                      {p.status === 'generated' && (
-                        previewMode[p.name] === 'raw' ? (
+                        {previewMode[p.name] === 'raw' ? (
                           <textarea
                             value={p.generatedOutput.html}
                             onChange={e => updateGeneratedHtml(p.name, e.target.value)}
@@ -872,9 +878,9 @@ export default function BatchProcessor() {
                             srcDoc={p.generatedOutput.html}
                             className="w-full h-64 rounded-lg border border-white/10 bg-white"
                           />
-                        )
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )
                   ))}
                 </div>
 

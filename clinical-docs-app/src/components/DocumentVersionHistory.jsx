@@ -49,7 +49,8 @@ export default function DocumentVersionHistory({ docId, patientName, userId, onR
           <button
             key={version.id}
             onClick={() => setExpandedVersion(expandedVersion === version.id ? null : version.id)}
-            className="w-full text-left p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+            className="w-full text-left p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            aria-expanded={expandedVersion === version.id ? 'true' : 'false'}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">

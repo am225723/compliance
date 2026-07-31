@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw } from 'lucide-react';
+import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
@@ -14,6 +14,7 @@ export default function GenerationHistoryPage() {
   const [loading, setLoading] = useState(false);
   const [expandedLog, setExpandedLog] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [retryingErrors, setRetryingErrors] = useState({});
 
   useEffect(() => {
     if (user?.id) {
@@ -54,6 +55,20 @@ export default function GenerationHistoryPage() {
     setExpandedLog(expandedLog === logId ? null : logId);
   }
 
+  async function handleRetryError(errorId) {
+    setRetryingErrors(prev => ({ ...prev, [errorId]: true }));
+    try {
+      // TODO: Implement retry workflow - for now show message
+      // This would involve:
+      // 1. Finding the original batch configuration
+      // 2. Re-running generation for just this patient
+      // 3. Creating a new document or new version
+      console.log('Retry functionality coming soon');
+    } finally {
+      setRetryingErrors(prev => ({ ...prev, [errorId]: false }));
+    }
+  }
+
   const filteredLogs = logs.filter(log =>
     log.batch_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.document_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,14 +99,17 @@ export default function GenerationHistoryPage() {
 
         {/* Search */}
         <div className="mb-5">
+          <label htmlFor="search-batch" className="block text-xs font-bold text-slate-400 mb-1.5">Search History</label>
           <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" aria-hidden="true" />
             <input
+              id="search-batch"
               type="text"
               placeholder="Search by batch name, document type, or status…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40"
+              className="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
+              aria-label="Search generation history"
             />
           </div>
         </div>
@@ -119,7 +137,8 @@ export default function GenerationHistoryPage() {
                   {/* Header */}
                   <button
                     onClick={() => toggleExpandLog(log.id)}
-                    className="w-full text-left flex items-center justify-between gap-3"
+                    className="w-full text-left flex items-center justify-between gap-3 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/30 rounded px-1 py-0.5"
+                    aria-expanded={expandedLog === log.id ? 'true' : 'false'}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {statusIcon}
@@ -168,10 +187,17 @@ export default function GenerationHistoryPage() {
                                   </div>
                                   {err.retry_eligible && (
                                     <button
-                                      className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors flex-shrink-0"
+                                      onClick={() => handleRetryError(err.id)}
+                                      disabled={retryingErrors[err.id]}
+                                      className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 disabled:opacity-50 transition-colors flex-shrink-0"
                                       title="Retry this patient"
+                                      aria-label={`Retry generation for ${err.patient_name}`}
                                     >
-                                      <RotateCw className="w-3 h-3" />
+                                      {retryingErrors[err.id] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <RotateCw className="w-3 h-3" />
+                                      )}
                                     </button>
                                   )}
                                 </div>
