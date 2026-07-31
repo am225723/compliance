@@ -53,31 +53,32 @@ export default function DocumentReviewQueue({
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => onRegenerateClick?.(patient.name)}
-                    className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                    title="Regenerate this document"
+                    className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    aria-label={`Regenerate document for ${patient.name}`}
                   >
-                    <RotateCw className="w-4 h-4" />
+                    <RotateCw className="w-4 h-4" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => onReviewStatusChange?.(patient.name, 'approved')}
-                    className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                    title="Approve for saving"
+                    className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    aria-label={`Approve ${patient.name}`}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => setExpandedNotes(prev => ({ ...prev, [patient.name]: !prev[patient.name] }))}
-                    className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
-                    title="Add review notes"
+                    className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    aria-label={`Add or edit review notes for ${patient.name}`}
+                    aria-expanded={expandedNotes[patient.name] ? 'true' : 'false'}
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-4 h-4" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => onReviewStatusChange?.(patient.name, 'rejected')}
-                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                    title="Reject this document"
+                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                    aria-label={`Reject ${patient.name}`}
                   >
-                    <XCircle className="w-4 h-4" />
+                    <XCircle className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               )}

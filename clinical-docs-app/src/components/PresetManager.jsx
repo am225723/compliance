@@ -13,6 +13,7 @@ export default function PresetManager({ docTypeKey, settings, onApplyPreset, use
   const [saving, setSaving] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [presetDescription, setPresetDescription] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     if (!userId) return;
@@ -28,9 +29,10 @@ export default function PresetManager({ docTypeKey, settings, onApplyPreset, use
 
   async function handleSavePreset() {
     if (!presetName.trim()) {
-      alert('Please enter a preset name');
+      setValidationError('Please enter a preset name');
       return;
     }
+    setValidationError('');
     setSaving(true);
     const saved = await savePreset(supabase, userId, {
       name: presetName,
@@ -68,20 +70,35 @@ export default function PresetManager({ docTypeKey, settings, onApplyPreset, use
       <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
         <h3 className="font-black text-white mb-3">Save Current Configuration as Preset</h3>
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Preset name (e.g., 'Standard DARP')"
-            value={presetName}
-            onChange={e => setPresetName(e.target.value)}
-            className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40"
-          />
-          <input
-            type="text"
-            placeholder="Description (optional)"
-            value={presetDescription}
-            onChange={e => setPresetDescription(e.target.value)}
-            className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40"
-          />
+          {validationError && (
+            <div role="alert" className="text-xs text-red-400 bg-red-500/10 border border-red-500/25 rounded-lg p-2">
+              {validationError}
+            </div>
+          )}
+          <div>
+            <label htmlFor="preset-name" className="block text-xs font-bold text-slate-300 mb-1.5">Preset Name *</label>
+            <input
+              id="preset-name"
+              type="text"
+              placeholder="e.g., 'Standard DARP'"
+              value={presetName}
+              onChange={e => { setPresetName(e.target.value); setValidationError(''); }}
+              aria-required="true"
+              aria-invalid={validationError ? 'true' : 'false'}
+              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
+            />
+          </div>
+          <div>
+            <label htmlFor="preset-description" className="block text-xs font-bold text-slate-300 mb-1.5">Description</label>
+            <input
+              id="preset-description"
+              type="text"
+              placeholder="Optional description"
+              value={presetDescription}
+              onChange={e => setPresetDescription(e.target.value)}
+              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
+            />
+          </div>
           <button
             onClick={handleSavePreset}
             disabled={saving}
@@ -114,17 +131,17 @@ export default function PresetManager({ docTypeKey, settings, onApplyPreset, use
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleLoadPreset(preset)}
-                    className="p-2 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors"
-                    title="Load preset"
+                    className="p-2 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                    aria-label={`Load preset ${preset.name}`}
                   >
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-4 h-4" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleDeletePreset(preset.id)}
-                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                    title="Delete preset"
+                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                    aria-label={`Delete preset ${preset.name}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>

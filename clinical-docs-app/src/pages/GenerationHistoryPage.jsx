@@ -84,14 +84,17 @@ export default function GenerationHistoryPage() {
 
         {/* Search */}
         <div className="mb-5">
+          <label htmlFor="search-batch" className="block text-xs font-bold text-slate-400 mb-1.5">Search History</label>
           <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" aria-hidden="true" />
             <input
+              id="search-batch"
               type="text"
               placeholder="Search by batch name, document type, or status…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40"
+              className="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
+              aria-label="Search generation history"
             />
           </div>
         </div>
@@ -119,7 +122,8 @@ export default function GenerationHistoryPage() {
                   {/* Header */}
                   <button
                     onClick={() => toggleExpandLog(log.id)}
-                    className="w-full text-left flex items-center justify-between gap-3"
+                    className="w-full text-left flex items-center justify-between gap-3 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/30 rounded px-1 py-0.5"
+                    aria-expanded={expandedLog === log.id ? 'true' : 'false'}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {statusIcon}
