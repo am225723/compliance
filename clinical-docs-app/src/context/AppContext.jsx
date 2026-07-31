@@ -232,6 +232,63 @@ export function AppProvider({ children }) {
     return templates.find(t => t.key === key)?.html || null;
   }
 
+  // ── Document review & versioning ───────────────────────
+  async function updateDocumentReview(docId, { reviewStatus, reviewNotes }) {
+    if (!session?.user) return null;
+    const { data, error } = await supabase
+      .from('documents')
+      .update({
+        review_status: reviewStatus,
+        review_notes: reviewNotes,
+        reviewed_by: session.user.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', docId)
+      .select()
+      .single();
+    if (!error && data) {
+      setDocuments(prev => prev.map(d => d.id === docId ? data : d));
+      return data;
+    }
+    console.error('updateDocumentReview error:', error);
+    return null;
+  }
+
+  async function regenerateDocument(originalDocId, newHtml, { provider, model, tokens }) {
+    if (!session?.user) return null;
+    const originalDoc = documents.find(d => d.id === originalDocId);
+    if (!originalDoc) return null;
+
+    const { promptTokens, completionTokens } = tokens || {};
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
+        ...originalDoc,
+        id: undefined,  // Let DB generate new ID
+        user_id: session.user.id,
+        content_html: newHtml,
+        version_number: (originalDoc.version_number || 1) + 1,
+        previous_version_id: originalDocId,
+        review_status: 'generated',
+        reviewed_by: null,
+        reviewed_at: null,
+        review_notes: null,
+        ai_provider: provider,
+        ai_model: model,
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        total_tokens: promptTokens && completionTokens ? promptTokens + completionTokens : null,
+      })
+      .select()
+      .single();
+    if (!error && data) {
+      setDocuments(prev => [data, ...prev]);
+      return data;
+    }
+    console.error('regenerateDocument error:', error);
+    return null;
+  }
+
   // ── Settings ──────────────────────────────────────────
   function updateSettings(patch) {
     setSettingsState(prev => {
@@ -268,7 +325,7 @@ export function AppProvider({ children }) {
       user: session?.user ?? null,
       // Documents
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
-      fetchExistingCalendarNotes,
+      fetchExistingCalendarNotes, updateDocumentReview, regenerateDocument,
       // Reports
       reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports,
       // Templates
