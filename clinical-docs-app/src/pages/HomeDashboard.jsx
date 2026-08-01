@@ -4,7 +4,7 @@ import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
   FileCheck2, Clock, Trash2, Sparkles, Brain,
-  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays
+  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays, History
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
@@ -290,7 +290,7 @@ export default function HomeDashboard() {
                 <p className="text-sm font-black text-white">{activeProvider?.label || 'No provider'}</p>
                 {isConfigured && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-black border border-teal-500/30">
-                    ✓ {activeProvider?.serverManaged ? 'Ready' : 'Ready'}
+                    ✓ Ready
                   </span>
                 )}
               </div>
