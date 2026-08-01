@@ -4,7 +4,7 @@ const SETTINGS_KEY = 'clinicaldocs_settings';
 
 export const defaultSettings = {
   // AI Provider
-  aiProvider:   'openai',      // 'openai' | 'gemini' | 'claude' | 'ollama'
+  aiProvider:   'gemini',      // 'openai' | 'gemini' | 'claude' | 'ollama'
   aiModel:      '',            // override model; empty = use provider default
 
   // Per-provider keys / config. Gemini, Claude, and Ollama Cloud keys are

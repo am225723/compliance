@@ -275,7 +275,7 @@ export default function CalendarNotesPage() {
       const existingRaw = await fetchExistingCalendarNotes(selectedCalendarIds, range);
       const existingIndex = buildExistingNoteIndex(existingRaw);
 
-      const provider = settings.aiProvider || 'openai';
+      const provider = settings.aiProvider || 'gemini';
       const keys = getProviderKeys(settings);
       const useAiFallback = !!calendarSettings.useAiFallback;
       const calendarNameById = Object.fromEntries(calendars.map((c) => [c.id, c.summary]));
@@ -421,7 +421,7 @@ export default function CalendarNotesPage() {
   async function handleGenerate() {
     if (selectedDocTypes.length === 0) { addLog('Select at least one document type.', 'error'); return; }
 
-    const provider = settings.aiProvider || 'openai';
+    const provider = settings.aiProvider || 'gemini';
     const keys = getProviderKeys(settings);
     if (!isProviderConfigured(provider, keys)) {
       addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error'); return;
@@ -545,7 +545,7 @@ export default function CalendarNotesPage() {
         const { savedOutputs } = await withRetry(
           () => saveGeneratedDocument({
             patient, docTypeKey: docKey, outputHtml: dt.generatedOutput.html, settings,
-            provider: settings.aiProvider || 'openai', model: settings.aiModel || undefined,
+            provider: settings.aiProvider || 'gemini', model: settings.aiModel || undefined,
             saveDocument, source: 'manual',
             calendarLink: { calendarId: appt.calendarId, eventId: appt.eventId, occurrenceStart: appt.start },
           }),

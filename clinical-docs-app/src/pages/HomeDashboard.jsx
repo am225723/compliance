@@ -3,19 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
-  FileCheck2, Clock, Trash2, Sparkles, Brain,
-  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays, History
+  FileCheck2, Trash2, Sparkles, Brain,
+  ExternalLink, Search, X, Zap, CalendarDays, History, HardDrive,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 
 const DOC_TYPE_LABELS = {
-  treatment_plan: { label: 'Treatment Plan', color: 'from-blue-500 to-indigo-600',  icon: Heart,         tag: 'Tx Plan'    },
-  darp:           { label: 'DARP Note',       color: 'from-teal-500 to-emerald-600', icon: ClipboardList, tag: 'DARP'       },
-  pre_intake:     { label: 'Pre-Intake',      color: 'from-violet-500 to-purple-600',icon: FileText,      tag: 'Intake'     },
-  follow_up:      { label: 'Follow-Up',       color: 'from-rose-500 to-pink-600',    icon: Calendar,      tag: 'Follow-Up'  },
+  treatment_plan: { label: 'Treatment Plan', color: 'from-blue-500 to-indigo-600',   icon: Heart,         tag: 'Tx Plan'   },
+  darp:           { label: 'DARP Note',       color: 'from-teal-500 to-emerald-600', icon: ClipboardList, tag: 'DARP'      },
+  pre_intake:     { label: 'Pre-Intake',      color: 'from-violet-500 to-purple-600',icon: FileText,      tag: 'Intake'    },
+  follow_up:      { label: 'Follow-Up',       color: 'from-rose-500 to-pink-600',    icon: Calendar,      tag: 'Follow-Up' },
 };
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 function DocCard({ doc, onDelete, selected, onToggleSelect }) {
   const meta = DOC_TYPE_LABELS[doc.document_type] || DOC_TYPE_LABELS.darp;
@@ -25,19 +32,19 @@ function DocCard({ doc, onDelete, selected, onToggleSelect }) {
     : '';
 
   return (
-    <div className={`group relative bg-white/3 hover:bg-white/6 border rounded-2xl p-4 transition-all ${
-      selected ? 'border-teal-500/50 bg-teal-500/5' : 'border-white/8 hover:border-white/15'
+    <div className={`group relative bg-white/[0.03] hover:bg-white/[0.06] border rounded-2xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20 ${
+      selected ? 'border-teal-500/50 bg-teal-500/5 ring-1 ring-teal-500/30' : 'border-white/8 hover:border-white/15'
     }`}>
       <button
         onClick={() => onToggleSelect(doc.id)}
         className="absolute top-3 left-3 z-10"
         title="Select"
       >
-        <input type="checkbox" checked={selected} readOnly className="w-3.5 h-3.5 rounded accent-teal-500" />
+        <input type="checkbox" checked={selected} readOnly className="w-3.5 h-3.5 rounded accent-teal-500 cursor-pointer" />
       </button>
 
       <div className="flex items-start justify-between gap-2 mb-3 pl-5">
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-md flex-shrink-0`}>
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-lg flex-shrink-0`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -91,7 +98,7 @@ export default function HomeDashboard() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const keys = getProviderKeys(settings);
-  const activeProviderId = settings.aiProvider || 'openai';
+  const activeProviderId = settings.aiProvider || 'gemini';
   const activeProvider = AI_PROVIDERS[activeProviderId];
 
   const isConfigured = isProviderConfigured(activeProviderId, keys);
@@ -102,6 +109,8 @@ export default function HomeDashboard() {
   // Stats
   const totalDocs = documents.length;
   const uniquePatients = new Set(documents.map(d => d.patient_name)).size;
+  const firstName = user?.email ? user.email.split('@')[0].split(/[._]/)[0] : '';
+  const greetingName = firstName ? `, ${firstName.charAt(0).toUpperCase()}${firstName.slice(1)}` : '';
 
   const visibleDocs = useMemo(() => {
     if (!search.trim()) return documents.slice(0, 8);
@@ -137,18 +146,26 @@ export default function HomeDashboard() {
       {/* Hero Header */}
       <div className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-16 -left-16 w-80 h-80 bg-teal-700/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-16 right-8 w-64 h-64 bg-emerald-700/15 rounded-full blur-3xl" />
+          <div className="absolute -top-24 -left-20 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 right-0 w-80 h-80 bg-emerald-600/15 rounded-full blur-3xl" />
+          <div className="absolute top-8 right-1/3 w-64 h-64 bg-violet-600/10 rounded-full blur-3xl" />
         </div>
-        <div className="relative max-w-6xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
+        <div className="relative max-w-6xl mx-auto px-6 py-10">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="IP" className="w-14 h-14 object-contain drop-shadow-lg" />
+              <div className="relative flex-shrink-0">
+                <div className="absolute inset-0 bg-teal-500/30 blur-xl rounded-2xl" />
+                <img src="/logo.png" alt="IP" className="relative w-14 h-14 object-contain drop-shadow-lg" />
+              </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-400">Integrative Psychiatry</p>
-                <h1 className="text-2xl font-black text-white leading-tight">Clinical AI</h1>
+                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+                  {getGreeting()}{greetingName}
+                </h1>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {user?.email && `Welcome back · ${user.email}`}
+                  {totalDocs > 0
+                    ? `${totalDocs} document${totalDocs === 1 ? '' : 's'} generated so far`
+                    : 'Ready to generate your first clinical document'}
                 </p>
               </div>
             </div>
@@ -156,9 +173,9 @@ export default function HomeDashboard() {
             {/* Quick action */}
             <button
               onClick={() => navigate('/batch')}
-              className={`hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg ${
+              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black transition-all ${
                 isReady
-                  ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-teal-900/40'
+                  ? 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white shadow-lg shadow-teal-900/40 hover:shadow-teal-800/50 hover:-translate-y-0.5'
                   : 'bg-white/8 text-slate-400 border border-white/10 cursor-default'
               }`}
             >
@@ -175,15 +192,20 @@ export default function HomeDashboard() {
         {(!isConfigured || !driveConnected) && (
           <div className="mb-8 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/25">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <h3 className="font-black text-white mb-1">Setup Required</h3>
-                <p className="text-sm text-amber-200">
-                  {!isConfigured && !driveConnected
-                    ? 'Connect Google Drive and add an AI provider to get started'
-                    : !isConfigured
-                    ? 'Add an AI provider to start generating documents'
-                    : 'Connect Google Drive to save documents'}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white mb-0.5">Setup Required</h3>
+                  <p className="text-sm text-amber-200">
+                    {!isConfigured && !driveConnected
+                      ? 'Connect Google Drive and add an AI provider to get started'
+                      : !isConfigured
+                      ? 'Add an AI provider to start generating documents'
+                      : 'Connect Google Drive to save documents'}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => navigate('/settings')}
@@ -204,9 +226,9 @@ export default function HomeDashboard() {
             <button
               onClick={() => navigate('/batch')}
               disabled={!isReady}
-              className={`text-left p-5 rounded-2xl border transition-all ${
+              className={`text-left p-5 rounded-2xl border transition-all duration-200 ${
                 isReady
-                  ? 'bg-gradient-to-br from-teal-600/20 to-emerald-600/20 border-teal-500/30 hover:border-teal-500/50 hover:from-teal-600/30 hover:to-emerald-600/30'
+                  ? 'bg-gradient-to-br from-teal-600/20 to-emerald-600/20 border-teal-500/30 hover:border-teal-500/50 hover:from-teal-600/30 hover:to-emerald-600/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/20'
                   : 'bg-slate-800/50 border-white/10 opacity-60 cursor-not-allowed'
               }`}
             >
@@ -214,7 +236,7 @@ export default function HomeDashboard() {
                 <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
                   <ClipboardList className="w-5 h-5 text-teal-400" />
                 </div>
-                {isReady && <ChevronRight className="w-5 h-5 text-teal-400 flex-shrink-0" />}
+                {isReady && <ChevronRight className="w-5 h-5 text-teal-400 flex-shrink-0 transition-transform group-hover:translate-x-0.5" />}
               </div>
               <h3 className="font-black text-white mb-1">Batch Processor</h3>
               <p className="text-sm text-slate-400">Generate documents from patient files in bulk</p>
@@ -224,9 +246,9 @@ export default function HomeDashboard() {
             <button
               onClick={() => navigate('/calendar-notes')}
               disabled={!isReady}
-              className={`text-left p-5 rounded-2xl border transition-all ${
+              className={`text-left p-5 rounded-2xl border transition-all duration-200 ${
                 isReady
-                  ? 'bg-gradient-to-br from-sky-600/20 to-cyan-600/20 border-sky-500/30 hover:border-sky-500/50 hover:from-sky-600/30 hover:to-cyan-600/30'
+                  ? 'bg-gradient-to-br from-sky-600/20 to-cyan-600/20 border-sky-500/30 hover:border-sky-500/50 hover:from-sky-600/30 hover:to-cyan-600/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-900/20'
                   : 'bg-slate-800/50 border-white/10 opacity-60 cursor-not-allowed'
               }`}
             >
@@ -243,7 +265,7 @@ export default function HomeDashboard() {
             {/* View History */}
             <button
               onClick={() => navigate('/history')}
-              className="text-left p-5 rounded-2xl border bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-violet-500/30 hover:border-violet-500/50 hover:from-violet-600/30 hover:to-purple-600/30 transition-all"
+              className="text-left p-5 rounded-2xl border bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-violet-500/30 hover:border-violet-500/50 hover:from-violet-600/30 hover:to-purple-600/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-900/20 transition-all duration-200"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
@@ -260,21 +282,20 @@ export default function HomeDashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Documents',  value: totalDocs,       icon: FileCheck2, color: 'text-teal-400',   bg: 'bg-teal-500/10'   },
-            { label: 'Patients',         value: uniquePatients,  icon: Brain,      color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
-            { label: 'AI Provider',      value: activeProvider?.label || 'None', icon: Sparkles, color: 'text-violet-400', bg: 'bg-violet-500/10' },
-            { label: 'Drive',            value: driveConnected ? 'Connected' : 'Offline', icon: Clock, color: driveConnected ? 'text-emerald-400' : 'text-slate-500', bg: driveConnected ? 'bg-emerald-500/10' : 'bg-white/5' },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
-              <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-3`}>
+            { label: 'Total Documents', value: totalDocs,      icon: FileCheck2, color: 'text-teal-400',   bg: 'bg-teal-500/10',   ring: 'group-hover:ring-teal-500/20' },
+            { label: 'Patients',        value: uniquePatients, icon: Brain,      color: 'text-blue-400',   bg: 'bg-blue-500/10',   ring: 'group-hover:ring-blue-500/20' },
+            { label: 'AI Provider',     value: activeProvider?.label || 'None', icon: Sparkles, color: 'text-violet-400', bg: 'bg-violet-500/10', ring: 'group-hover:ring-violet-500/20' },
+            { label: 'Drive',           value: driveConnected ? 'Connected' : 'Offline', icon: HardDrive, color: driveConnected ? 'text-emerald-400' : 'text-slate-500', bg: driveConnected ? 'bg-emerald-500/10' : 'bg-white/5', ring: driveConnected ? 'group-hover:ring-emerald-500/20' : 'group-hover:ring-white/10' },
+          ].map(({ label, value, icon: Icon, color, bg, ring }) => (
+            <div key={label} className={`group rounded-2xl border border-white/8 bg-white/[0.03] p-4 transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5 ring-1 ring-transparent ${ring}`}>
+              <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3 transition-transform group-hover:scale-105`}>
                 <Icon className={`w-4 h-4 ${color}`} />
               </div>
               <p className="text-lg font-black text-white truncate">{value}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
             </div>
           ))}
         </div>
-
 
         {/* AI Engine & More Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">

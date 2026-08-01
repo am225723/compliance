@@ -42,7 +42,7 @@ export default function AutoPilotPage() {
     if (!driveConnected) { addLog('Google Drive not connected — skipping run.', 'error'); return; }
     if (!autoPilot.docTypes.length) { addLog('No document types selected — nothing to generate.', 'error'); return; }
 
-    const provider = settings.aiProvider || 'openai';
+    const provider = settings.aiProvider || 'gemini';
     const keys = getProviderKeys(settings);
     if (!isProviderConfigured(provider, keys)) {
       addLog(`AI provider "${provider}" has no API key configured — skipping run.`, 'error'); return;
