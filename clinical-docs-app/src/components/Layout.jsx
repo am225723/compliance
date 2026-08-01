@@ -8,15 +8,35 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
-const navItems = [
-  { to: '/',              icon: LayoutDashboard, label: 'Dashboard',        sub: 'Home & Recent Docs'      },
-  { to: '/batch',         icon: ClipboardList,   label: 'Batch Processor',  sub: 'Generate Clinical Docs'  },
-  { to: '/history',       icon: History,         label: 'Generation History', sub: 'View Past Batches & Logs' },
-  { to: '/calendar-notes', icon: CalendarDays,   label: 'Calendar Notes',   sub: 'Generate From Appointments' },
-  { to: '/autopilot',     icon: Zap,             label: 'AutoPilot',        sub: 'Watch & Auto-Generate'   },
-  { to: '/reports',       icon: BarChart3,       label: 'Reports',          sub: 'Billing & Visit Data'    },
-  { to: '/templates',     icon: FileText,        label: 'Templates',        sub: 'Edit Document Templates' },
-  { to: '/settings',      icon: Settings,        label: 'Settings',         sub: 'AI Keys & Preferences'   },
+const navSections = [
+  {
+    section: 'Home',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard', sub: 'Overview & Recent Docs' },
+    ],
+  },
+  {
+    section: 'Generation',
+    items: [
+      { to: '/batch', icon: ClipboardList, label: 'Batch Processor', sub: 'Generate from Files' },
+      { to: '/calendar-notes', icon: CalendarDays, label: 'Calendar Notes', sub: 'From Appointments' },
+      { to: '/autopilot', icon: Zap, label: 'AutoPilot', sub: 'Auto-Generate & Watch' },
+    ],
+  },
+  {
+    section: 'Review & Analyze',
+    items: [
+      { to: '/history', icon: History, label: 'Generation History', sub: 'Batch Logs & Errors' },
+      { to: '/reports', icon: BarChart3, label: 'Reports', sub: 'Billing & Analytics' },
+    ],
+  },
+  {
+    section: 'Configuration',
+    items: [
+      { to: '/templates', icon: FileText, label: 'Templates', sub: 'Edit Document Templates' },
+      { to: '/settings', icon: Settings, label: 'Settings', sub: 'AI Keys & Preferences' },
+    ],
+  },
 ];
 
 export default function Layout({ children }) {
@@ -75,36 +95,41 @@ export default function Layout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-2 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, label, sub }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all group
-                ${isActive
-                  ? 'bg-teal-600/20 border border-teal-500/30 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }
-              `}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
-                    isActive ? 'bg-teal-500/20' : 'bg-white/5 group-hover:bg-white/10'
-                  }`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold leading-tight">{label}</p>
-                    <p className="text-[10px] text-slate-500 leading-tight truncate">{sub}</p>
-                  </div>
-                  {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-400 flex-shrink-0" />}
-                </>
-              )}
-            </NavLink>
+        <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-1">
+          {navSections.map(({ section, items }) => (
+            <div key={section}>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 px-3 py-2">{section}</p>
+              {items.map(({ to, icon: Icon, label, sub }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all group
+                    ${isActive
+                      ? 'bg-teal-600/20 border border-teal-500/30 text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                    }
+                  `}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
+                        isActive ? 'bg-teal-500/20' : 'bg-white/5 group-hover:bg-white/10'
+                      }`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold leading-tight">{label}</p>
+                        <p className="text-[10px] text-slate-500 leading-tight truncate">{sub}</p>
+                      </div>
+                      {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-400 flex-shrink-0" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           ))}
 
           {/* Template quick links */}

@@ -4,7 +4,7 @@ import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
   FileCheck2, Clock, Trash2, Sparkles, Brain,
-  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays
+  ExternalLink, AlertCircle, Search, X, Zap, CalendarDays, History
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
@@ -171,6 +171,92 @@ export default function HomeDashboard() {
 
       <div className="max-w-6xl mx-auto px-6 mt-8">
 
+        {/* Setup status banner */}
+        {(!isConfigured || !driveConnected) && (
+          <div className="mb-8 p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/25">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="font-black text-white mb-1">Setup Required</h3>
+                <p className="text-sm text-amber-200">
+                  {!isConfigured && !driveConnected
+                    ? 'Connect Google Drive and add an AI provider to get started'
+                    : !isConfigured
+                    ? 'Add an AI provider to start generating documents'
+                    : 'Connect Google Drive to save documents'}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-black text-sm transition-all whitespace-nowrap"
+              >
+                <Settings className="w-4 h-4" />
+                Go to Settings
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Primary workflow cards */}
+        <div className="mb-8">
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400 mb-3">Quick Start</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Generate from Files */}
+            <button
+              onClick={() => navigate('/batch')}
+              disabled={!isReady}
+              className={`text-left p-5 rounded-2xl border transition-all ${
+                isReady
+                  ? 'bg-gradient-to-br from-teal-600/20 to-emerald-600/20 border-teal-500/30 hover:border-teal-500/50 hover:from-teal-600/30 hover:to-emerald-600/30'
+                  : 'bg-slate-800/50 border-white/10 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-teal-400" />
+                </div>
+                {isReady && <ChevronRight className="w-5 h-5 text-teal-400 flex-shrink-0" />}
+              </div>
+              <h3 className="font-black text-white mb-1">Batch Processor</h3>
+              <p className="text-sm text-slate-400">Generate documents from patient files in bulk</p>
+            </button>
+
+            {/* Generate from Appointments */}
+            <button
+              onClick={() => navigate('/calendar-notes')}
+              disabled={!isReady}
+              className={`text-left p-5 rounded-2xl border transition-all ${
+                isReady
+                  ? 'bg-gradient-to-br from-sky-600/20 to-cyan-600/20 border-sky-500/30 hover:border-sky-500/50 hover:from-sky-600/30 hover:to-cyan-600/30'
+                  : 'bg-slate-800/50 border-white/10 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center">
+                  <CalendarDays className="w-5 h-5 text-sky-400" />
+                </div>
+                {isReady && <ChevronRight className="w-5 h-5 text-sky-400 flex-shrink-0" />}
+              </div>
+              <h3 className="font-black text-white mb-1">Calendar Notes</h3>
+              <p className="text-sm text-slate-400">Auto-generate from your calendar appointments</p>
+            </button>
+
+            {/* View History */}
+            <button
+              onClick={() => navigate('/history')}
+              className="text-left p-5 rounded-2xl border bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-violet-500/30 hover:border-violet-500/50 hover:from-violet-600/30 hover:to-purple-600/30 transition-all"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                  <History className="w-5 h-5 text-violet-400" />
+                </div>
+                <ChevronRight className="w-5 h-5 text-violet-400 flex-shrink-0" />
+              </div>
+              <h3 className="font-black text-white mb-1">Generation History</h3>
+              <p className="text-sm text-slate-400">View batch runs, logs, and retry failed items</p>
+            </button>
+          </div>
+        </div>
+
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
@@ -189,104 +275,66 @@ export default function HomeDashboard() {
           ))}
         </div>
 
-        {/* Setup nudges */}
-        {(!isConfigured || !driveConnected) && (
-          <div className="mb-6 space-y-2">
-            {!isConfigured && (
-              <div
-                onClick={() => navigate('/settings')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 cursor-pointer hover:bg-amber-500/15 transition-all"
-              >
-                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                <p className="text-xs text-amber-300 font-semibold flex-1">
-                  No AI provider configured yet — add your API key in Settings to start generating documents.
-                </p>
-                <Settings className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              </div>
-            )}
-            {!driveConnected && (
-              <div
-                onClick={() => navigate('/settings')}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/25 cursor-pointer hover:bg-blue-500/15 transition-all"
-              >
-                <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                <p className="text-xs text-blue-300 font-semibold flex-1">
-                  Google Drive not connected — connect in Settings to save documents to patient folders.
-                </p>
-                <Settings className="w-4 h-4 text-blue-400 flex-shrink-0" />
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Active AI Engine quick status */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet-400" />
-            <h2 className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Active AI Engine</h2>
-          </div>
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-xs text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1"
-          >
-            <Settings className="w-3 h-3" /> Manage
-          </button>
-        </div>
-
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border mb-8 ${
-          isConfigured
-            ? 'border-teal-500/30 bg-teal-500/8'
-            : 'border-white/10 bg-white/3'
-        }`}>
-          <span className="text-2xl">{activeProvider?.logo || '🤖'}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-black text-white">{activeProvider?.label || 'No provider selected'}</p>
-              {isConfigured && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-black border border-teal-500/30">
-                  {/* Server-managed providers can't be verified from the client — this
-                      reflects "should be ready", not a live check of the server secret. */}
-                  {activeProvider?.serverManaged ? 'Server-managed' : '✓ Ready'}
-                </span>
-              )}
+        {/* AI Engine & More Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+          {/* Active AI Engine */}
+          <div className={`lg:col-span-2 flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all ${
+            isConfigured
+              ? 'border-teal-500/30 bg-gradient-to-r from-teal-600/10 to-emerald-600/10'
+              : 'border-white/10 bg-white/3'
+          }`}>
+            <span className="text-3xl">{activeProvider?.logo || '🤖'}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-black text-white">{activeProvider?.label || 'No provider'}</p>
+                {isConfigured && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-black border border-teal-500/30">
+                    ✓ Ready
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 font-mono mt-0.5">{currentModel}</p>
             </div>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">{currentModel}</p>
-          </div>
-          <button
-            onClick={() => navigate('/batch')}
-            disabled={!isReady}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              isReady
-                ? 'bg-teal-600 hover:bg-teal-500 text-white'
-                : 'bg-white/5 text-slate-600 cursor-not-allowed'
-            }`}
-          >
-            <Play className="w-3 h-3" /> Generate
-          </button>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-          {[
-            { label: 'Batch Generate',  icon: ClipboardList, to: '/batch',          color: 'from-teal-600 to-emerald-600',  desc: 'Process patient files'   },
-            { label: 'Calendar Notes',  icon: CalendarDays,  to: '/calendar-notes', color: 'from-sky-600 to-cyan-600',      desc: 'Generate from appointments' },
-            { label: 'AutoPilot',       icon: Zap,           to: '/autopilot',      color: 'from-amber-500 to-orange-600',  desc: 'Watch & auto-generate'   },
-            { label: 'View Reports',    icon: BarChart3,     to: '/reports',        color: 'from-blue-600 to-indigo-600',   desc: 'Billing & visit data'    },
-            { label: 'Templates',       icon: FileText,      to: '/templates',      color: 'from-violet-600 to-purple-600', desc: 'Edit document templates' },
-            { label: 'Settings',        icon: Settings,      to: '/settings',       color: 'from-slate-600 to-slate-700',   desc: 'Configure AI & Drive'    },
-          ].map(({ label, icon: Icon, to, color, desc }) => (
             <button
-              key={to}
-              onClick={() => navigate(to)}
-              className="group text-left bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 rounded-2xl p-4 transition-all"
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition-colors"
             >
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md mb-3`}>
-                <Icon className="w-4 h-4 text-white" />
-              </div>
-              <p className="text-sm font-black text-white group-hover:text-teal-300 transition-colors">{label}</p>
-              <p className="text-[11px] text-slate-600 mt-0.5">{desc}</p>
+              <Settings className="w-3 h-3" /> Change
             </button>
-          ))}
+          </div>
+
+          {/* Quick Access to Other Features */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => navigate('/autopilot')}
+              className="text-left p-3 rounded-xl bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 transition-all group"
+            >
+              <Zap className="w-4 h-4 text-amber-400 mb-1" />
+              <p className="text-xs font-black text-white">AutoPilot</p>
+            </button>
+            <button
+              onClick={() => navigate('/reports')}
+              className="text-left p-3 rounded-xl bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 transition-all group"
+            >
+              <BarChart3 className="w-4 h-4 text-blue-400 mb-1" />
+              <p className="text-xs font-black text-white">Reports</p>
+            </button>
+            <button
+              onClick={() => navigate('/templates')}
+              className="text-left p-3 rounded-xl bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 transition-all group"
+            >
+              <FileText className="w-4 h-4 text-violet-400 mb-1" />
+              <p className="text-xs font-black text-white">Templates</p>
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className="text-left p-3 rounded-xl bg-white/3 hover:bg-white/6 border border-white/8 hover:border-white/15 transition-all group"
+            >
+              <Settings className="w-4 h-4 text-slate-400 mb-1" />
+              <p className="text-xs font-black text-white">Settings</p>
+            </button>
+          </div>
         </div>
 
         {/* Recent Documents */}
