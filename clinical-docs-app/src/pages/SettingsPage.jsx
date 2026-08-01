@@ -93,7 +93,7 @@ function SecretInput({ value, onChange, onBlurSave, placeholder, label, hint }) 
   );
 }
 
-function PlainInput({ value, onChange, placeholder, label }) {
+function PlainInput({ value, onChange, onBlur, placeholder, label }) {
   return (
     <div>
       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">{label}</label>
@@ -101,6 +101,7 @@ function PlainInput({ value, onChange, placeholder, label }) {
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-violet-500/50 font-mono"
       />
@@ -227,7 +228,7 @@ export default function SettingsPage() {
 
   const [form, setForm] = useState(() => {
     // Resolve aiModel: if empty, use the provider's default so it's always explicit
-    const provider = settings.aiProvider || 'openai';
+    const provider = settings.aiProvider || 'gemini';
     const resolvedModel = settings.aiModel || AI_PROVIDERS[provider]?.defaultModel || '';
     return {
       aiProvider:        provider,
@@ -239,6 +240,8 @@ export default function SettingsPage() {
       detailLevel:       settings.detailLevel,
       namingTreatmentPlan: settings.namingConvention.treatmentPlan,
       namingDarp:          settings.namingConvention.darp,
+      namingPreIntake:     settings.namingConvention.preIntake,
+      namingFollowUp:      settings.namingConvention.followUp,
       sourceFiles:         settings.sourceFiles || {},
     };
   });
@@ -260,6 +263,8 @@ export default function SettingsPage() {
       namingConvention: {
         treatmentPlan: f.namingTreatmentPlan,
         darp:          f.namingDarp,
+        preIntake:     f.namingPreIntake,
+        followUp:      f.namingFollowUp,
       },
       sourceFiles: f.sourceFiles,
     };
@@ -317,8 +322,10 @@ export default function SettingsPage() {
   const ext        = form.outputFormat === 'PDF' ? '.pdf' : '.html';
   const extBoth    = '.html / .pdf';
   const previewExt = form.outputFormat === 'Both' ? extBoth : ext;
-  const previewTp   = applyNamingConvention(form.namingTreatmentPlan, 'Smith', today) + previewExt;
-  const previewDarp = applyNamingConvention(form.namingDarp, 'Smith', today) + previewExt;
+  const previewTp        = applyNamingConvention(form.namingTreatmentPlan, 'Smith', today) + previewExt;
+  const previewDarp      = applyNamingConvention(form.namingDarp, 'Smith', today) + previewExt;
+  const previewPreIntake = applyNamingConvention(form.namingPreIntake, 'Smith', today) + previewExt;
+  const previewFollowUp  = applyNamingConvention(form.namingFollowUp, 'Smith', today) + previewExt;
 
   const activeProvider = AI_PROVIDERS[form.aiProvider];
   const providerModels = activeProvider?.models || [];
@@ -556,6 +563,7 @@ export default function SettingsPage() {
                 </p>
                 {!envClientId && (
                   <PlainInput value={driveClientId} onChange={setDriveClientId}
+                    onBlur={() => saveClientId(driveClientId)}
                     placeholder="xxxx.apps.googleusercontent.com" label="Google OAuth2 Client ID" />
                 )}
                 {driveError && (
@@ -686,6 +694,18 @@ export default function SettingsPage() {
                 <input type="text" value={form.namingDarp} onChange={e => set('namingDarp', e.target.value)}
                   className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500/50 font-mono" />
                 <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewDarp}</span></p>
+              </div>
+              <div>
+                <label htmlFor="naming-pre-intake" className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Pre-Intake Summary</label>
+                <input id="naming-pre-intake" type="text" value={form.namingPreIntake} onChange={e => set('namingPreIntake', e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500/50 font-mono" />
+                <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewPreIntake}</span></p>
+              </div>
+              <div>
+                <label htmlFor="naming-follow-up" className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Follow-Up Note</label>
+                <input id="naming-follow-up" type="text" value={form.namingFollowUp} onChange={e => set('namingFollowUp', e.target.value)}
+                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500/50 font-mono" />
+                <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewFollowUp}</span></p>
               </div>
             </div>
           </div>
