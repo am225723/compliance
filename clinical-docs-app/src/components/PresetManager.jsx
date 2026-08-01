@@ -61,8 +61,7 @@ export default function PresetManager({ docTypeKey, settings, onApplyPreset, use
   }
 
   function handleLoadPreset(preset) {
-    const settings = applyPreset(preset, settings);
-    onApplyPreset(settings);
+    onApplyPreset(applyPreset(preset, settings));
   }
 
   return (
