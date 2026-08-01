@@ -67,7 +67,7 @@ rehydrateToken();
 const ENV_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 export function saveClientId(id) {
-  localStorage.setItem(CLIENT_ID_KEY, id);
+  try { localStorage.setItem(CLIENT_ID_KEY, id); } catch { /* blocked/unavailable storage — value still lives in React state for this session */ }
 }
 export function loadClientId() {
   return ENV_CLIENT_ID || localStorage.getItem(CLIENT_ID_KEY) || '';

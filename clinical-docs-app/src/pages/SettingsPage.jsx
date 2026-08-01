@@ -696,14 +696,14 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewDarp}</span></p>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Pre-Intake Summary</label>
-                <input type="text" value={form.namingPreIntake} onChange={e => set('namingPreIntake', e.target.value)}
+                <label htmlFor="naming-pre-intake" className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Pre-Intake Summary</label>
+                <input id="naming-pre-intake" type="text" value={form.namingPreIntake} onChange={e => set('namingPreIntake', e.target.value)}
                   className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500/50 font-mono" />
                 <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewPreIntake}</span></p>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Follow-Up Note</label>
-                <input type="text" value={form.namingFollowUp} onChange={e => set('namingFollowUp', e.target.value)}
+                <label htmlFor="naming-follow-up" className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Follow-Up Note</label>
+                <input id="naming-follow-up" type="text" value={form.namingFollowUp} onChange={e => set('namingFollowUp', e.target.value)}
                   className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500/50 font-mono" />
                 <p className="text-xs text-slate-600 mt-1">Preview: <span className="text-slate-400 font-mono">{previewFollowUp}</span></p>
               </div>

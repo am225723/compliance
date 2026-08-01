@@ -35,13 +35,13 @@ function DocCard({ doc, onDelete, selected, onToggleSelect }) {
     <div className={`group relative bg-white/[0.03] hover:bg-white/[0.06] border rounded-2xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20 ${
       selected ? 'border-teal-500/50 bg-teal-500/5 ring-1 ring-teal-500/30' : 'border-white/8 hover:border-white/15'
     }`}>
-      <button
-        onClick={() => onToggleSelect(doc.id)}
-        className="absolute top-3 left-3 z-10"
-        title="Select"
-      >
-        <input type="checkbox" checked={selected} readOnly className="w-3.5 h-3.5 rounded accent-teal-500 cursor-pointer" />
-      </button>
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(doc.id)}
+        aria-label={`${selected ? 'Deselect' : 'Select'} ${doc.patient_name || 'document'}`}
+        className="absolute top-3 left-3 z-10 w-3.5 h-3.5 rounded accent-teal-500 cursor-pointer"
+      />
 
       <div className="flex items-start justify-between gap-2 mb-3 pl-5">
         <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-lg flex-shrink-0`}>
@@ -226,7 +226,7 @@ export default function HomeDashboard() {
             <button
               onClick={() => navigate('/batch')}
               disabled={!isReady}
-              className={`text-left p-5 rounded-2xl border transition-all duration-200 ${
+              className={`group text-left p-5 rounded-2xl border transition-all duration-200 ${
                 isReady
                   ? 'bg-gradient-to-br from-teal-600/20 to-emerald-600/20 border-teal-500/30 hover:border-teal-500/50 hover:from-teal-600/30 hover:to-emerald-600/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/20'
                   : 'bg-slate-800/50 border-white/10 opacity-60 cursor-not-allowed'
