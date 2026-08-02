@@ -25,3 +25,15 @@ export const CANONICAL_DOCUMENT_TYPE = {
 export function getDocumentTypeMeta(key) {
   return DOCUMENT_TYPES.find(t => t.key === key) || null;
 }
+
+/** Default Reports-page "Type of Service" for each generated document type —
+ *  used to pre-fill the billing entry auto-created alongside a saved
+ *  document. Values match ReportsPage's SERVICE_TYPES options exactly so the
+ *  pre-filled dropdown shows a real selection rather than falling through to
+ *  "— Select type —". */
+export const DEFAULT_SERVICE_TYPE_BY_DOC_TYPE = {
+  treatment_plan: 'Treatment Planning',
+  session_note:   'Psychotherapy',
+  pre_intake:     'Initial Intake',
+  follow_up:      'Follow-Up Visit',
+};

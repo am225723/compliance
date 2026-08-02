@@ -56,7 +56,7 @@ export default function TemplatesPage() {
     <div className="min-h-full bg-slate-950 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -101,14 +101,14 @@ export default function TemplatesPage() {
                 <button
                   onClick={handleResetToDefault}
                   disabled={!override || saving || loadingHtml}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-30"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-30"
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> Reset to Default
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || loadingHtml || !dirty}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-black transition-all disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black transition-all disabled:opacity-40"
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Save
@@ -117,8 +117,11 @@ export default function TemplatesPage() {
             </div>
 
             {loadingHtml ? (
-              <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+              <div role="status" className="flex flex-col items-center justify-center py-24">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                </div>
+                <span className="sr-only">Loading template</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

@@ -9,7 +9,7 @@ import {
   generateClinicalDocument, htmlToPdfBlob,
 } from './aiEngine';
 import { applyNamingConvention } from './settings';
-import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from './documentTypes';
+import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, DEFAULT_SERVICE_TYPE_BY_DOC_TYPE, getDocumentTypeMeta } from './documentTypes';
 
 const NAMING_KEY = {
   treatment_plan: 'treatmentPlan',
@@ -110,7 +110,8 @@ export async function generateDocumentForPatient({
 /** Upload a generated document to Drive (HTML and/or a real PDF) and save its record to Supabase. */
 export async function saveGeneratedDocument({
   patient, docTypeKey, outputHtml, settings, provider, model, saveDocument, source = 'manual',
-  calendarLink = null, // { calendarId, eventId, occurrenceStart } | null — set by Calendar Notes
+  calendarLink = null, // { calendarId, eventId, occurrenceStart, durationMinutes? } | null — set by Calendar Notes
+  saveReport = null,   // optional — auto-creates a linked draft Reports row for billing/visit tracking
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -157,6 +158,26 @@ export async function saveGeneratedDocument({
     // transient DB error) — treat this as a failure rather than resolving
     // silently, or callers will mark the item "done" with no DB record.
     throw new Error('Document uploaded to Drive but the database record could not be saved.');
+  }
+
+  if (saveReport) {
+    // Best-effort: a draft billing row makes the Reports page useful without
+    // extra clicks, but it's a convenience on top of the document that just
+    // saved successfully — never let it fail the save the user is waiting on.
+    try {
+      const dateOfService = calendarLink?.occurrenceStart
+        ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+      await saveReport({
+        document_id: saved.id,
+        patient_name: patient.name,
+        type_of_service: DEFAULT_SERVICE_TYPE_BY_DOC_TYPE[docTypeKey] || null,
+        date_of_service: dateOfService,
+        psychotherapy_minutes: calendarLink?.durationMinutes ?? null,
+      });
+    } catch (e) {
+      console.error('Auto-create report entry failed:', e);
+    }
   }
 
   return { savedOutputs, saved };

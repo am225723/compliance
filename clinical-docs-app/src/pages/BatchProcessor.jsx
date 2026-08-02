@@ -83,7 +83,7 @@ function resumeStablePhase(storedPhase) {
 }
 
 export default function BatchProcessor() {
-  const { settings, driveConnected, saveDocument, getTemplateHtml, fetchLatestDocument, user, updateDocumentReview, regenerateDocument } = useApp();
+  const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, user, updateDocumentReview, regenerateDocument } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [batchInput, setBatchInput] = useState('');
   const [patients, setPatients] = useState([]);
@@ -492,6 +492,7 @@ export default function BatchProcessor() {
             provider: settings.aiProvider || 'gemini',
             model: settings.aiModel || undefined,
             saveDocument,
+            saveReport,
             source: 'manual',
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 saving ${patient.name}: ${e.message}`, 'warn') }
