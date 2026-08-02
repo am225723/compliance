@@ -96,6 +96,7 @@ export default function BatchProcessor() {
   const [batchPreValidationWarnings, setBatchPreValidationWarnings] = useState([]);
   const [generationLogId, setGenerationLogId] = useState(null);
   const abortRef = useRef(false);
+  const persistTimeoutRef = useRef(null);
 
   const [selectedTemplate, setSelectedTemplate] = useState('treatment_plan');
   const [progress, setProgress] = useState({ percent: 0, current: 0, total: 0, step: '' });
@@ -151,16 +152,23 @@ export default function BatchProcessor() {
     } catch { /* ignore corrupted snapshot */ }
   }, []);
 
+  // Debounced so the frequent genPercent updates during streaming (many
+  // per document) don't each trigger a synchronous JSON.stringify + Web
+  // Storage write of the whole patients array.
   useEffect(() => {
     if (phase === PHASE.IDLE) {
       localStorage.removeItem(BATCH_STORAGE_KEY);
       return;
     }
-    try {
-      localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
-        phase, patients, batchInput, selectedTemplate, summary, ts: Date.now(),
-      }));
-    } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
+          phase, patients, batchInput, selectedTemplate, summary, ts: Date.now(),
+        }));
+      } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    }, 400);
+    return () => clearTimeout(persistTimeoutRef.current);
   }, [phase, patients, batchInput, selectedTemplate, summary]);
 
   function handleResumeBatch() {
@@ -735,7 +743,14 @@ export default function BatchProcessor() {
                       {/* Per-document progress bar while this patient's document is streaming in */}
                       {p.status === 'generating' && (
                         <div className="mt-2 pl-6">
-                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            role="progressbar"
+                            aria-label={`Generating document for ${p.name}`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={p.genPercent || 0}
+                            className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"
+                          >
                             <div
                               className="h-full bg-gradient-to-r from-violet-600 to-teal-500 transition-all duration-300 ease-out"
                               style={{ width: `${p.genPercent || 0}%` }}
