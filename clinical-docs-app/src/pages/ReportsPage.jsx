@@ -403,7 +403,10 @@ export default function ReportsPage() {
             { label: 'Total Entries',    value: reports.length, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10' },
             { label: 'Unique Patients',  value: new Set(reports.map(r => r.patient_name)).size, icon: Users, color: 'text-teal-400', bg: 'bg-teal-500/10' },
             { label: 'This Month',       value: reports.filter(r => r.date_of_service?.startsWith(new Date().toISOString().slice(0,7))).length, icon: Calendar, color: 'text-violet-400', bg: 'bg-violet-500/10' },
-            { label: 'Avg Psych Mins',   value: reports.length ? Math.round(reports.reduce((s,r) => s + (r.psychotherapy_minutes||0), 0) / reports.filter(r=>r.psychotherapy_minutes).length || 0) + ' min' : '—', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+            { label: 'Avg Psych Mins',   value: (() => {
+                const minutes = reports.map(r => r.psychotherapy_minutes).filter(m => m != null);
+                return minutes.length ? `${Math.round(minutes.reduce((s, m) => s + m, 0) / minutes.length)} min` : '—';
+              })(), icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
               <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>

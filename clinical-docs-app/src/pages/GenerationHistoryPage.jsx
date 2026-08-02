@@ -25,20 +25,20 @@ export default function GenerationHistoryPage() {
   async function loadGenerationLogs() {
     if (!user?.id) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('generation_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (!error && data) {
-      setLogs(data);
-      // Load errors for each log
-      for (const log of data) {
-        loadErrorsForLog(log.id);
+    try {
+      const { data, error } = await supabase
+        .from('generation_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (!error && data) {
+        setLogs(data);
+        await Promise.allSettled(data.map(log => loadErrorsForLog(log.id)));
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadErrorsForLog(logId) {
@@ -103,23 +103,28 @@ export default function GenerationHistoryPage() {
           </button>
         </div>
 
-        {/* Stats summary */}
+        {/* Stats summary — scoped to the most recent 50 batches (the loaded window) */}
         {logs.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {[
-              { label: 'Total Batches',  value: logs.length,     icon: ListChecks,   color: 'text-violet-400', bg: 'bg-violet-500/10' },
-              { label: 'Patients',       value: totalPatients,   icon: Users,        color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
-              { label: 'Completed',      value: totalSuccess,    icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-              { label: 'Errors',         value: totalErrors,     icon: XCircle,      color: totalErrors ? 'text-red-400' : 'text-slate-500', bg: totalErrors ? 'bg-red-500/10' : 'bg-white/5' },
-            ].map(({ label, value, icon: Icon, color, bg }) => (
-              <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
-                <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
+          <div className="mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Recent Batches', value: logs.length,     icon: ListChecks,   color: 'text-violet-400', bg: 'bg-violet-500/10' },
+                { label: 'Patients',       value: totalPatients,   icon: Users,        color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
+                { label: 'Completed',      value: totalSuccess,    icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                { label: 'Errors',         value: totalErrors,     icon: XCircle,      color: totalErrors ? 'text-red-400' : 'text-slate-500', bg: totalErrors ? 'bg-red-500/10' : 'bg-white/5' },
+              ].map(({ label, value, icon: Icon, color, bg }) => (
+                <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                  <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                    <Icon className={`w-4 h-4 ${color}`} />
+                  </div>
+                  <p className="text-lg font-black text-white truncate">{value}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
                 </div>
-                <p className="text-lg font-black text-white truncate">{value}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            {logs.length >= 50 && (
+              <p className="text-[11px] text-slate-600 mt-2">Based on the 50 most recent batches</p>
+            )}
           </div>
         )}
 
@@ -142,8 +147,11 @@ export default function GenerationHistoryPage() {
 
         {/* Logs list */}
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+          <div role="status" className="flex flex-col items-center justify-center py-24">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+            </div>
+            <span className="sr-only">Loading generation history</span>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
