@@ -13,7 +13,7 @@ import { DATE_PRESETS, getPresetRange } from '../lib/dateRanges';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { parseAppointment } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
+import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../lib/settings';
@@ -133,6 +133,7 @@ export default function CalendarNotesPage() {
 
   const abortRef = useRef(false);
   const knownPatientsRef = useRef([]);
+  const persistTimeoutRef = useRef(null);
   const calendarScopeGranted = driveConnected && hasCalendarScope();
 
   function addLog(msg, type = 'info') {
@@ -182,17 +183,24 @@ export default function CalendarNotesPage() {
     } catch { /* ignore corrupted snapshot */ }
   }, []);
 
+  // Debounced so the frequent genPercent updates during streaming (many
+  // per document) don't each trigger a synchronous JSON.stringify + Web
+  // Storage write of the whole appointments array.
   useEffect(() => {
     if (phase === PHASE.IDLE || phase === PHASE.LOADING) {
       if (phase === PHASE.IDLE) sessionStorage.removeItem(STORAGE_KEY);
       return;
     }
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        phase, appointments, selectedCalendarIds, preset, customStart, customEnd,
-        selectedDocTypes, summary, ts: Date.now(),
-      }));
-    } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+          phase, appointments, selectedCalendarIds, preset, customStart, customEnd,
+          selectedDocTypes, summary, ts: Date.now(),
+        }));
+      } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    }, 400);
+    return () => clearTimeout(persistTimeoutRef.current);
   }, [phase, appointments, selectedCalendarIds, preset, customStart, customEnd, selectedDocTypes, summary]);
 
   function handleResume() {
@@ -455,7 +463,7 @@ export default function CalendarNotesPage() {
       const appt = appointments.find((a) => a.id === apptId);
       const meta = getDocumentTypeMeta(docKey);
       updateProgress(Math.round((i / total) * 100), i + 1, total, `${appt.parsedName} — ${meta.label}`);
-      setDocTypeStatus(apptId, docKey, { status: 'generating' });
+      setDocTypeStatus(apptId, docKey, { status: 'generating', genPercent: 0 });
       addLog(`\n━━━ ${i + 1}/${total}: ${appt.parsedName} — ${meta.label} ━━━`);
 
       try {
@@ -468,13 +476,21 @@ export default function CalendarNotesPage() {
           continue;
         }
 
+        let lastGenPercent = -1;
         const { outputHtml, templateLabel } = await withRetry(
           () => generateDocumentForPatient({
             patient, docTypeKey: docKey, sourceText, systemPrompt, provider, keys,
             model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
             onLog: (msg, type) => addLog(`  ${msg}`, type),
+            onChunk: (_delta, fullText) => {
+              const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
+              if (pct !== lastGenPercent) {
+                lastGenPercent = pct;
+                setDocTypeStatus(apptId, docKey, { genPercent: pct });
+              }
+            },
           }),
-          { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
+          { retries: 2, onRetry: (e, n) => { lastGenPercent = -1; setDocTypeStatus(apptId, docKey, { genPercent: 0 }); addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn'); } },
         );
 
         addLog(`  ✓ ${templateLabel} generated`);
@@ -844,13 +860,33 @@ export default function CalendarNotesPage() {
                       )}
 
                       {/* Per-doc-type status */}
-                      <div className="pl-6 flex flex-wrap gap-1.5">
-                        {selectedDocTypes.map((dk) => (
-                          <div key={dk} className="flex items-center gap-1">
-                            <span className="text-[10px] text-slate-600">{getDocumentTypeMeta(dk)?.label}:</span>
-                            <DocTypeStatusBadge status={appt.perDocType[dk]?.status || 'idle'} />
-                          </div>
-                        ))}
+                      <div className="pl-6 flex flex-wrap gap-3">
+                        {selectedDocTypes.map((dk) => {
+                          const dtStatus = appt.perDocType[dk] || {};
+                          return (
+                            <div key={dk} className="flex flex-col gap-1 min-w-[6rem]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-slate-600">{getDocumentTypeMeta(dk)?.label}:</span>
+                                <DocTypeStatusBadge status={dtStatus.status || 'idle'} />
+                              </div>
+                              {dtStatus.status === 'generating' && (
+                                <div
+                                  role="progressbar"
+                                  aria-label={`Generating ${getDocumentTypeMeta(dk)?.label} for ${appt.parsedName}`}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                  aria-valuenow={dtStatus.genPercent || 0}
+                                  className="w-full h-1 bg-slate-800 rounded-full overflow-hidden"
+                                >
+                                  <div
+                                    className="h-full bg-gradient-to-r from-sky-600 to-cyan-500 transition-all duration-300 ease-out"
+                                    style={{ width: `${dtStatus.genPercent || 0}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {appt.files.length > 0 && (

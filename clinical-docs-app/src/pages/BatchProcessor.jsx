@@ -13,7 +13,7 @@ import {
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
+import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
@@ -96,6 +96,7 @@ export default function BatchProcessor() {
   const [batchPreValidationWarnings, setBatchPreValidationWarnings] = useState([]);
   const [generationLogId, setGenerationLogId] = useState(null);
   const abortRef = useRef(false);
+  const persistTimeoutRef = useRef(null);
 
   const [selectedTemplate, setSelectedTemplate] = useState('treatment_plan');
   const [progress, setProgress] = useState({ percent: 0, current: 0, total: 0, step: '' });
@@ -151,16 +152,23 @@ export default function BatchProcessor() {
     } catch { /* ignore corrupted snapshot */ }
   }, []);
 
+  // Debounced so the frequent genPercent updates during streaming (many
+  // per document) don't each trigger a synchronous JSON.stringify + Web
+  // Storage write of the whole patients array.
   useEffect(() => {
     if (phase === PHASE.IDLE) {
       localStorage.removeItem(BATCH_STORAGE_KEY);
       return;
     }
-    try {
-      localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
-        phase, patients, batchInput, selectedTemplate, summary, ts: Date.now(),
-      }));
-    } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
+          phase, patients, batchInput, selectedTemplate, summary, ts: Date.now(),
+        }));
+      } catch { /* storage full/unavailable — resuming just won't work this time */ }
+    }, 400);
+    return () => clearTimeout(persistTimeoutRef.current);
   }, [phase, patients, batchInput, selectedTemplate, summary]);
 
   function handleResumeBatch() {
@@ -340,7 +348,7 @@ export default function BatchProcessor() {
 
       const stepNum = i + 1;
       updateProgress(Math.round((i / total) * 100), stepNum, total, `Processing ${patient.name}...`);
-      updatePatientByName(patient.name, { status: 'generating' });
+      updatePatientByName(patient.name, { status: 'generating', genPercent: 0 });
       addLog(`\n━━━ ${stepNum}/${total}: ${patient.name} ━━━`);
 
       try {
@@ -363,14 +371,22 @@ export default function BatchProcessor() {
         addLog(`  ✓ Using ${sourceFileList.length} source file(s): ${sourceFileList.join(', ')}`);
         addLog(`  🔮 Generating ${meta.label}...`);
 
+        let lastGenPercent = -1;
         const { outputHtml, templateLabel } = await withRetry(
           () => generateDocumentForPatient({
             patient, docTypeKey, sourceText, systemPrompt, provider, keys,
             model: settings.aiModel || undefined,
             getTemplateHtml, fetchLatestDocument,
             onLog: (msg, type) => addLog(`  ${msg}`, type),
+            onChunk: (_delta, fullText) => {
+              const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
+              if (pct !== lastGenPercent) {
+                lastGenPercent = pct;
+                updatePatientByName(patient.name, { genPercent: pct });
+              }
+            },
           }),
-          { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn') }
+          { retries: 2, onRetry: (e, n) => { lastGenPercent = -1; updatePatientByName(patient.name, { genPercent: 0 }); addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn'); } }
         );
 
         addLog(`  ✓ ${templateLabel} generated (${outputHtml.length} chars)`);
@@ -723,6 +739,25 @@ export default function BatchProcessor() {
                           )}
                         </div>
                       </div>
+
+                      {/* Per-document progress bar while this patient's document is streaming in */}
+                      {p.status === 'generating' && (
+                        <div className="mt-2 pl-6">
+                          <div
+                            role="progressbar"
+                            aria-label={`Generating document for ${p.name}`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={p.genPercent || 0}
+                            className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"
+                          >
+                            <div
+                              className="h-full bg-gradient-to-r from-violet-600 to-teal-500 transition-all duration-300 ease-out"
+                              style={{ width: `${p.genPercent || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* File list — checkbox per file lets the preselected match be verified or overridden */}
                       {(expandedFiles[p.name] || phase !== PHASE.PREVIEW) && p.files.length > 0 && (
