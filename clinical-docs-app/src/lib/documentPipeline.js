@@ -24,6 +24,22 @@ export function buildFileName(namingConvention, docTypeKey, lastName, dateStr) {
   return applyNamingConvention(template, lastName, dateStr);
 }
 
+// Rough expected output length per detail level, used only to drive a
+// smooth in-flight progress bar while a document streams in — not an exact
+// prediction. Capped short of 100% so the bar never claims "done" before the
+// stream actually finishes.
+const EXPECTED_CHARS_BY_DETAIL = {
+  'Bulleted Summary': 2500,
+  'Standard':          4500,
+  'Highly Detailed':   7500,
+};
+const MAX_STREAMING_PERCENT = 96;
+
+export function estimateGenerationPercent(detailLevel, charsSoFar) {
+  const expected = EXPECTED_CHARS_BY_DETAIL[detailLevel] || EXPECTED_CHARS_BY_DETAIL.Standard;
+  return Math.min(MAX_STREAMING_PERCENT, Math.round((charsSoFar / expected) * 100));
+}
+
 /**
  * Read source files for a patient into one combined text blob. When
  * `selectedFiles` is provided (Source File Selection feature), only those
@@ -64,7 +80,7 @@ async function loadTemplateHtml(docTypeKey, getTemplateHtml) {
  */
 export async function generateDocumentForPatient({
   patient, docTypeKey, sourceText, systemPrompt, provider, keys, model,
-  getTemplateHtml, fetchLatestDocument, onLog,
+  getTemplateHtml, fetchLatestDocument, onLog, onChunk,
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -87,7 +103,7 @@ export async function generateDocumentForPatient({
     userPrompt = sourceText + '\n\nGenerate a clinical document based on the above patient information using the provided template structure.';
   }
 
-  const outputHtml = await generateClinicalDocument({ provider, keys, model, systemPrompt, userPrompt });
+  const outputHtml = await generateClinicalDocument({ provider, keys, model, systemPrompt, userPrompt, onChunk });
   return { outputHtml, templateLabel: meta.label };
 }
 

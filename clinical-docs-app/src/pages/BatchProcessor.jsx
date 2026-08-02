@@ -13,7 +13,7 @@ import {
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
+import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
@@ -340,7 +340,7 @@ export default function BatchProcessor() {
 
       const stepNum = i + 1;
       updateProgress(Math.round((i / total) * 100), stepNum, total, `Processing ${patient.name}...`);
-      updatePatientByName(patient.name, { status: 'generating' });
+      updatePatientByName(patient.name, { status: 'generating', genPercent: 0 });
       addLog(`\n━━━ ${stepNum}/${total}: ${patient.name} ━━━`);
 
       try {
@@ -363,14 +363,22 @@ export default function BatchProcessor() {
         addLog(`  ✓ Using ${sourceFileList.length} source file(s): ${sourceFileList.join(', ')}`);
         addLog(`  🔮 Generating ${meta.label}...`);
 
+        let lastGenPercent = -1;
         const { outputHtml, templateLabel } = await withRetry(
           () => generateDocumentForPatient({
             patient, docTypeKey, sourceText, systemPrompt, provider, keys,
             model: settings.aiModel || undefined,
             getTemplateHtml, fetchLatestDocument,
             onLog: (msg, type) => addLog(`  ${msg}`, type),
+            onChunk: (_delta, fullText) => {
+              const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
+              if (pct !== lastGenPercent) {
+                lastGenPercent = pct;
+                updatePatientByName(patient.name, { genPercent: pct });
+              }
+            },
           }),
-          { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn') }
+          { retries: 2, onRetry: (e, n) => { lastGenPercent = -1; updatePatientByName(patient.name, { genPercent: 0 }); addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn'); } }
         );
 
         addLog(`  ✓ ${templateLabel} generated (${outputHtml.length} chars)`);
@@ -723,6 +731,18 @@ export default function BatchProcessor() {
                           )}
                         </div>
                       </div>
+
+                      {/* Per-document progress bar while this patient's document is streaming in */}
+                      {p.status === 'generating' && (
+                        <div className="mt-2 pl-6">
+                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-violet-600 to-teal-500 transition-all duration-300 ease-out"
+                              style={{ width: `${p.genPercent || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* File list — checkbox per file lets the preselected match be verified or overridden */}
                       {(expandedFiles[p.name] || phase !== PHASE.PREVIEW) && p.files.length > 0 && (
