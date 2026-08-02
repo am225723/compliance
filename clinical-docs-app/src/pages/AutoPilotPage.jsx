@@ -16,7 +16,7 @@ const INTERVAL_OPTIONS = [15, 30, 60, 120];
 export default function AutoPilotPage() {
   const {
     settings, updateSettings, driveConnected,
-    saveDocument, getTemplateHtml, fetchLatestDocument,
+    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument,
   } = useApp();
 
   const autoPilot = settings.autoPilot;
@@ -105,7 +105,7 @@ export default function AutoPilotPage() {
               () => saveGeneratedDocument({
                 patient, docTypeKey: docType.key, outputHtml, settings,
                 provider, model: settings.aiModel || undefined,
-                saveDocument, source: 'autopilot',
+                saveDocument, saveReport, source: 'autopilot',
               }),
               { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2 saving: ${e.message}`, 'warn') }
             );

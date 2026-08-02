@@ -134,6 +134,22 @@ export function AppProvider({ children }) {
     return null;
   }
 
+  async function updateReport(id, patch) {
+    if (!session?.user) return null;
+    const { data, error } = await supabase
+      .from('reports')
+      .update(patch)
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && data) {
+      setReports(prev => prev.map(r => r.id === id ? data : r));
+      return data;
+    }
+    console.error('updateReport error:', error);
+    return null;
+  }
+
   async function deleteDocument(id) {
     await supabase.from('documents').delete().eq('id', id);
     setDocuments(prev => prev.filter(d => d.id !== id));
@@ -327,7 +343,7 @@ export function AppProvider({ children }) {
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
       fetchExistingCalendarNotes, updateDocumentReview, regenerateDocument,
       // Reports
-      reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports,
+      reports, reportsLoading, saveReport, updateReport, deleteReport, deleteReports, fetchReports,
       // Templates
       templates, templatesLoading, fetchTemplates, saveTemplate, deleteTemplate, getTemplateHtml,
     }}>

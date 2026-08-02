@@ -108,7 +108,7 @@ function resumeStablePhase(storedPhase) {
 export default function CalendarNotesPage() {
   const {
     settings, updateSettings, driveConnected,
-    saveDocument, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes,
+    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes,
   } = useApp();
 
   const calendarSettings = settings.calendar;
@@ -562,8 +562,11 @@ export default function CalendarNotesPage() {
           () => saveGeneratedDocument({
             patient, docTypeKey: docKey, outputHtml: dt.generatedOutput.html, settings,
             provider: settings.aiProvider || 'gemini', model: settings.aiModel || undefined,
-            saveDocument, source: 'manual',
-            calendarLink: { calendarId: appt.calendarId, eventId: appt.eventId, occurrenceStart: appt.start },
+            saveDocument, saveReport, source: 'manual',
+            calendarLink: {
+              calendarId: appt.calendarId, eventId: appt.eventId, occurrenceStart: appt.start,
+              durationMinutes: appt.durationMinutes,
+            },
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
         );

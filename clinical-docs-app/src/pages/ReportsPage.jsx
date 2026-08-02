@@ -97,17 +97,18 @@ function TagInput({ value = [], onChange, placeholder, suggestions = [] }) {
   );
 }
 
-function AddReportModal({ onClose, onSave }) {
+function ReportFormModal({ report, onClose, onSave }) {
   const { documents } = useApp();
+  const isEdit = !!report;
   const [form, setForm] = useState({
-    patient_name: '',
-    icd10_codes: [],
-    type_of_service: '',
-    cpt_codes: [],
-    psychotherapy_minutes: '',
-    date_of_service: new Date().toISOString().split('T')[0],
-    notes: '',
-    document_id: '',
+    patient_name: report?.patient_name || '',
+    icd10_codes: report?.icd10_codes || [],
+    type_of_service: report?.type_of_service || '',
+    cpt_codes: report?.cpt_codes || [],
+    psychotherapy_minutes: report?.psychotherapy_minutes ?? '',
+    date_of_service: report?.date_of_service || new Date().toISOString().split('T')[0],
+    notes: report?.notes || '',
+    document_id: report?.document_id || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -128,8 +129,8 @@ function AddReportModal({ onClose, onSave }) {
       <div className="bg-slate-900 border border-white/15 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-black text-white">Add Report Entry</h2>
+            {isEdit ? <Edit3 className="w-4 h-4 text-teal-400" /> : <Plus className="w-4 h-4 text-teal-400" />}
+            <h2 className="text-sm font-black text-white">{isEdit ? 'Edit Report Entry' : 'Add Report Entry'}</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10">
             <X className="w-4 h-4" />
@@ -255,7 +256,7 @@ function AddReportModal({ onClose, onSave }) {
               Cancel
             </button>
             <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-black transition-all">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Save Entry</>}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> {isEdit ? 'Save Changes' : 'Save Entry'}</>}
             </button>
           </div>
         </form>
@@ -266,9 +267,10 @@ function AddReportModal({ onClose, onSave }) {
 
 export default function ReportsPage() {
   const navigate = useNavigate();
-  const { reports, reportsLoading, saveReport, deleteReport, deleteReports, fetchReports } = useApp();
+  const { reports, reportsLoading, saveReport, updateReport, deleteReport, deleteReports, fetchReports } = useApp();
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
   const [sortField, setSortField] = useState('date_of_service');
   const [sortDir, setSortDir] = useState('desc');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -546,12 +548,20 @@ export default function ReportsPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => deleteReport(report.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button
+                            onClick={() => setEditingReport(report)}
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-teal-400 hover:bg-teal-500/10 transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteReport(report.id)}
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -569,9 +579,16 @@ export default function ReportsPage() {
       </div>
 
       {showAddModal && (
-        <AddReportModal
+        <ReportFormModal
           onClose={() => setShowAddModal(false)}
           onSave={saveReport}
+        />
+      )}
+      {editingReport && (
+        <ReportFormModal
+          report={editingReport}
+          onClose={() => setEditingReport(null)}
+          onSave={patch => updateReport(editingReport.id, patch)}
         />
       )}
     </div>
