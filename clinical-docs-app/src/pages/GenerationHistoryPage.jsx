@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2 } from 'lucide-react';
+import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2, RefreshCw, ListChecks, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
@@ -75,11 +75,15 @@ export default function GenerationHistoryPage() {
     log.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalPatients = logs.reduce((sum, l) => sum + (l.total_patients || 0), 0);
+  const totalSuccess = logs.reduce((sum, l) => sum + (l.successful_count || 0), 0);
+  const totalErrors = logs.reduce((sum, l) => sum + (l.failed_count || 0), 0);
+
   return (
     <div className="min-h-full bg-slate-950 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <History className="w-5 h-5 text-white" />
@@ -91,11 +95,33 @@ export default function GenerationHistoryPage() {
           </div>
           <button
             onClick={loadGenerationLogs}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all"
           >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
+
+        {/* Stats summary */}
+        {logs.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Total Batches',  value: logs.length,     icon: ListChecks,   color: 'text-violet-400', bg: 'bg-violet-500/10' },
+              { label: 'Patients',       value: totalPatients,   icon: Users,        color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
+              { label: 'Completed',      value: totalSuccess,    icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Errors',         value: totalErrors,     icon: XCircle,      color: totalErrors ? 'text-red-400' : 'text-slate-500', bg: totalErrors ? 'bg-red-500/10' : 'bg-white/5' },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
+                <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                  <Icon className={`w-4 h-4 ${color}`} />
+                </div>
+                <p className="text-lg font-black text-white truncate">{value}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Search */}
         <div className="mb-5">
@@ -108,7 +134,7 @@ export default function GenerationHistoryPage() {
               placeholder="Search by batch name, document type, or status…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
+              className="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
               aria-label="Search generation history"
             />
           </div>
@@ -116,10 +142,20 @@ export default function GenerationHistoryPage() {
 
         {/* Logs list */}
         {loading ? (
-          <div className="text-center py-12 text-slate-400">Loading history…</div>
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+          </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            {logs.length === 0 ? 'No batch history yet.' : 'No results found.'}
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+              <History className="w-7 h-7 text-slate-600" />
+            </div>
+            <p className="text-sm font-bold text-slate-500">
+              {logs.length === 0 ? 'No batch history yet' : 'No results found'}
+            </p>
+            <p className="text-xs text-slate-700 mt-1">
+              {logs.length === 0 ? 'Generated batches will appear here' : `No results for "${searchTerm}"`}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -133,7 +169,7 @@ export default function GenerationHistoryPage() {
                                 <XCircle className="w-4 h-4 text-red-400" />;
 
               return (
-                <div key={log.id} className={`rounded-lg border p-4 ${statusColor}`}>
+                <div key={log.id} className={`rounded-2xl border p-4 transition-colors ${statusColor}`}>
                   {/* Header */}
                   <button
                     onClick={() => toggleExpandLog(log.id)}
@@ -178,7 +214,7 @@ export default function GenerationHistoryPage() {
                           <p className="font-bold text-red-300 text-xs mb-2">Failed Patients ({logErrors.length}):</p>
                           <div className="space-y-2">
                             {logErrors.map(err => (
-                              <div key={err.id} className="bg-black/30 rounded p-2 text-xs">
+                              <div key={err.id} className="bg-black/30 rounded-lg p-2 text-xs">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
                                     <p className="font-bold text-white">{err.patient_name}</p>

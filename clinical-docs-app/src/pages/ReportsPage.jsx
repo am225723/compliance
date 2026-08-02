@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   BarChart3, Plus, Trash2, Search, RefreshCw, Loader2,
   FileText, Calendar, Edit3, X, Check, ChevronDown, ChevronUp,
-  Download, AlertCircle
+  Download, AlertCircle, Users, Clock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -400,14 +400,17 @@ export default function ReportsPage() {
         {/* Stats summary */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Total Entries',    value: reports.length },
-            { label: 'Unique Patients',  value: new Set(reports.map(r => r.patient_name)).size },
-            { label: 'This Month',       value: reports.filter(r => r.date_of_service?.startsWith(new Date().toISOString().slice(0,7))).length },
-            { label: 'Avg Psych Mins',   value: reports.length ? Math.round(reports.reduce((s,r) => s + (r.psychotherapy_minutes||0), 0) / reports.filter(r=>r.psychotherapy_minutes).length || 0) + ' min' : '—' },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-white/3 border border-white/8 rounded-xl px-4 py-3">
-              <p className="text-lg font-black text-white">{value}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{label}</p>
+            { label: 'Total Entries',    value: reports.length, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { label: 'Unique Patients',  value: new Set(reports.map(r => r.patient_name)).size, icon: Users, color: 'text-teal-400', bg: 'bg-teal-500/10' },
+            { label: 'This Month',       value: reports.filter(r => r.date_of_service?.startsWith(new Date().toISOString().slice(0,7))).length, icon: Calendar, color: 'text-violet-400', bg: 'bg-violet-500/10' },
+            { label: 'Avg Psych Mins',   value: reports.length ? Math.round(reports.reduce((s,r) => s + (r.psychotherapy_minutes||0), 0) / reports.filter(r=>r.psychotherapy_minutes).length || 0) + ' min' : '—', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div key={label} className="rounded-2xl border border-white/8 bg-white/3 p-4">
+              <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+                <Icon className={`w-4 h-4 ${color}`} />
+              </div>
+              <p className="text-lg font-black text-white truncate">{value}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
             </div>
           ))}
         </div>
