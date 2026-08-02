@@ -26,8 +26,12 @@ export const AI_PROVIDERS = {
     id: 'gemini',
     label: 'Gemini',
     logo: '🔵',
-    defaultModel: 'gemini-2.0-flash',
-    models: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+    defaultModel: 'gemini-3.6-flash',
+    // gemini-2.0-flash / gemini-2.5-flash / gemini-2.5-pro were retired
+    // (2.5 series deprecated 2026-06-17); gemini-3.1-pro-preview still
+    // carries a "-preview" suffix in its model ID despite being Google's
+    // current stable Pro-tier offering.
+    models: ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-pro-preview'],
     // Key lives server-side as a Supabase Edge Function secret (notes_gemini-proxy) — no client field.
     serverManaged: true,
   },
@@ -225,7 +229,7 @@ async function generateOpenAI({ keys, model, systemPrompt, userPrompt, onChunk }
 
 async function generateGemini({ model, systemPrompt, userPrompt, onChunk }) {
   const response = await callProxy('notes_gemini-proxy', 'Gemini', {
-    model: model || 'gemini-2.0-flash',
+    model: model || 'gemini-3.6-flash',
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: { maxOutputTokens: 16000 },
