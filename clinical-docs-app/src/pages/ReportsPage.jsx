@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   BarChart3, Plus, Trash2, Search, RefreshCw, Loader2,
   FileText, Calendar, Edit3, X, Check, ChevronDown, ChevronUp,
-  Download, AlertCircle, Users, Clock
+  Download, AlertCircle, AlertTriangle, Users, Clock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { CPT_CODE_GROUPS, CPT_CODE_LOOKUP } from '../lib/cptCodes';
+import { validateCptClaim } from '../lib/cptValidation';
 
 const SERVICE_TYPES = [
   'Psychiatric Evaluation',
@@ -19,83 +21,6 @@ const SERVICE_TYPES = [
   'Initial Intake',
   'Treatment Planning',
 ];
-
-/** The full set of CPT codes a board-certified psychiatrist bills through
- *  Headway — CPT entry is restricted to exactly this list (no free text).
- *  Groups are ordered with the codes used on the overwhelming majority of
- *  visits (E/M + psychotherapy add-on) first; 90792 is scoped to new-patient
- *  intake only and should not be treated as a default for follow-up visits. */
-const CPT_CODE_GROUPS = [
-  {
-    label: 'E/M — Established Patient (medication management)',
-    codes: [
-      { code: '99213', description: 'Established patient E/M — Low MDM' },
-      { code: '99214', description: 'Established patient E/M — Moderate MDM' },
-      { code: '99215', description: 'Established patient E/M — High MDM' },
-    ],
-  },
-  {
-    label: 'Psychotherapy Add-On (bill only with an E/M code)',
-    codes: [
-      { code: '90833', description: 'Add-on — 16–37 min psychotherapy' },
-      { code: '90836', description: 'Add-on — 38–52 min psychotherapy' },
-      { code: '90838', description: 'Add-on — 53+ min psychotherapy' },
-    ],
-  },
-  {
-    label: 'E/M — New Patient (medication management)',
-    codes: [
-      { code: '99203', description: 'New patient E/M — Low MDM' },
-      { code: '99204', description: 'New patient E/M — Moderate MDM' },
-      { code: '99205', description: 'New patient E/M — High MDM' },
-    ],
-  },
-  {
-    label: 'Stand-Alone Psychotherapy (no medication management)',
-    codes: [
-      { code: '90832', description: 'Psychotherapy — 16–37 min' },
-      { code: '90834', description: 'Psychotherapy — 38–52 min' },
-      { code: '90837', description: 'Psychotherapy — 53+ min' },
-    ],
-  },
-  {
-    label: 'Interactive Complexity',
-    codes: [
-      { code: '90785', description: 'Add-on for communication complexity (reported after the psychotherapy code)' },
-    ],
-  },
-  {
-    label: 'Crisis Psychotherapy',
-    codes: [
-      { code: '90839', description: 'First 60 min of crisis psychotherapy' },
-      { code: '90840', description: 'Each additional 30 min' },
-    ],
-  },
-  {
-    label: 'Family Therapy',
-    codes: [
-      { code: '90846', description: 'Family psychotherapy without patient present' },
-      { code: '90847', description: 'Family psychotherapy with patient present' },
-      { code: '90849', description: 'Multiple-family group psychotherapy' },
-    ],
-  },
-  {
-    label: 'Group Therapy',
-    codes: [
-      { code: '90853', description: 'Group psychotherapy' },
-    ],
-  },
-  {
-    label: 'Initial Evaluation (new-patient intake only)',
-    codes: [
-      { code: '90792', description: 'Psychiatric diagnostic evaluation with medical services — do not combine with an E/M code on the same encounter' },
-    ],
-  },
-];
-
-const CPT_CODE_LOOKUP = new Map(
-  CPT_CODE_GROUPS.flatMap(g => g.codes).map(c => [c.code, c.description])
-);
 
 const COMMON_ICD10 = [
   'F32.0', 'F32.1', 'F32.2', 'F33.0', 'F33.1',
@@ -252,12 +177,16 @@ function ReportFormModal({ report, onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
 
+  const parsedMinutes = form.psychotherapy_minutes ? parseInt(form.psychotherapy_minutes) : null;
+  const cptValidation = validateCptClaim(form.cpt_codes, parsedMinutes);
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (cptValidation.errors.length) return;
     setSaving(true);
     await onSave({
       ...form,
-      psychotherapy_minutes: form.psychotherapy_minutes ? parseInt(form.psychotherapy_minutes) : null,
+      psychotherapy_minutes: parsedMinutes,
       document_id: form.document_id || null,
     });
     setSaving(false);
@@ -369,13 +298,30 @@ function ReportFormModal({ report, onClose, onSave }) {
             <input
               type="number"
               min="0"
-              max="240"
               value={form.psychotherapy_minutes}
               onChange={e => setForm(f => ({ ...f, psychotherapy_minutes: e.target.value }))}
               placeholder="e.g. 60"
               className="w-full px-3 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-teal-500/60 transition-all"
             />
           </div>
+
+          {/* CPT claim validation feedback */}
+          {(cptValidation.errors.length > 0 || cptValidation.warnings.length > 0) && (
+            <div className="space-y-2">
+              {cptValidation.errors.map(msg => (
+                <div key={msg} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{msg}</span>
+                </div>
+              ))}
+              {cptValidation.warnings.map(msg => (
+                <div key={msg} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{msg}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -393,7 +339,12 @@ function ReportFormModal({ report, onClose, onSave }) {
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-white text-sm font-bold border border-white/10 transition-all">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-black transition-all">
+            <button
+              type="submit"
+              disabled={saving || cptValidation.errors.length > 0}
+              title={cptValidation.errors.length > 0 ? 'Fix the CPT claim errors above before saving' : undefined}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> {isEdit ? 'Save Changes' : 'Save Entry'}</>}
             </button>
           </div>
