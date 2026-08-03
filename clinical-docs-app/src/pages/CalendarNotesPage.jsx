@@ -13,11 +13,40 @@ import { DATE_PRESETS, getPresetRange } from '../lib/dateRanges';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { parseAppointment } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
+import {
+  collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
+  resolveSessionSourcePatterns,
+} from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../lib/settings';
 import { buildExistingNoteIndex, findExistingNote } from '../lib/calendarDedup';
+import { getSessionSourceFiles, isSessionSourceFile } from '../lib/sessionSourceFiles';
+import ClientFacingActions from '../components/ClientFacingActions';
+
+/**
+ * Among a folder's Zoom-note / Notes-by-Gemini files, pick the one whose
+ * extracted date is closest to this specific appointment's date — a
+ * calendar occurrence already pins down *which* session this note is for,
+ * so (unlike the Batch Processor, which doesn't know a target date and so
+ * splits into one note per file) Calendar Notes just needs the single best
+ * match instead of dumping every session file in the folder into context.
+ * `patterns` should be the caller's resolveSessionSourcePatterns(settings)
+ * result, so this honors the same user-configured patterns as planning does.
+ */
+function pickBestSessionFile(files, apptStartIso, patterns) {
+  const sessionFiles = getSessionSourceFiles(files, patterns);
+  if (sessionFiles.length === 0) return null;
+  const apptTime = new Date(apptStartIso).getTime();
+  let best = sessionFiles[0];
+  let bestDiff = Infinity;
+  for (const sf of sessionFiles) {
+    if (!sf.extractedDate) continue;
+    const diff = Math.abs(new Date(sf.extractedDate).getTime() - apptTime);
+    if (diff < bestDiff) { bestDiff = diff; best = sf; }
+  }
+  return best;
+}
 
 const PHASE = {
   IDLE: 'idle', LOADING: 'loading', REVIEW_APPTS: 'review_appts',
@@ -468,7 +497,53 @@ export default function CalendarNotesPage() {
 
       try {
         const patient = { name: appt.parsedName, folderId: appt.folderId, folderName: appt.folderName, files: appt.files };
-        const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type));
+        const sessionSourcePatterns = resolveSessionSourcePatterns(settings);
+
+        // session_note: prefer the one Zoom/Gemini file whose date is closest
+        // to this appointment, instead of dumping every session file in the
+        // folder into context (the appointment already tells us which
+        // session this note is for).
+        let selectedFiles = null; // null = use every file, same as before
+        if (docKey === 'session_note') {
+          const best = pickBestSessionFile(appt.files, appt.start, sessionSourcePatterns);
+          if (best) {
+            const extras = appt.files.filter((f) => f.id !== best.id && !isSessionSourceFile(f.name, sessionSourcePatterns));
+            selectedFiles = [best, ...extras];
+          }
+        }
+
+        // treatment_plan: bootstrap a Pass-1 DARP note from the oldest
+        // session file, same as the Batch Processor — but generated
+        // in-memory only here (not saved as its own document), since a
+        // calendar occurrence doesn't map onto an unrelated bootstrap note
+        // the way a patient folder does.
+        let bootstrapNoteHtml = null;
+        if (docKey === 'treatment_plan') {
+          const sessionFiles = getSessionSourceFiles(appt.files, sessionSourcePatterns);
+          if (sessionFiles.length > 0) {
+            const oldest = sessionFiles[0];
+            addLog(`  🔮 Generating First Session Note pass (context only, not saved) from ${oldest.name}...`);
+            try {
+              const { sourceText: bootstrapSourceText, sourceFileList: bootstrapFileList } =
+                await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), [oldest]);
+              if (bootstrapFileList.length > 0) {
+                const { outputHtml: bootstrapHtml } = await withRetry(
+                  () => generateDocumentForPatient({
+                    patient, docTypeKey: 'session_note', sourceText: bootstrapSourceText, systemPrompt, provider, keys,
+                    model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
+                    onLog: (msg, type) => addLog(`    ${msg}`, type),
+                  }),
+                  { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
+                );
+                bootstrapNoteHtml = bootstrapHtml;
+              }
+            } catch (e) {
+              addLog(`  ⚠ Could not generate First Session Note context: ${e.message} — continuing without it.`, 'warn');
+            }
+          }
+        }
+
+        const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type), selectedFiles);
 
         if (sourceFileList.length === 0) {
           addLog(`  ✅ No source files for ${appt.parsedName}, skipping.`);
@@ -480,7 +555,7 @@ export default function CalendarNotesPage() {
         const { outputHtml, templateLabel } = await withRetry(
           () => generateDocumentForPatient({
             patient, docTypeKey: docKey, sourceText, systemPrompt, provider, keys,
-            model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
+            model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument, bootstrapNoteHtml,
             onLog: (msg, type) => addLog(`  ${msg}`, type),
             onChunk: (_delta, fullText) => {
               const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
@@ -948,6 +1023,9 @@ export default function CalendarNotesPage() {
                           ) : (
                             <iframe title={`preview-${rowKey}`} sandbox="" srcDoc={dt.generatedOutput.html} className="w-full h-64 rounded-lg border border-white/10 bg-white" />
                           )
+                        )}
+                        {dt.status === 'generated' && (
+                          <ClientFacingActions documentHtml={dt.generatedOutput.html} patientName={appt.parsedName} />
                         )}
                       </div>
                     );

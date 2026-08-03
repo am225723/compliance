@@ -13,6 +13,7 @@ import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, DEFAULT_SERVICE_TYPE_BY_DOC_TY
 import { extractLatestDateFromFileNames } from './dateExtraction';
 import { getSessionSourceFiles } from './sessionSourceFiles';
 import { getSourceRules } from './sourceFileSelection';
+import { suggestCptCodes } from './cptCodes';
 
 const NAMING_KEY = {
   treatment_plan: 'treatmentPlan',
@@ -41,7 +42,7 @@ export function computeOutputFileNameBase(namingConvention, docTypeKey, patientN
  *  user has customized them in Settings — falls back to the shared default
  *  (undefined) so planning stays consistent with what's actually preselected
  *  in the Verify Source Files step. */
-function resolveSessionSourcePatterns(settings) {
+export function resolveSessionSourcePatterns(settings) {
   const rule = getSourceRules(settings, 'session_note').find(r => r.id === 'session_source');
   return rule?.patterns?.length ? rule.patterns : undefined;
 }
@@ -298,12 +299,14 @@ export async function saveGeneratedDocument({
         || (calendarLink?.occurrenceStart ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10) : null)
         || extractLatestDateFromFileNames((patient.files || []).map(f => f.name))
         || new Date().toISOString().slice(0, 10);
+      const psychotherapyMinutes = calendarLink?.durationMinutes ?? null;
       await saveReport({
         document_id: saved.id,
         patient_name: patient.name,
         type_of_service: DEFAULT_SERVICE_TYPE_BY_DOC_TYPE[docTypeKey] || null,
         date_of_service: dateOfService,
-        psychotherapy_minutes: calendarLink?.durationMinutes ?? null,
+        psychotherapy_minutes: psychotherapyMinutes,
+        cpt_codes: suggestCptCodes(docTypeKey, psychotherapyMinutes, outputHtml),
       });
     } catch (e) {
       console.error('Auto-create report entry failed:', e);

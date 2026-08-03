@@ -539,6 +539,66 @@ export default function BatchProcessor() {
     }
   }
 
+  /** Re-run generation for a single already-generated (or failed) output in place, without re-running the whole batch. */
+  async function handleRegenerateClick(key) {
+    const output = outputs.find(o => o.key === key);
+    if (!output) return;
+    const patient = patients.find(p => p.name === output.patientName);
+    if (!patient) {
+      addLog(`Cannot regenerate — no matched folder record for ${output.patientName}. Re-run matching first.`, 'error');
+      return;
+    }
+
+    const provider = settings.aiProvider || 'gemini';
+    const keys = getProviderKeys(settings);
+    if (!isProviderConfigured(provider, keys)) {
+      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error');
+      return;
+    }
+
+    updateOutputByKey(key, { regenerating: true, error: null });
+    addLog(`\n🔄 Regenerating ${output.patientName} — ${output.label}...`);
+
+    try {
+      const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type), output.sourceFiles);
+      if (sourceFileList.length === 0) {
+        throw new Error('No source files available to regenerate from.');
+      }
+
+      let bootstrapNoteHtml = null;
+      if (output.dependsOnKey) {
+        bootstrapNoteHtml = outputs.find(o => o.key === output.dependsOnKey)?.generatedOutput?.html || null;
+        if (!bootstrapNoteHtml) {
+          addLog(`  ⚠ First Session Note wasn't available — regenerating Treatment Plan without that extra context.`, 'warn');
+        }
+      }
+
+      const systemPrompt = buildSystemPrompt(settings.detailLevel);
+      const { outputHtml, templateLabel } = await withRetry(
+        () => generateDocumentForPatient({
+          patient, docTypeKey: output.docTypeKey, sourceText, systemPrompt, provider, keys,
+          model: settings.aiModel || undefined,
+          getTemplateHtml, fetchLatestDocument, bootstrapNoteHtml,
+          onLog: (msg, type) => addLog(`  ${msg}`, type),
+        }),
+        { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') }
+      );
+
+      updateOutputByKey(key, {
+        status: 'generated', regenerating: false,
+        generatedOutput: { html: outputHtml, templateLabel, sourceFileList },
+        approved: true, error: null,
+      });
+      addLog(`  ✅ ${output.label} regenerated (${outputHtml.length} chars)`);
+    } catch (e) {
+      // Revoke approval so a failed regeneration can't be saved silently —
+      // matches handleGenerate's failure behavior — and require the
+      // clinician to re-approve deliberately once it's fixed.
+      updateOutputByKey(key, { regenerating: false, error: e.message, status: 'error', approved: false });
+      addLog(`  ❌ Regeneration failed for ${output.patientName} — ${output.label}: ${e.message}`, 'error');
+    }
+  }
+
   // ── Phase 3: Save approved documents to Drive + Supabase ────────────────
   async function handleSaveApproved() {
     const approved = outputs.filter(o => o.status === 'generated' && o.approved);
@@ -1074,6 +1134,7 @@ export default function BatchProcessor() {
                 <DocumentReviewQueue
                   items={generatedForReview}
                   onReviewStatusChange={handleReviewStatusChange}
+                  onRegenerateClick={handleRegenerateClick}
                   phase={phase}
                 />
 

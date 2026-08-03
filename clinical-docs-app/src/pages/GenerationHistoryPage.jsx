@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2, RefreshCw, ListChecks, Users, FileText, ExternalLink, LayoutList } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -214,7 +215,12 @@ export default function GenerationHistoryPage() {
                 >
                   <FileText className="w-4 h-4 text-violet-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white truncate">{doc.patient_name}</p>
+                    <Link
+                      to={`/patients/${encodeURIComponent(doc.patient_name || '')}`}
+                      className="font-bold text-white truncate hover:text-teal-300 hover:underline transition-colors inline-block max-w-full"
+                    >
+                      {doc.patient_name}
+                    </Link>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {DOC_TYPE_LABEL[doc.document_type] || doc.document_type} • {new Date(doc.created_at).toLocaleString()}
                     </p>
