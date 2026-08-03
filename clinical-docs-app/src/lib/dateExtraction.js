@@ -64,9 +64,13 @@ const PATTERNS = [
     re: new RegExp(`${NOT_DIGIT_BEFORE}(\\d{1,2})[-_.](\\d{1,2})[-_.](20\\d{2})${NOT_DIGIT_AFTER}`),
     parse: m => ({ year: +m[3], month: +m[1], day: +m[2] }),
   },
-  // US MM-DD-YY (2-digit year — checked last, most ambiguous)
+  // US MM-DD-YY (2-digit year — checked last, most ambiguous). Dots are
+  // deliberately excluded here (unlike the patterns above): a dotted
+  // x.y.z triplet is as likely to be a version string like "v1.2.24" as a
+  // date, and this row's date_of_service feeds a billing record — the
+  // unambiguous 4-digit-year pattern above already covers dotted dates.
   {
-    re: new RegExp(`${NOT_DIGIT_BEFORE}(\\d{1,2})[-_.](\\d{1,2})[-_.](\\d{2})${NOT_DIGIT_AFTER}`),
+    re: new RegExp(`${NOT_DIGIT_BEFORE}(\\d{1,2})[-_](\\d{1,2})[-_](\\d{2})${NOT_DIGIT_AFTER}`),
     parse: m => ({ year: fullYear(+m[3]), month: +m[1], day: +m[2] }),
   },
 ];

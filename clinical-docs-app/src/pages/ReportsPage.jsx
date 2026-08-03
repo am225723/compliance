@@ -194,7 +194,7 @@ function CptCodePicker({ value = [], onChange }) {
         {value.map(code => (
           <span key={code} title={CPT_CODE_LOOKUP.get(code)} className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-500/20 text-teal-300 rounded-lg text-xs font-bold font-mono">
             {code}
-            <button type="button" onClick={() => toggleCode(code)} className="hover:text-red-400">
+            <button type="button" aria-label={`Remove CPT code ${code}`} onClick={() => toggleCode(code)} className="hover:text-red-400">
               <X className="w-3 h-3" />
             </button>
           </span>

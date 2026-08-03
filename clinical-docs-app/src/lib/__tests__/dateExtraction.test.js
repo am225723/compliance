@@ -37,6 +37,11 @@ describe('extractDateFromFileName', () => {
   it('rejects an out-of-range calendar date', () => {
     expect(extractDateFromFileName('2026-13-40.pdf')).toBeNull();
   });
+
+  it('does not misread a dotted version string as a 2-digit-year date', () => {
+    expect(extractDateFromFileName('v1.2.24.pdf')).toBeNull();
+    expect(extractDateFromFileName('Amendment-2.1.15.pdf')).toBeNull();
+  });
 });
 
 describe('extractLatestDateFromFileNames', () => {
