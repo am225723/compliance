@@ -55,7 +55,7 @@ export const defaultSettings = {
       { id: 'assessment', label: 'Assessment / Evaluation', enabled: true, required: false, patterns: ['assessment', 'evaluation', 'psych eval', 'initial evaluation'] },
     ],
     session_note: [
-      { id: 'session_source', label: 'Session transcript or Zoom note', enabled: true, required: false, patterns: ['zoomnote', 'zoom note', 'transcript', 'session summary', 'session note'] },
+      { id: 'session_source', label: 'Session transcript, Zoom note, or Notes by Gemini', enabled: true, required: false, patterns: ['zoomnote', 'zoom note', 'notesbygemini', 'notes by gemini', 'gemini notes', 'transcript', 'session summary', 'session note'] },
       { id: 'treatment_plan', label: 'Treatment Plan source file', enabled: false, required: false, patterns: ['treatment plan', 'treatmentplan'] },
     ],
     pre_intake: [
