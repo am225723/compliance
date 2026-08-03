@@ -138,10 +138,11 @@ CRITICAL RULES:
 2. Replace ONLY the text content inside each ai-prompt span with your generated clinical content.
 3. Do NOT change any HTML structure, CSS classes, div containers, or surrounding elements whatsoever.
 4. Do NOT add new HTML tags inside the spans — plain text only (you may use newline characters for line breaks).
-5. Use only information explicitly documented in the provided source files. Never hallucinate or invent clinical data.
-6. If a field's data is not present in the source material, leave the value blank and do not write "Not documented" in the body.
-7. Follow each per-field instruction inside each ai-prompt span precisely.
-8. Return the COMPLETE HTML document with every ai-prompt span replaced. Do not truncate or summarize the HTML.`;
+5. Never invent facts: specific symptoms, events, history, medications, dates, or other clinical data must come only from what is documented in the provided source files.
+6. Within that limit, you may — and should — use standard clinical language and reasonable clinical inference to express what the source material supports: phrase Mental Status Exam findings in standard MSE terminology even if the source uses casual wording, name the psychotherapy interventions used when the techniques described in the source are recognizable (e.g. cognitive restructuring, behavioral activation, motivational interviewing), write a clinical formulation that connects documented symptoms/history/stressors into a coherent case conceptualization, and state medical necessity in terms of documented functional impairment and risk. This is translating and synthesizing what's there into professional clinical documentation, not adding new facts.
+7. If a field's data is not present in the source material and cannot be reasonably inferred from what IS present per rule 6, leave the value blank and do not write "Not documented" in the body.
+8. Follow each per-field instruction inside each ai-prompt span precisely.
+9. Return the COMPLETE HTML document with every ai-prompt span replaced. Do not truncate or summarize the HTML.`;
 }
 
 export function buildTreatmentPlanPrompt(sourceText, templateHtml) {

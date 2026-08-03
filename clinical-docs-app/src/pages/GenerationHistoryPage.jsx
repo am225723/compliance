@@ -3,12 +3,20 @@
  */
 
 import { useState, useEffect } from 'react';
-import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2, RefreshCw, ListChecks, Users } from 'lucide-react';
+import { History, AlertTriangle, CheckCircle2, XCircle, ChevronDown, ChevronUp, Search, RotateCw, Loader2, RefreshCw, ListChecks, Users, FileText, ExternalLink, LayoutList } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 
+const DOC_TYPE_LABEL = {
+  treatment_plan: 'Treatment Plan',
+  darp: 'DARP Progress Note',
+  pre_intake: 'Pre-Intake Brief',
+  follow_up: 'Follow-Up Visit',
+};
+
 export default function GenerationHistoryPage() {
-  const { user } = useApp();
+  const { user, documents, docsLoading, fetchDocuments } = useApp();
+  const [viewMode, setViewMode] = useState('batches'); // 'batches' | 'files'
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -75,6 +83,14 @@ export default function GenerationHistoryPage() {
     log.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Every individual generated document, regardless of which batch produced
+  // it, sorted by date — the flat complement to the by-batch view above.
+  const sortedDocuments = [...documents].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const filteredDocuments = sortedDocuments.filter(doc =>
+    doc.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (DOC_TYPE_LABEL[doc.document_type] || doc.document_type)?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const totalPatients = logs.reduce((sum, l) => sum + (l.total_patients || 0), 0);
   const totalSuccess = logs.reduce((sum, l) => sum + (l.successful_count || 0), 0);
   const totalErrors = logs.reduce((sum, l) => sum + (l.failed_count || 0), 0);
@@ -93,18 +109,38 @@ export default function GenerationHistoryPage() {
               <p className="text-xs text-slate-500">View past batch runs, errors, and retry failures</p>
             </div>
           </div>
-          <button
-            onClick={loadGenerationLogs}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+              <button
+                onClick={() => setViewMode('batches')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'batches' ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
+                }`}
+              >
+                <ListChecks className="w-3.5 h-3.5" /> By Batch
+              </button>
+              <button
+                onClick={() => setViewMode('files')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'files' ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
+                }`}
+              >
+                <LayoutList className="w-3.5 h-3.5" /> All Files
+              </button>
+            </div>
+            <button
+              onClick={viewMode === 'batches' ? loadGenerationLogs : fetchDocuments}
+              disabled={viewMode === 'batches' ? loading : docsLoading}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${(viewMode === 'batches' ? loading : docsLoading) ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Stats summary — scoped to the most recent 50 batches (the loaded window) */}
-        {logs.length > 0 && (
+        {viewMode === 'batches' && logs.length > 0 && (
           <div className="mb-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -130,23 +166,74 @@ export default function GenerationHistoryPage() {
 
         {/* Search */}
         <div className="mb-5">
-          <label htmlFor="search-batch" className="block text-xs font-bold text-slate-400 mb-1.5">Search History</label>
+          <label htmlFor="search-batch" className="block text-xs font-bold text-slate-400 mb-1.5">
+            {viewMode === 'batches' ? 'Search History' : 'Search Files'}
+          </label>
           <div className="relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-slate-500" aria-hidden="true" />
             <input
               id="search-batch"
               type="text"
-              placeholder="Search by batch name, document type, or status…"
+              placeholder={viewMode === 'batches'
+                ? 'Search by batch name, document type, or status…'
+                : 'Search by patient name or document type…'}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full bg-slate-900 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20"
-              aria-label="Search generation history"
+              aria-label={viewMode === 'batches' ? 'Search generation history' : 'Search all generated files'}
             />
           </div>
         </div>
 
-        {/* Logs list */}
-        {loading ? (
+        {viewMode === 'files' ? (
+          docsLoading ? (
+            <div role="status" className="flex flex-col items-center justify-center py-24">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+              </div>
+              <span className="sr-only">Loading files</span>
+            </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                <FileText className="w-7 h-7 text-slate-600" />
+              </div>
+              <p className="text-sm font-bold text-slate-500">
+                {documents.length === 0 ? 'No documents generated yet' : 'No results found'}
+              </p>
+              <p className="text-xs text-slate-700 mt-1">
+                {documents.length === 0 ? 'Generated documents will appear here' : `No results for "${searchTerm}"`}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/8 overflow-hidden">
+              {filteredDocuments.map((doc, idx) => (
+                <div
+                  key={doc.id}
+                  className={`flex items-center gap-3 px-4 py-3 ${idx > 0 ? 'border-t border-white/5' : ''} hover:bg-white/3 transition-colors`}
+                >
+                  <FileText className="w-4 h-4 text-violet-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-white truncate">{doc.patient_name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {DOC_TYPE_LABEL[doc.document_type] || doc.document_type} • {new Date(doc.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {doc.drive_file_url && (
+                    <a
+                      href={doc.drive_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-violet-300 hover:bg-violet-500/10 text-xs font-bold transition-all flex-shrink-0"
+                    >
+                      Open <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        ) : loading ? (
           <div role="status" className="flex flex-col items-center justify-center py-24">
             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />

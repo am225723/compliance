@@ -20,11 +20,82 @@ const SERVICE_TYPES = [
   'Treatment Planning',
 ];
 
-const COMMON_CPT = [
-  '90791', '90792', '90832', '90834', '90837',
-  '90838', '90839', '90840', '90845', '90847',
-  '90853', '99213', '99214', '99215', '99205',
+/** The full set of CPT codes a board-certified psychiatrist bills through
+ *  Headway — CPT entry is restricted to exactly this list (no free text).
+ *  Groups are ordered with the codes used on the overwhelming majority of
+ *  visits (E/M + psychotherapy add-on) first; 90792 is scoped to new-patient
+ *  intake only and should not be treated as a default for follow-up visits. */
+const CPT_CODE_GROUPS = [
+  {
+    label: 'E/M — Established Patient (medication management)',
+    codes: [
+      { code: '99213', description: 'Established patient E/M — Low MDM' },
+      { code: '99214', description: 'Established patient E/M — Moderate MDM' },
+      { code: '99215', description: 'Established patient E/M — High MDM' },
+    ],
+  },
+  {
+    label: 'Psychotherapy Add-On (bill only with an E/M code)',
+    codes: [
+      { code: '90833', description: 'Add-on — 16–37 min psychotherapy' },
+      { code: '90836', description: 'Add-on — 38–52 min psychotherapy' },
+      { code: '90838', description: 'Add-on — 53+ min psychotherapy' },
+    ],
+  },
+  {
+    label: 'E/M — New Patient (medication management)',
+    codes: [
+      { code: '99203', description: 'New patient E/M — Low MDM' },
+      { code: '99204', description: 'New patient E/M — Moderate MDM' },
+      { code: '99205', description: 'New patient E/M — High MDM' },
+    ],
+  },
+  {
+    label: 'Stand-Alone Psychotherapy (no medication management)',
+    codes: [
+      { code: '90832', description: 'Psychotherapy — 16–37 min' },
+      { code: '90834', description: 'Psychotherapy — 38–52 min' },
+      { code: '90837', description: 'Psychotherapy — 53+ min' },
+    ],
+  },
+  {
+    label: 'Interactive Complexity',
+    codes: [
+      { code: '90785', description: 'Add-on for communication complexity (reported after the psychotherapy code)' },
+    ],
+  },
+  {
+    label: 'Crisis Psychotherapy',
+    codes: [
+      { code: '90839', description: 'First 60 min of crisis psychotherapy' },
+      { code: '90840', description: 'Each additional 30 min' },
+    ],
+  },
+  {
+    label: 'Family Therapy',
+    codes: [
+      { code: '90846', description: 'Family psychotherapy without patient present' },
+      { code: '90847', description: 'Family psychotherapy with patient present' },
+      { code: '90849', description: 'Multiple-family group psychotherapy' },
+    ],
+  },
+  {
+    label: 'Group Therapy',
+    codes: [
+      { code: '90853', description: 'Group psychotherapy' },
+    ],
+  },
+  {
+    label: 'Initial Evaluation (new-patient intake only)',
+    codes: [
+      { code: '90792', description: 'Psychiatric diagnostic evaluation with medical services — do not combine with an E/M code on the same encounter' },
+    ],
+  },
 ];
+
+const CPT_CODE_LOOKUP = new Map(
+  CPT_CODE_GROUPS.flatMap(g => g.codes).map(c => [c.code, c.description])
+);
 
 const COMMON_ICD10 = [
   'F32.0', 'F32.1', 'F32.2', 'F33.0', 'F33.1',
@@ -90,6 +161,75 @@ function TagInput({ value = [], onChange, placeholder, suggestions = [] }) {
             >
               {s}
             </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** CPT entry restricted to CPT_CODE_GROUPS — selection only, no free text,
+ *  so an entry can never carry a code outside what Headway actually bills. */
+function CptCodePicker({ value = [], onChange }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+
+  function toggleCode(code) {
+    onChange(value.includes(code) ? value.filter(c => c !== code) : [...value, code]);
+  }
+
+  const q = query.trim().toLowerCase();
+  const filteredGroups = CPT_CODE_GROUPS
+    .map(group => ({
+      ...group,
+      codes: group.codes.filter(({ code, description }) =>
+        !q || code.includes(q) || description.toLowerCase().includes(q)
+      ),
+    }))
+    .filter(group => group.codes.length > 0);
+
+  return (
+    <div className="relative">
+      <div className="min-h-[42px] flex flex-wrap gap-1 px-3 py-2 bg-slate-800 border border-white/10 rounded-xl focus-within:border-teal-500/60 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all">
+        {value.map(code => (
+          <span key={code} title={CPT_CODE_LOOKUP.get(code)} className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-500/20 text-teal-300 rounded-lg text-xs font-bold font-mono">
+            {code}
+            <button type="button" onClick={() => toggleCode(code)} className="hover:text-red-400">
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder={value.length === 0 ? 'Search CPT codes…' : ''}
+          className="flex-1 min-w-[100px] bg-transparent text-xs text-white placeholder-slate-600 outline-none"
+        />
+      </div>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded-xl shadow-xl z-20 max-h-64 overflow-y-auto">
+          {filteredGroups.length === 0 && (
+            <p className="px-3 py-2 text-xs text-slate-500">No matching CPT codes.</p>
+          )}
+          {filteredGroups.map(group => (
+            <div key={group.label}>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">{group.label}</p>
+              {group.codes.map(({ code, description }) => (
+                <button
+                  key={code}
+                  type="button"
+                  onMouseDown={() => toggleCode(code)}
+                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 ${
+                    value.includes(code) ? 'bg-teal-500/15 text-teal-300' : 'text-slate-300 hover:bg-white/5'
+                  }`}
+                >
+                  <span className="font-mono font-bold">{code}</span>
+                  <span className="text-slate-500 truncate">{description}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -216,13 +356,11 @@ function ReportFormModal({ report, onClose, onSave }) {
           {/* CPT Codes */}
           <div>
             <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">CPT Codes</label>
-            <TagInput
+            <CptCodePicker
               value={form.cpt_codes}
               onChange={v => setForm(f => ({ ...f, cpt_codes: v }))}
-              placeholder="Type code + Enter (e.g. 90837)"
-              suggestions={COMMON_CPT}
             />
-            <p className="text-[10px] text-slate-600 mt-1">Common: {COMMON_CPT.slice(0, 5).join(', ')}</p>
+            <p className="text-[10px] text-slate-600 mt-1">Restricted to Headway-supported psychiatry codes. Search by code or description.</p>
           </div>
 
           {/* Psychotherapy Minutes */}
