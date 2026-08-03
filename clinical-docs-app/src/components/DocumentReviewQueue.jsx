@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { CheckCircle2, XCircle, RotateCw, Eye, Loader2, MessageSquare } from 'lucide-react';
 
 export default function DocumentReviewQueue({
-  items, onReviewStatusChange, onRegenerateClick, phase,
+  items, onReviewStatusChange, phase,
 }) {
   const [expandedNotes, setExpandedNotes] = useState({});
   const generatedItems = items.filter(o => o.status === 'generated' || (o.status === 'error' && phase !== 'preview'));
@@ -56,9 +56,10 @@ export default function DocumentReviewQueue({
               {item.status === 'generated' && (
                 <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={() => onRegenerateClick?.(item.key)}
-                    className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    aria-label={`Regenerate document for ${item.patientName} — ${item.label}`}
+                    disabled
+                    title="Regeneration isn't supported within a batch yet — retry from the Generation History page instead."
+                    className="p-2 rounded-lg bg-blue-500/10 text-blue-400/40 cursor-not-allowed"
+                    aria-label={`Regenerate document for ${item.patientName} — ${item.label} (not yet supported — use Generation History)`}
                   >
                     <RotateCw className="w-4 h-4" aria-hidden="true" />
                   </button>

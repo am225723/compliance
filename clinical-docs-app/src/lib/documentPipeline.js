@@ -12,6 +12,7 @@ import { applyNamingConvention } from './settings';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, DEFAULT_SERVICE_TYPE_BY_DOC_TYPE, getDocumentTypeMeta } from './documentTypes';
 import { extractLatestDateFromFileNames } from './dateExtraction';
 import { getSessionSourceFiles } from './sessionSourceFiles';
+import { getSourceRules } from './sourceFileSelection';
 
 const NAMING_KEY = {
   treatment_plan: 'treatmentPlan',
@@ -27,11 +28,22 @@ export function buildFileName(namingConvention, docTypeKey, lastName, dateStr) {
 }
 
 /** Compact YYYYMMDD form used in file names — `dateForFilename` is an ISO
- *  'YYYY-MM-DD' (from a source file name) or null to fall back to today. */
-export function computeOutputFileNameBase(namingConvention, docTypeKey, patientName, dateForFilename) {
+ *  'YYYY-MM-DD' (from a source file name) or null to fall back to today.
+ *  `suffix`, when given, disambiguates same-dated sibling outputs (e.g. two
+ *  session files from the same day) so they never collide on file name. */
+export function computeOutputFileNameBase(namingConvention, docTypeKey, patientName, dateForFilename, suffix = '') {
   const lastName = patientName.trim().split(/\s+/).pop() || patientName;
   const dateStr = (dateForFilename || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
-  return buildFileName(namingConvention, docTypeKey, lastName, dateStr);
+  return buildFileName(namingConvention, docTypeKey, lastName, dateStr) + suffix;
+}
+
+/** The configured 'session_source' rule's patterns for session_note, when the
+ *  user has customized them in Settings — falls back to the shared default
+ *  (undefined) so planning stays consistent with what's actually preselected
+ *  in the Verify Source Files step. */
+function resolveSessionSourcePatterns(settings) {
+  const rule = getSourceRules(settings, 'session_note').find(r => r.id === 'session_source');
+  return rule?.patterns?.length ? rule.patterns : undefined;
 }
 
 /**
@@ -52,13 +64,14 @@ export function computeOutputFileNameBase(namingConvention, docTypeKey, patientN
  * Each returned output is a *plan*, not a generated document — `key` is a
  * stable identifier used to track its generation/review/save status.
  */
-export function planPatientOutputs(patient, docTypeKey) {
+export function planPatientOutputs(patient, docTypeKey, settings) {
   const files = patient.files || [];
   const selectedIds = new Set(patient.selectedFileIds || []);
   const selectedFiles = files.filter(f => selectedIds.has(f.id));
+  const patterns = resolveSessionSourcePatterns(settings);
 
   if (docTypeKey === 'session_note') {
-    const sessionFiles = getSessionSourceFiles(files).filter(f => selectedIds.has(f.id));
+    const sessionFiles = getSessionSourceFiles(files, patterns).filter(f => selectedIds.has(f.id));
     if (sessionFiles.length === 0) {
       return [{
         key: `${patient.name}::session_note`,
@@ -66,10 +79,14 @@ export function planPatientOutputs(patient, docTypeKey) {
         label: 'DARP Progress Note',
         sourceFiles: selectedFiles,
         dateForFilename: null,
+        dedupeSuffix: '',
         isBootstrap: false, dependsOnKey: null,
       }];
     }
     const extrasBase = selectedFiles.filter(f => !sessionFiles.some(sf => sf.id === f.id));
+    // Multiple session files can legitimately share a date (or both lack an
+    // extractable one) — an index suffix keeps every planned file name
+    // unique regardless, rather than only disambiguating detected collisions.
     return sessionFiles.map((sf, i) => ({
       key: `${patient.name}::session_note::${sf.id}`,
       patientName: patient.name, docTypeKey: 'session_note',
@@ -78,12 +95,13 @@ export function planPatientOutputs(patient, docTypeKey) {
         : 'DARP Progress Note',
       sourceFiles: [sf, ...extrasBase],
       dateForFilename: sf.extractedDate,
+      dedupeSuffix: sessionFiles.length > 1 ? `-${i + 1}` : '',
       isBootstrap: false, dependsOnKey: null,
     }));
   }
 
   if (docTypeKey === 'treatment_plan') {
-    const sessionFiles = getSessionSourceFiles(files); // not gated by selectedFileIds — treatment_plan's own rules don't preselect these
+    const sessionFiles = getSessionSourceFiles(files, patterns); // not gated by selectedFileIds — treatment_plan's own rules don't preselect these
     const outputs = [];
     let bootstrapKey = null;
     if (sessionFiles.length > 0) {
@@ -95,6 +113,7 @@ export function planPatientOutputs(patient, docTypeKey) {
         label: `First Session Note (auto-generated from ${oldest.name} for Treatment Plan context)`,
         sourceFiles: [oldest],
         dateForFilename: oldest.extractedDate,
+        dedupeSuffix: '',
         isBootstrap: true, dependsOnKey: null,
       });
     }
@@ -104,6 +123,7 @@ export function planPatientOutputs(patient, docTypeKey) {
       label: 'Treatment Plan',
       sourceFiles: selectedFiles,
       dateForFilename: null,
+      dedupeSuffix: '',
       isBootstrap: false, dependsOnKey: bootstrapKey,
     });
     return outputs;
@@ -116,6 +136,7 @@ export function planPatientOutputs(patient, docTypeKey) {
     label: meta?.label || docTypeKey,
     sourceFiles: selectedFiles,
     dateForFilename: null,
+    dedupeSuffix: '',
     isBootstrap: false, dependsOnKey: null,
   }];
 }
@@ -269,10 +290,10 @@ export async function saveGeneratedDocument({
     // saved successfully — never let it fail the save the user is waiting on.
     try {
       // Prefer the actual session date over the date the document happened to
-      // be generated: the linked calendar occurrence is authoritative when
-      // present, otherwise fall back to a date found in the source file
-      // names (patients' folders are typically named/dated per visit), and
-      // only default to today as a last resort.
+      // be generated: an explicit override (e.g. a specific source file's
+      // extracted date, passed by the Batch Processor's per-output planning)
+      // wins first, then a linked calendar occurrence, then a date found in
+      // the source file names, and only today as a last resort.
       const dateOfService = dateOfServiceOverride
         || (calendarLink?.occurrenceStart ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10) : null)
         || extractLatestDateFromFileNames((patient.files || []).map(f => f.name))

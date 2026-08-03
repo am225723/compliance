@@ -74,19 +74,27 @@ function StatusBadge({ status }) {
 
 function normalizeResumedOutputs(list) {
   return (list || []).map(o => {
-    if (o.status === 'generating') return { ...o, status: 'planned' };
-    if (o.status === 'saving') return { ...o, status: 'generated' };
+    // generatedOutput.html is deliberately never persisted (it's the full
+    // clinical note — PHI at rest) — see the persistence effect below. Any
+    // status implying in-memory content that isn't yet durably saved to
+    // Drive/Supabase ('done') can't be trusted after a resume; demote it
+    // back to 'planned' so it gets regenerated instead of reviewed/saved
+    // with a missing body.
+    if (o.status === 'generating' || o.status === 'generated' || o.status === 'saving') {
+      return { ...o, status: 'planned', generatedOutput: null };
+    }
     return o;
   });
 }
 
 function resumeStablePhase(storedPhase) {
-  // MATCHING/CONFIRM/GENERATING are all mid-flight — safest is to drop back
-  // to PREVIEW so files (and therefore planned outputs) get re-verified
-  // before generating rather than resuming into a half-built plan.
-  if (storedPhase === PHASE.MATCHING || storedPhase === PHASE.CONFIRM || storedPhase === PHASE.GENERATING) return PHASE.PREVIEW;
-  if (storedPhase === PHASE.SAVING) return PHASE.REVIEW;
-  return storedPhase;
+  // Only DONE (everything already saved — nothing left that only lives in
+  // memory) is safe to resume into directly. Every other phase, including
+  // REVIEW, can involve generated content that was deliberately never
+  // persisted, so drop back to PREVIEW and let files get re-verified and
+  // regenerated rather than resuming into a plan with missing document bodies.
+  if (storedPhase === PHASE.DONE || storedPhase === PHASE.IDLE) return storedPhase;
+  return PHASE.PREVIEW;
 }
 
 export default function BatchProcessor() {
@@ -180,10 +188,16 @@ export default function BatchProcessor() {
     clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
       try {
+        // generatedOutput.html is the full clinical note (PHI) — never park
+        // that in localStorage. Resume only needs the plan; a resumed run
+        // re-generates any document that isn't safely saved to Drive/Supabase.
+        const persistableOutputs = outputs.map(({ generatedOutput: _generatedOutput, ...rest }) => rest);
         localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
-          phase, patients, outputs, batchInput, selectedTemplate, summary, ts: Date.now(),
+          phase, patients, outputs: persistableOutputs, batchInput, selectedTemplate, summary, ts: Date.now(),
         }));
-      } catch { /* storage full/unavailable — resuming just won't work this time */ }
+      } catch (e) {
+        console.warn('Could not persist batch snapshot for resume:', e);
+      }
     }, 400);
     return () => clearTimeout(persistTimeoutRef.current);
   }, [phase, patients, outputs, batchInput, selectedTemplate, summary]);
@@ -301,9 +315,9 @@ export default function BatchProcessor() {
     const meta = getDocumentTypeMeta(docTypeKey);
     if (!meta) { addLog('No template selected.', 'error'); return; }
 
-    const built = confirmed.flatMap(patient => planPatientOutputs(patient, docTypeKey).map(planned => ({
+    const built = confirmed.flatMap(patient => planPatientOutputs(patient, docTypeKey, settings).map(planned => ({
       ...planned,
-      fileNameBase: computeOutputFileNameBase(settings.namingConvention, planned.docTypeKey, planned.patientName, planned.dateForFilename),
+      fileNameBase: computeOutputFileNameBase(settings.namingConvention, planned.docTypeKey, planned.patientName, planned.dateForFilename, planned.dedupeSuffix),
       included: true,
       status: 'planned',
       genPercent: 0,
@@ -385,6 +399,18 @@ export default function BatchProcessor() {
       const patientOutputs = activeOutputs.filter(o => o.patientName === patientName);
 
       addLog(`\n━━━ ${patientName} ━━━`);
+
+      if (!patient) {
+        const msg = `No matched folder record found for ${patientName} — re-run matching.`;
+        addLog(`  ❌ ${msg}`, 'error');
+        patientOutputs.forEach(o => {
+          stepNum += 1;
+          updateOutputByKey(o.key, { status: 'error', error: msg, approved: false });
+          failureCount += 1;
+          updateProgress(Math.round((stepNum / total) * 100), stepNum, total, 'Done');
+        });
+        continue;
+      }
 
       // Per-patient selected-file check against the doc type's configured
       // rules — run once per patient (not per output) since it validates the
@@ -511,10 +537,6 @@ export default function BatchProcessor() {
     } else if (status === 'rejected') {
       updateOutputByKey(key, { approved: false });
     }
-  }
-
-  function handleRegenerateClick(_key) {
-    addLog(`ℹ Regeneration not yet supported within batch. Use the Generate History page to retry failed items.`, 'info');
   }
 
   // ── Phase 3: Save approved documents to Drive + Supabase ────────────────
@@ -1052,7 +1074,6 @@ export default function BatchProcessor() {
                 <DocumentReviewQueue
                   items={generatedForReview}
                   onReviewStatusChange={handleReviewStatusChange}
-                  onRegenerateClick={handleRegenerateClick}
                   phase={phase}
                 />
 

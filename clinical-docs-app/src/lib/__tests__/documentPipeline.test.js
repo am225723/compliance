@@ -29,6 +29,11 @@ describe('computeOutputFileNameBase', () => {
     expect(computeOutputFileNameBase(namingConvention, 'treatment_plan', 'John Smith', null))
       .toBe(`Smith_${today}_TreatmentPlan`);
   });
+
+  it('appends a disambiguating suffix when given one', () => {
+    expect(computeOutputFileNameBase(namingConvention, 'session_note', 'John Smith', '2026-01-15', '-2'))
+      .toBe('Smith_20260115_DARP-2');
+  });
 });
 
 function patientWithFiles(files, selectedFileIds) {
@@ -81,6 +86,45 @@ describe('planPatientOutputs — session_note', () => {
     const outputs = planPatientOutputs(patientWithFiles(files, ['zoom1']), 'session_note');
     expect(outputs).toHaveLength(1);
     expect(outputs[0].sourceFiles.map(f => f.id)).toEqual(['zoom1']);
+  });
+
+  it('gives same-dated (or both undated) session files distinct dedupe suffixes so filenames never collide', () => {
+    const files = [
+      { id: 'zoomA', name: 'Zoom Note 2026-01-15 A.pdf' },
+      { id: 'zoomB', name: 'Zoom Note 2026-01-15 B.pdf' },
+    ];
+    const outputs = planPatientOutputs(patientWithFiles(files), 'session_note');
+    expect(outputs).toHaveLength(2);
+    expect(outputs[0].dateForFilename).toBe(outputs[1].dateForFilename); // same extracted date
+    expect(outputs[0].dedupeSuffix).not.toBe(outputs[1].dedupeSuffix);
+
+    const namesA = computeOutputFileNameBase(namingConvention, outputs[0].docTypeKey, outputs[0].patientName, outputs[0].dateForFilename, outputs[0].dedupeSuffix);
+    const namesB = computeOutputFileNameBase(namingConvention, outputs[1].docTypeKey, outputs[1].patientName, outputs[1].dateForFilename, outputs[1].dedupeSuffix);
+    expect(namesA).not.toBe(namesB);
+  });
+
+  it('leaves the dedupe suffix empty when there is only one session file', () => {
+    const files = [{ id: 'zoom1', name: 'Zoom Note 2026-01-15.pdf' }];
+    const outputs = planPatientOutputs(patientWithFiles(files), 'session_note');
+    expect(outputs[0].dedupeSuffix).toBe('');
+  });
+
+  it('uses the configured session_source rule patterns from Settings, when customized', () => {
+    const files = [{ id: 'custom1', name: 'MyCustomTranscriptTool 2026-01-15.pdf' }];
+    const settings = {
+      sourceFiles: {
+        session_note: [
+          { id: 'session_source', enabled: true, patterns: ['mycustomtranscripttool'] },
+        ],
+      },
+    };
+    const withoutCustomPatterns = planPatientOutputs(patientWithFiles(files), 'session_note');
+    expect(withoutCustomPatterns[0].label).toBe('DARP Progress Note'); // falls back to the single-combined-note path — pattern doesn't match the default list
+
+    const withCustomPatterns = planPatientOutputs(patientWithFiles(files), 'session_note', settings);
+    expect(withCustomPatterns).toHaveLength(1);
+    expect(withCustomPatterns[0].sourceFiles.map(f => f.id)).toEqual(['custom1']);
+    expect(withCustomPatterns[0].dateForFilename).toBe('2026-01-15'); // only reachable via the per-session-file planning path
   });
 });
 
