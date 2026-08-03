@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { CheckCircle2, XCircle, RotateCw, Eye, Loader2, MessageSquare } from 'lucide-react';
+import ClientFacingActions from './ClientFacingActions';
 
 export default function DocumentReviewQueue({
   items, onReviewStatusChange, onRegenerateClick, phase,
@@ -100,6 +101,10 @@ export default function DocumentReviewQueue({
                   rows={2}
                 />
               </div>
+            )}
+
+            {item.generatedOutput?.html && (
+              <ClientFacingActions documentHtml={item.generatedOutput.html} patientName={item.patientName} />
             )}
           </div>
         ))}

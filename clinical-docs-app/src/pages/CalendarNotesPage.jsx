@@ -22,6 +22,7 @@ import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../lib/settings';
 import { buildExistingNoteIndex, findExistingNote } from '../lib/calendarDedup';
 import { getSessionSourceFiles, isSessionSourceFile } from '../lib/sessionSourceFiles';
+import ClientFacingActions from '../components/ClientFacingActions';
 
 /**
  * Among a folder's Zoom-note / Notes-by-Gemini files, pick the one whose
@@ -1022,6 +1023,9 @@ export default function CalendarNotesPage() {
                           ) : (
                             <iframe title={`preview-${rowKey}`} sandbox="" srcDoc={dt.generatedOutput.html} className="w-full h-64 rounded-lg border border-white/10 bg-white" />
                           )
+                        )}
+                        {dt.status === 'generated' && (
+                          <ClientFacingActions documentHtml={dt.generatedOutput.html} patientName={appt.parsedName} />
                         )}
                       </div>
                     );

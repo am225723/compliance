@@ -98,6 +98,38 @@ This is explicitly a *starting point*, not a billing decision — the Reports
 page's CPT picker and `cptValidation.js` still govern what's actually
 submitted, and everything here is trivially editable.
 
+### Patient-facing content actions (`ClientFacingActions.jsx`)
+
+The Pre-Intake template's "Client-Facing Materials" block contains two
+sections meant to leave the clinical record as-is and go to the patient
+directly: an **Empathetic Patient Summary Letter** and **Client-Facing
+Psychoeducation**. `lib/clientFacingSections.js` extracts either one out of a
+generated document's HTML by heading text (not document type, so it keeps
+working if the template moves them), and `ClientFacingActions.jsx` — wired
+into `DocumentReviewQueue`, Calendar Notes' review queue, and
+`PatientTimelinePage` — renders per-section actions:
+
+- **Copy** — clipboard, for pasting into an EHR or elsewhere.
+- **Gmail** — opens a prefilled Gmail *compose* window
+  (`lib/gmailCompose.js`) rather than sending anything itself. Deliberately
+  not a Gmail API `gmail.send` integration: that scope is a materially more
+  sensitive consent than the Drive/Calendar scopes already in use, and email
+  isn't end-to-end encrypted — having the app transmit patient-facing
+  content directly is a real compliance surface that needs its own explicit
+  design pass (recipient verification, audit trail, BAA coverage) before
+  it's worth doing. This gets the workflow benefit (no retyping/reformatting)
+  without that risk: the clinician still reviews and hits send themselves,
+  in their own Gmail.
+- **PDF Handout** (Psychoeducation only) — composes the section with 0–2
+  matched diagrams into a standalone PDF via the existing `htmlToPdfBlob()`.
+  The diagrams (`lib/psychoeducationDiagrams.js`) are a small, hand-authored
+  SVG set (sleep hygiene, CBT thought cycle, medication schedule) matched by
+  keyword against the section text — not AI image generation. No
+  image-generation provider is wired into this app, and adding one for this
+  would mean new cost-per-generation and a real risk of inaccurate or
+  off-brand medical imagery that would need clinical review before every
+  use. The curated set trades flexibility for zero hallucination risk.
+
 ## 2. Candidate future features
 
 Ordered by how directly each one builds on what already exists — not by

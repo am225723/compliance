@@ -14,6 +14,7 @@ import {
   CheckCircle2, Clock, XCircle,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ClientFacingActions from '../components/ClientFacingActions';
 
 const DOC_TYPE_LABEL = {
   treatment_plan: 'Treatment Plan',
@@ -200,6 +201,7 @@ export default function PatientTimelinePage() {
                               className="w-full h-64 rounded-lg border border-white/10 bg-white"
                             />
                           )}
+                          <ClientFacingActions documentHtml={d.content_html} patientName={patientName} />
                         </div>
                       )}
                     </div>
