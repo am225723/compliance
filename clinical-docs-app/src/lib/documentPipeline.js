@@ -11,6 +11,7 @@ import {
 import { applyNamingConvention } from './settings';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, DEFAULT_SERVICE_TYPE_BY_DOC_TYPE, getDocumentTypeMeta } from './documentTypes';
 import { extractLatestDateFromFileNames } from './dateExtraction';
+import { getSessionSourceFiles } from './sessionSourceFiles';
 
 const NAMING_KEY = {
   treatment_plan: 'treatmentPlan',
@@ -23,6 +24,100 @@ export function buildFileName(namingConvention, docTypeKey, lastName, dateStr) {
   const key = NAMING_KEY[docTypeKey] || docTypeKey;
   const template = namingConvention?.[key] || `[LastName]_[Date]_${docTypeKey}`;
   return applyNamingConvention(template, lastName, dateStr);
+}
+
+/** Compact YYYYMMDD form used in file names — `dateForFilename` is an ISO
+ *  'YYYY-MM-DD' (from a source file name) or null to fall back to today. */
+export function computeOutputFileNameBase(namingConvention, docTypeKey, patientName, dateForFilename) {
+  const lastName = patientName.trim().split(/\s+/).pop() || patientName;
+  const dateStr = (dateForFilename || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+  return buildFileName(namingConvention, docTypeKey, lastName, dateStr);
+}
+
+/**
+ * Expand one matched patient into the concrete list of documents a
+ * generation run will actually produce for the selected document type:
+ *
+ *  - session_note: one DARP Progress Note per Zoom-note / Notes-by-Gemini
+ *    source file found (each session gets its own note), falling back to a
+ *    single combined note when no such file is present or all were
+ *    deselected — matching prior single-note-per-patient behavior.
+ *  - treatment_plan: when a Zoom-note / Notes-by-Gemini file exists anywhere
+ *    in the folder, the oldest one first bootstraps a DARP Progress Note
+ *    (Pass 1), which then feeds into the Treatment Plan as extra context
+ *    alongside its normal configured sources (intake, assessment, etc.).
+ *  - pre_intake / follow_up: unchanged, a single output from the patient's
+ *    currently selected files.
+ *
+ * Each returned output is a *plan*, not a generated document — `key` is a
+ * stable identifier used to track its generation/review/save status.
+ */
+export function planPatientOutputs(patient, docTypeKey) {
+  const files = patient.files || [];
+  const selectedIds = new Set(patient.selectedFileIds || []);
+  const selectedFiles = files.filter(f => selectedIds.has(f.id));
+
+  if (docTypeKey === 'session_note') {
+    const sessionFiles = getSessionSourceFiles(files).filter(f => selectedIds.has(f.id));
+    if (sessionFiles.length === 0) {
+      return [{
+        key: `${patient.name}::session_note`,
+        patientName: patient.name, docTypeKey: 'session_note',
+        label: 'DARP Progress Note',
+        sourceFiles: selectedFiles,
+        dateForFilename: null,
+        isBootstrap: false, dependsOnKey: null,
+      }];
+    }
+    const extrasBase = selectedFiles.filter(f => !sessionFiles.some(sf => sf.id === f.id));
+    return sessionFiles.map((sf, i) => ({
+      key: `${patient.name}::session_note::${sf.id}`,
+      patientName: patient.name, docTypeKey: 'session_note',
+      label: sessionFiles.length > 1
+        ? `DARP Progress Note ${i + 1} of ${sessionFiles.length} — ${sf.name}`
+        : 'DARP Progress Note',
+      sourceFiles: [sf, ...extrasBase],
+      dateForFilename: sf.extractedDate,
+      isBootstrap: false, dependsOnKey: null,
+    }));
+  }
+
+  if (docTypeKey === 'treatment_plan') {
+    const sessionFiles = getSessionSourceFiles(files); // not gated by selectedFileIds — treatment_plan's own rules don't preselect these
+    const outputs = [];
+    let bootstrapKey = null;
+    if (sessionFiles.length > 0) {
+      const oldest = sessionFiles[0];
+      bootstrapKey = `${patient.name}::session_note::bootstrap::${oldest.id}`;
+      outputs.push({
+        key: bootstrapKey,
+        patientName: patient.name, docTypeKey: 'session_note',
+        label: `First Session Note (auto-generated from ${oldest.name} for Treatment Plan context)`,
+        sourceFiles: [oldest],
+        dateForFilename: oldest.extractedDate,
+        isBootstrap: true, dependsOnKey: null,
+      });
+    }
+    outputs.push({
+      key: `${patient.name}::treatment_plan`,
+      patientName: patient.name, docTypeKey: 'treatment_plan',
+      label: 'Treatment Plan',
+      sourceFiles: selectedFiles,
+      dateForFilename: null,
+      isBootstrap: false, dependsOnKey: bootstrapKey,
+    });
+    return outputs;
+  }
+
+  const meta = getDocumentTypeMeta(docTypeKey);
+  return [{
+    key: `${patient.name}::${docTypeKey}`,
+    patientName: patient.name, docTypeKey,
+    label: meta?.label || docTypeKey,
+    sourceFiles: selectedFiles,
+    dateForFilename: null,
+    isBootstrap: false, dependsOnKey: null,
+  }];
 }
 
 // Rough expected output length per detail level, used only to drive a
@@ -77,11 +172,13 @@ async function loadTemplateHtml(docTypeKey, getTemplateHtml) {
 /**
  * Generate one document (in-memory only, not saved) for a patient + document
  * type. DARP notes automatically chain in the patient's most recently saved
- * Treatment Plan as Pass-1 context, when one exists.
+ * Treatment Plan as Pass-1 context, when one exists. Treatment Plans can
+ * optionally chain in a just-generated bootstrap DARP note (see
+ * planPatientOutputs) as extra context alongside their normal sources.
  */
 export async function generateDocumentForPatient({
   patient, docTypeKey, sourceText, systemPrompt, provider, keys, model,
-  getTemplateHtml, fetchLatestDocument, onLog, onChunk,
+  getTemplateHtml, fetchLatestDocument, onLog, onChunk, bootstrapNoteHtml = null,
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -89,7 +186,10 @@ export async function generateDocumentForPatient({
 
   let userPrompt;
   if (docTypeKey === 'treatment_plan') {
-    userPrompt = buildTreatmentPlanPrompt(sourceText, templateHtml);
+    const effectiveSourceText = bootstrapNoteHtml
+      ? `${sourceText}\n\n--- AUTO-GENERATED FIRST SESSION NOTE (for clinical context) ---\n${bootstrapNoteHtml}\n`
+      : sourceText;
+    userPrompt = buildTreatmentPlanPrompt(effectiveSourceText, templateHtml);
   } else if (docTypeKey === 'session_note') {
     let treatmentPlanHtml = '';
     const latestPlan = await fetchLatestDocument?.(patient.name, 'treatment_plan');
@@ -113,13 +213,15 @@ export async function saveGeneratedDocument({
   patient, docTypeKey, outputHtml, settings, provider, model, saveDocument, source = 'manual',
   calendarLink = null, // { calendarId, eventId, occurrenceStart, durationMinutes? } | null — set by Calendar Notes
   saveReport = null,   // optional — auto-creates a linked draft Reports row for billing/visit tracking
+  fileNameBase = null, // precomputed via computeOutputFileNameBase — reused as-is so a previewed filename matches what's actually saved
+  dateOfServiceOverride = null, // ISO 'YYYY-MM-DD' — e.g. the specific source file's extracted date for a per-session output
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
 
   const lastName = patient.name.trim().split(/\s+/).pop() || patient.name;
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const fileName = buildFileName(settings.namingConvention, docTypeKey, lastName, today);
+  const fileName = fileNameBase || buildFileName(settings.namingConvention, docTypeKey, lastName, today);
 
   const wantsHtml = settings.outputFormat === 'HTML' || settings.outputFormat === 'Both';
   const wantsPdf  = settings.outputFormat === 'PDF'  || settings.outputFormat === 'Both';
@@ -171,10 +273,10 @@ export async function saveGeneratedDocument({
       // present, otherwise fall back to a date found in the source file
       // names (patients' folders are typically named/dated per visit), and
       // only default to today as a last resort.
-      const dateOfService = calendarLink?.occurrenceStart
-        ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10)
-        : extractLatestDateFromFileNames((patient.files || []).map(f => f.name))
-          || new Date().toISOString().slice(0, 10);
+      const dateOfService = dateOfServiceOverride
+        || (calendarLink?.occurrenceStart ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10) : null)
+        || extractLatestDateFromFileNames((patient.files || []).map(f => f.name))
+        || new Date().toISOString().slice(0, 10);
       await saveReport({
         document_id: saved.id,
         patient_name: patient.name,

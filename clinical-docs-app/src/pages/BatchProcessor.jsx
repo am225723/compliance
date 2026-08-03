@@ -13,7 +13,10 @@ import {
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
+import {
+  collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
+  planPatientOutputs, computeOutputFileNameBase,
+} from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
@@ -25,7 +28,7 @@ import DeduplicationWarning from '../components/DeduplicationWarning';
 import DocumentReviewQueue from '../components/DocumentReviewQueue';
 
 const PHASE = {
-  IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview',
+  IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview', CONFIRM: 'confirm',
   GENERATING: 'generating', REVIEW: 'review', SAVING: 'saving', DONE: 'done',
 };
 
@@ -56,6 +59,7 @@ function StatusBadge({ status }) {
     done:       { color: 'bg-emerald-500/20 text-emerald-300', label: 'Complete' },
     error:      { color: 'bg-red-500/20 text-red-400',        label: 'Error' },
     skipped:    { color: 'bg-slate-600/20 text-slate-400',    label: 'Skipped' },
+    planned:    { color: 'bg-slate-700 text-slate-300',       label: 'Planned' },
   };
   const { color, label } = map[status] || map.pending;
   return (
@@ -68,16 +72,19 @@ function StatusBadge({ status }) {
   );
 }
 
-function normalizeResumedPatients(list) {
-  return (list || []).map(p => {
-    if (p.status === 'generating') return { ...p, status: 'matched' };
-    if (p.status === 'saving') return { ...p, status: 'generated' };
-    return p;
+function normalizeResumedOutputs(list) {
+  return (list || []).map(o => {
+    if (o.status === 'generating') return { ...o, status: 'planned' };
+    if (o.status === 'saving') return { ...o, status: 'generated' };
+    return o;
   });
 }
 
 function resumeStablePhase(storedPhase) {
-  if (storedPhase === PHASE.MATCHING || storedPhase === PHASE.GENERATING) return PHASE.PREVIEW;
+  // MATCHING/CONFIRM/GENERATING are all mid-flight — safest is to drop back
+  // to PREVIEW so files (and therefore planned outputs) get re-verified
+  // before generating rather than resuming into a half-built plan.
+  if (storedPhase === PHASE.MATCHING || storedPhase === PHASE.CONFIRM || storedPhase === PHASE.GENERATING) return PHASE.PREVIEW;
   if (storedPhase === PHASE.SAVING) return PHASE.REVIEW;
   return storedPhase;
 }
@@ -88,6 +95,7 @@ export default function BatchProcessor() {
   const [singleClientMode, setSingleClientMode] = useState(false);
   const [batchInput, setBatchInput] = useState('');
   const [patients, setPatients] = useState([]);
+  const [outputs, setOutputs] = useState([]);
   const [log, setLog] = useState([]);
   const [summary, setSummary] = useState(null);
   const [expandedFiles, setExpandedFiles] = useState({});
@@ -108,6 +116,14 @@ export default function BatchProcessor() {
 
   function updatePatientByName(name, patch) {
     setPatients(prev => prev.map(p => p.name === name ? { ...p, ...patch } : p));
+  }
+
+  function updateOutputByKey(key, patch) {
+    setOutputs(prev => prev.map(o => o.key === key ? { ...o, ...patch } : o));
+  }
+
+  function toggleOutputIncluded(key) {
+    setOutputs(prev => prev.map(o => o.key === key ? { ...o, included: !o.included } : o));
   }
 
   function togglePatientSourceFile(patientName, fileId) {
@@ -165,18 +181,19 @@ export default function BatchProcessor() {
     persistTimeoutRef.current = setTimeout(() => {
       try {
         localStorage.setItem(BATCH_STORAGE_KEY, JSON.stringify({
-          phase, patients, batchInput, selectedTemplate, summary, ts: Date.now(),
+          phase, patients, outputs, batchInput, selectedTemplate, summary, ts: Date.now(),
         }));
       } catch { /* storage full/unavailable — resuming just won't work this time */ }
     }, 400);
     return () => clearTimeout(persistTimeoutRef.current);
-  }, [phase, patients, batchInput, selectedTemplate, summary]);
+  }, [phase, patients, outputs, batchInput, selectedTemplate, summary]);
 
   function handleResumeBatch() {
     if (!resumeBanner) return;
     setBatchInput(resumeBanner.batchInput || '');
     setSelectedTemplate(resumeBanner.selectedTemplate || 'treatment_plan');
-    setPatients(normalizeResumedPatients(resumeBanner.patients));
+    setPatients(resumeBanner.patients || []);
+    setOutputs(normalizeResumedOutputs(resumeBanner.outputs));
     setSummary(resumeBanner.summary || null);
     setPhase(resumeStablePhase(resumeBanner.phase));
     setResumeBanner(null);
@@ -209,7 +226,7 @@ export default function BatchProcessor() {
       const result = await Promise.all(names.map(async (name) => {
         const candidates = matchPatientFolders(name, subfolders);
         const status = classifyMatch(candidates);
-        const base = { name, candidates, outputs: [], generatedOutput: null, approved: true, error: null, selectedFileIds: [], sourceRuleResults: [] };
+        const base = { name, candidates, error: null, selectedFileIds: [], sourceRuleResults: [] };
 
         if (status === 'not_found') {
           addLog(`⚠ "${name}" — Folder Not Found`, 'warn');
@@ -268,57 +285,73 @@ export default function BatchProcessor() {
     setProgress({ percent, current, total, step });
   }
 
-  // ── Pre-generation validation ────────────────────────────────────────
-  async function preValidateAndPrepare() {
+  // ── Phase 1.5: Build the planned outputs list + move to the Confirm screen ──
+  function handleProceedToConfirm() {
     const confirmed = patients.filter(p => p.status === 'matched');
     if (confirmed.length === 0) {
       addLog('No matched patients to generate for.', 'error');
-      return null;
+      return;
     }
     if (patients.some(p => p.status === 'ambiguous')) {
       addLog('Resolve all ambiguous folder matches before generating.', 'error');
-      return null;
+      return;
     }
 
     const docTypeKey = selectedTemplate;
     const meta = getDocumentTypeMeta(docTypeKey);
-    if (!meta) { addLog('No template selected.', 'error'); return null; }
+    if (!meta) { addLog('No template selected.', 'error'); return; }
 
-    const provider = settings.aiProvider || 'gemini';
-    const keys = getProviderKeys(settings);
-    if (!isProviderConfigured(provider, keys)) {
-      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error');
-      return null;
-    }
+    const built = confirmed.flatMap(patient => planPatientOutputs(patient, docTypeKey).map(planned => ({
+      ...planned,
+      fileNameBase: computeOutputFileNameBase(settings.namingConvention, planned.docTypeKey, planned.patientName, planned.dateForFilename),
+      included: true,
+      status: 'planned',
+      genPercent: 0,
+      generatedOutput: null,
+      approved: true,
+      error: null,
+      savedOutputs: [],
+    })));
 
-    // Check for duplicates and pre-collect errors/warnings
-    const rules = getSourceRules(settings, docTypeKey);
-    let hasDedupeWarnings = false;
-    confirmed.forEach(patient => {
-      const duplicates = detectDuplicateSourceFiles(patient.files, patient.sourceRuleResults || []);
-      if (duplicates.length > 0) {
-        addLog(`⚠ ${patient.name}: ${duplicates.length} file(s) match multiple rules and will be included twice`, 'warn');
-        hasDedupeWarnings = true;
-      }
-    });
-
-    if (hasDedupeWarnings) {
-      addLog('💡 Tip: Modify source file rules to avoid duplication, or manually adjust file selection per patient', 'info');
-    }
-
-    return { confirmed, docTypeKey, meta, provider, keys };
+    setOutputs(built);
+    setPhase(PHASE.CONFIRM);
   }
 
   // ── Phase 2: Generate (in memory only — nothing is saved yet) ───────────
   async function handleGenerate() {
-    const prep = await preValidateAndPrepare();
-    if (!prep) return;
-    const { confirmed, docTypeKey, meta, provider, keys } = prep;
+    const activeOutputs = outputs.filter(o => o.included);
+    if (activeOutputs.length === 0) {
+      addLog('No planned outputs selected to generate.', 'error');
+      return;
+    }
+
+    const docTypeKey = selectedTemplate;
+    const provider = settings.aiProvider || 'gemini';
+    const keys = getProviderKeys(settings);
+    if (!isProviderConfigured(provider, keys)) {
+      addLog(`${AI_PROVIDERS[provider]?.label || provider} API key not configured. Go to Settings.`, 'error');
+      return;
+    }
+
+    // Check for duplicates and pre-collect warnings, once per patient involved
+    let hasDedupeWarnings = false;
+    [...new Set(activeOutputs.map(o => o.patientName))].forEach(name => {
+      const patient = patients.find(p => p.name === name);
+      if (!patient) return;
+      const duplicates = detectDuplicateSourceFiles(patient.files, patient.sourceRuleResults || []);
+      if (duplicates.length > 0) {
+        addLog(`⚠ ${name}: ${duplicates.length} file(s) match multiple rules and will be included twice`, 'warn');
+        hasDedupeWarnings = true;
+      }
+    });
+    if (hasDedupeWarnings) {
+      addLog('💡 Tip: Modify source file rules to avoid duplication, or manually adjust file selection per patient', 'info');
+    }
 
     setPhase(PHASE.GENERATING);
     abortRef.current = false;
 
-    const total = confirmed.length;
+    const total = activeOutputs.length;
     updateProgress(0, 0, total, 'Starting...');
 
     // Create generation log for audit trail
@@ -341,86 +374,115 @@ export default function BatchProcessor() {
     const systemPrompt = buildSystemPrompt(settings.detailLevel);
     let successCount = 0;
     let failureCount = 0;
-    let skipCount = 0;
+    let stepNum = 0;
+    const resultsByKey = {};
+    const patientOrder = [...new Set(activeOutputs.map(o => o.patientName))];
 
-    for (let i = 0; i < confirmed.length; i++) {
-      const patient = confirmed[i];
+    outer:
+    for (const patientName of patientOrder) {
       if (abortRef.current) { addLog('\n⏹ Generation cancelled.', 'warn'); break; }
+      const patient = patients.find(p => p.name === patientName);
+      const patientOutputs = activeOutputs.filter(o => o.patientName === patientName);
 
-      const stepNum = i + 1;
-      updateProgress(Math.round((i / total) * 100), stepNum, total, `Processing ${patient.name}...`);
-      updatePatientByName(patient.name, { status: 'generating', genPercent: 0 });
-      addLog(`\n━━━ ${stepNum}/${total}: ${patient.name} ━━━`);
+      addLog(`\n━━━ ${patientName} ━━━`);
 
-      try {
-        const rules = getSourceRules(settings, docTypeKey);
-        const validation = validateSelectedSourceFiles(patient.files, patient.selectedFileIds, rules);
-        if (validation.missingRequired.length > 0) {
-          throw new Error(`Required source file missing: ${validation.missingRequired.map(x => x.rule.label).join(', ')}`);
-        }
-        validation.missingOptional.forEach(({ rule }) => addLog(`  ⚠ Optional source not found: ${rule.label}`, 'warn'));
-
-        const selectedFiles = validation.selectedFiles;
-        const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type), selectedFiles);
-
-        if (sourceFileList.length === 0) {
-          addLog(`  ✅ No source files selected for ${patient.name}, skipping.`);
-          updatePatientByName(patient.name, { status: 'skipped', error: 'No source files' });
-          continue;
-        }
-
-        addLog(`  ✓ Using ${sourceFileList.length} source file(s): ${sourceFileList.join(', ')}`);
-        addLog(`  🔮 Generating ${meta.label}...`);
-
-        let lastGenPercent = -1;
-        const { outputHtml, templateLabel } = await withRetry(
-          () => generateDocumentForPatient({
-            patient, docTypeKey, sourceText, systemPrompt, provider, keys,
-            model: settings.aiModel || undefined,
-            getTemplateHtml, fetchLatestDocument,
-            onLog: (msg, type) => addLog(`  ${msg}`, type),
-            onChunk: (_delta, fullText) => {
-              const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
-              if (pct !== lastGenPercent) {
-                lastGenPercent = pct;
-                updatePatientByName(patient.name, { genPercent: pct });
-              }
-            },
-          }),
-          { retries: 2, onRetry: (e, n) => { lastGenPercent = -1; updatePatientByName(patient.name, { genPercent: 0 }); addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn'); } }
-        );
-
-        addLog(`  ✓ ${templateLabel} generated (${outputHtml.length} chars)`);
-        updatePatientByName(patient.name, {
-          status: 'generated',
-          generatedOutput: { html: outputHtml, templateLabel, sourceFileList },
-          approved: true,
-          error: null,
+      // Per-patient selected-file check against the doc type's configured
+      // rules — run once per patient (not per output) since it validates the
+      // same underlying selectedFileIds every one of this patient's outputs draws from.
+      const rules = getSourceRules(settings, docTypeKey);
+      const validation = validateSelectedSourceFiles(patient.files, patient.selectedFileIds, rules);
+      validation.missingOptional.forEach(({ rule }) => addLog(`  ⚠ Optional source not found: ${rule.label}`, 'warn'));
+      if (validation.missingRequired.length > 0) {
+        const msg = `Required source file missing: ${validation.missingRequired.map(x => x.rule.label).join(', ')}`;
+        addLog(`  ❌ ${msg}`, 'error');
+        patientOutputs.forEach(o => {
+          stepNum += 1;
+          updateOutputByKey(o.key, { status: 'error', error: msg, approved: false });
+          failureCount += 1;
+          updateProgress(Math.round((stepNum / total) * 100), stepNum, total, 'Done');
         });
-        successCount += 1;
-      } catch (e) {
-        addLog(`  ❌ Error for ${patient.name}: ${e.message}`, 'error');
-        updatePatientByName(patient.name, { status: 'error', error: e.message, approved: false });
-        failureCount += 1;
-
-        // Log error to audit table if we have a generation log
-        if (batchLog?.id) {
-          await saveGenerationError(supabase, {
-            userId: user?.id,
-            generationLogId: batchLog.id,
-            patientName: patient.name,
-            error: e,
-            docTypeKey,
-          });
-        }
+        continue;
       }
 
-      updateProgress(Math.round(((i + 1) / total) * 100), stepNum, total, 'Done');
+      for (const out of patientOutputs) {
+        if (abortRef.current) { addLog('\n⏹ Generation cancelled.', 'warn'); break outer; }
+
+        stepNum += 1;
+        updateProgress(Math.round(((stepNum - 1) / total) * 100), stepNum, total, `Processing ${patientName} — ${out.label}...`);
+        updateOutputByKey(out.key, { status: 'generating', genPercent: 0 });
+
+        try {
+          const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type), out.sourceFiles);
+
+          if (sourceFileList.length === 0) {
+            addLog(`  ✅ No source files for ${patientName} — ${out.label}, skipping.`);
+            updateOutputByKey(out.key, { status: 'skipped', error: 'No source files' });
+            continue;
+          }
+
+          addLog(`  ✓ Using ${sourceFileList.length} source file(s): ${sourceFileList.join(', ')}`);
+          addLog(`  🔮 Generating ${out.label}...`);
+
+          let bootstrapNoteHtml = null;
+          if (out.dependsOnKey) {
+            const dep = resultsByKey[out.dependsOnKey];
+            if (dep?.html) {
+              bootstrapNoteHtml = dep.html;
+            } else {
+              addLog(`  ⚠ First Session Note wasn't generated — building the Treatment Plan without that extra context.`, 'warn');
+            }
+          }
+
+          let lastGenPercent = -1;
+          const { outputHtml, templateLabel } = await withRetry(
+            () => generateDocumentForPatient({
+              patient, docTypeKey: out.docTypeKey, sourceText, systemPrompt, provider, keys,
+              model: settings.aiModel || undefined,
+              getTemplateHtml, fetchLatestDocument, bootstrapNoteHtml,
+              onLog: (msg, type) => addLog(`  ${msg}`, type),
+              onChunk: (_delta, fullText) => {
+                const pct = estimateGenerationPercent(settings.detailLevel, fullText.length);
+                if (pct !== lastGenPercent) {
+                  lastGenPercent = pct;
+                  updateOutputByKey(out.key, { genPercent: pct });
+                }
+              },
+            }),
+            { retries: 2, onRetry: (e, n) => { lastGenPercent = -1; updateOutputByKey(out.key, { genPercent: 0 }); addLog(`  ⟳ Retry ${n}/2 after error: ${e.message}`, 'warn'); } }
+          );
+
+          addLog(`  ✓ ${templateLabel} generated (${outputHtml.length} chars)`);
+          resultsByKey[out.key] = { html: outputHtml };
+          updateOutputByKey(out.key, {
+            status: 'generated',
+            generatedOutput: { html: outputHtml, templateLabel, sourceFileList },
+            approved: true,
+            error: null,
+          });
+          successCount += 1;
+        } catch (e) {
+          addLog(`  ❌ Error for ${patientName} — ${out.label}: ${e.message}`, 'error');
+          updateOutputByKey(out.key, { status: 'error', error: e.message, approved: false });
+          failureCount += 1;
+
+          if (batchLog?.id) {
+            await saveGenerationError(supabase, {
+              userId: user?.id,
+              generationLogId: batchLog.id,
+              patientName,
+              error: e,
+              docTypeKey: out.docTypeKey,
+            });
+          }
+        }
+
+        updateProgress(Math.round((stepNum / total) * 100), stepNum, total, 'Done');
+      }
     }
 
     // Update generation log with final stats
     if (batchLog?.id) {
-      skipCount = total - successCount - failureCount;
+      const skipCount = total - successCount - failureCount;
       await completeGenerationLog(supabase, {
         generationLogId: batchLog.id,
         successfulCount: successCount,
@@ -433,38 +495,31 @@ export default function BatchProcessor() {
     addLog('\n✅ Generation complete — review documents before saving to Drive.');
   }
 
-  function toggleApprove(name) {
-    setPatients(prev => prev.map(p => p.name === name ? { ...p, approved: !p.approved } : p));
-  }
-
-  function updateGeneratedHtml(name, html) {
-    setPatients(prev => prev.map(p =>
-      p.name === name ? { ...p, generatedOutput: { ...p.generatedOutput, html } } : p
+  function updateGeneratedHtml(key, html) {
+    setOutputs(prev => prev.map(o =>
+      o.key === key ? { ...o, generatedOutput: { ...o.generatedOutput, html } } : o
     ));
   }
 
-  function togglePreviewMode(name) {
-    setPreviewMode(prev => ({ ...prev, [name]: prev[name] === 'raw' ? 'rendered' : 'raw' }));
+  function togglePreviewMode(key) {
+    setPreviewMode(prev => ({ ...prev, [key]: prev[key] === 'raw' ? 'rendered' : 'raw' }));
   }
 
-  function handleReviewStatusChange(patientName, status) {
-    const patient = patients.find(p => p.name === patientName);
-    if (!patient) return;
-
+  function handleReviewStatusChange(key, status) {
     if (status === 'approved') {
-      updatePatientByName(patientName, { approved: true });
+      updateOutputByKey(key, { approved: true });
     } else if (status === 'rejected') {
-      updatePatientByName(patientName, { approved: false });
+      updateOutputByKey(key, { approved: false });
     }
   }
 
-  function handleRegenerateClick(patientName) {
+  function handleRegenerateClick(_key) {
     addLog(`ℹ Regeneration not yet supported within batch. Use the Generate History page to retry failed items.`, 'info');
   }
 
   // ── Phase 3: Save approved documents to Drive + Supabase ────────────────
   async function handleSaveApproved() {
-    const approved = patients.filter(p => p.status === 'generated' && p.approved);
+    const approved = outputs.filter(o => o.status === 'generated' && o.approved);
     if (approved.length === 0) {
       addLog('No approved documents to save.', 'error');
       return;
@@ -477,35 +532,38 @@ export default function BatchProcessor() {
     updateProgress(0, 0, total, 'Saving...');
 
     for (let i = 0; i < approved.length; i++) {
-      const patient = approved[i];
+      const out = approved[i];
       if (abortRef.current) { addLog('\n⏹ Save cancelled.', 'warn'); break; }
+      const patient = patients.find(p => p.name === out.patientName);
 
-      updatePatientByName(patient.name, { status: 'saving' });
-      updateProgress(Math.round((i / total) * 100), i + 1, total, `Saving ${patient.name}...`);
+      updateOutputByKey(out.key, { status: 'saving' });
+      updateProgress(Math.round((i / total) * 100), i + 1, total, `Saving ${out.patientName} — ${out.label}...`);
 
       try {
         const { savedOutputs } = await withRetry(
           () => saveGeneratedDocument({
             patient,
-            docTypeKey: selectedTemplate,
-            outputHtml: patient.generatedOutput.html,
+            docTypeKey: out.docTypeKey,
+            outputHtml: out.generatedOutput.html,
             settings,
             provider: settings.aiProvider || 'gemini',
             model: settings.aiModel || undefined,
             saveDocument,
             saveReport,
             source: 'manual',
+            fileNameBase: out.fileNameBase,
+            dateOfServiceOverride: out.dateForFilename,
           }),
-          { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 saving ${patient.name}: ${e.message}`, 'warn') }
+          { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 saving ${out.patientName} — ${out.label}: ${e.message}`, 'warn') }
         );
 
-        updatePatientByName(patient.name, { status: 'done', outputs: savedOutputs });
-        auditRows.push({ name: patient.name, status: 'done', files: patient.generatedOutput.sourceFileList, outputs: savedOutputs });
-        addLog(`  ✅ ${patient.name} saved — ${savedOutputs.length} file(s)`);
+        updateOutputByKey(out.key, { status: 'done', savedOutputs });
+        auditRows.push({ key: out.key, name: out.patientName, label: out.label, status: 'done', files: out.generatedOutput.sourceFileList, outputs: savedOutputs });
+        addLog(`  ✅ ${out.patientName} — ${out.label} saved — ${savedOutputs.length} file(s)`);
       } catch (e) {
-        updatePatientByName(patient.name, { status: 'error', error: e.message });
-        auditRows.push({ name: patient.name, status: 'error', error: e.message, files: [], outputs: [] });
-        addLog(`  ❌ Save failed for ${patient.name}: ${e.message}`, 'error');
+        updateOutputByKey(out.key, { status: 'error', error: e.message });
+        auditRows.push({ key: out.key, name: out.patientName, label: out.label, status: 'error', error: e.message, files: [], outputs: [] });
+        addLog(`  ❌ Save failed for ${out.patientName} — ${out.label}: ${e.message}`, 'error');
       }
     }
 
@@ -522,6 +580,7 @@ export default function BatchProcessor() {
   function handleReset() {
     setPhase(PHASE.IDLE);
     setPatients([]);
+    setOutputs([]);
     setLog([]);
     setSummary(null);
     setBatchInput('');
@@ -533,7 +592,7 @@ export default function BatchProcessor() {
   }
 
   const hasAmbiguous = patients.some(p => p.status === 'ambiguous');
-  const generatedForReview = patients.filter(p => p.status === 'generated' || (p.status === 'error' && phase !== PHASE.PREVIEW));
+  const generatedForReview = outputs.filter(o => o.status === 'generated' || (o.status === 'error' && phase !== PHASE.PREVIEW));
 
   return (
     <div className="min-h-full bg-slate-950 p-6">
@@ -660,7 +719,7 @@ export default function BatchProcessor() {
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">
-                Patient <span className="font-bold text-white">{progress.current}</span> of <span className="font-bold text-white">{progress.total}</span>
+                Document <span className="font-bold text-white">{progress.current}</span> of <span className="font-bold text-white">{progress.total}</span>
               </span>
               <span className="text-slate-400">{progress.step}</span>
             </div>
@@ -742,7 +801,7 @@ export default function BatchProcessor() {
             )}
 
             {/* Step 2: Preview & Verify Sources (+ resolve ambiguous matches) */}
-            {(phase === PHASE.PREVIEW || phase === PHASE.GENERATING) && patients.length > 0 && (
+            {phase === PHASE.PREVIEW && patients.length > 0 && (
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-6 h-6 rounded-full bg-teal-500/20 flex items-center justify-center text-xs font-black text-teal-400">2</div>
@@ -750,9 +809,7 @@ export default function BatchProcessor() {
                     <h2 className="text-sm font-black text-white">Verify Source Files</h2>
                     <p className="text-[10px] text-slate-500">Click ± to see which documents will be used</p>
                   </div>
-                  {phase === PHASE.PREVIEW && (
-                    <span className="ml-auto text-xs text-teal-400 font-semibold">Confirm before generating</span>
-                  )}
+                  <span className="ml-auto text-xs text-teal-400 font-semibold">Confirm before generating</span>
                 </div>
 
                 <div className="space-y-2">
@@ -783,44 +840,22 @@ export default function BatchProcessor() {
                         </div>
                       </div>
 
-                      {/* Per-document progress bar while this patient's document is streaming in */}
-                      {p.status === 'generating' && (
-                        <div className="mt-2 pl-6">
-                          <div
-                            role="progressbar"
-                            aria-label={`Generating document for ${p.name}`}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={p.genPercent || 0}
-                            className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"
-                          >
-                            <div
-                              className="h-full bg-gradient-to-r from-violet-600 to-teal-500 transition-all duration-300 ease-out"
-                              style={{ width: `${p.genPercent || 0}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
                       {/* File list — checkbox per file lets the preselected match be verified or overridden */}
-                      {(expandedFiles[p.name] || phase !== PHASE.PREVIEW) && p.files.length > 0 && (
+                      {expandedFiles[p.name] && p.files.length > 0 && (
                         <div className="mt-2 pl-6 space-y-1">
-                          {phase === PHASE.PREVIEW && (
-                            <button
-                              type="button"
-                              onClick={() => applyConfiguredFileRules(p.name)}
-                              className="mb-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/25 text-teal-300 text-[10px] font-bold hover:bg-teal-500/20 transition-colors"
-                            >
-                              Re-apply Settings Rules
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => applyConfiguredFileRules(p.name)}
+                            className="mb-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/25 text-teal-300 text-[10px] font-bold hover:bg-teal-500/20 transition-colors"
+                          >
+                            Re-apply Settings Rules
+                          </button>
                           {p.files.map(f => (
                             <label key={f.id} className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={(p.selectedFileIds || []).includes(f.id)}
                                 onChange={() => togglePatientSourceFile(p.name, f.id)}
-                                disabled={phase !== PHASE.PREVIEW}
                                 className="accent-teal-500"
                               />
                               <FileText className="w-3 h-3 flex-shrink-0" />
@@ -885,33 +920,128 @@ export default function BatchProcessor() {
                   ))}
                 </div>
 
-                {/* Confirm button */}
-                {phase === PHASE.PREVIEW && (
-                  <>
-                    {hasAmbiguous && (
-                      <p className="mt-3 text-xs text-amber-400 flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5" /> Resolve all ambiguous matches above before generating.
-                      </p>
-                    )}
+                {/* Continue button */}
+                {hasAmbiguous && (
+                  <p className="mt-3 text-xs text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Resolve all ambiguous matches above before continuing.
+                  </p>
+                )}
+                <button
+                  onClick={handleProceedToConfirm}
+                  disabled={!patients.some(p => p.status === 'matched') || hasAmbiguous}
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
+                >
+                  <Eye className="w-4 h-4" />
+                  Continue to Confirm Outputs
+                  <span className="text-xs opacity-70">({patients.filter(p => p.status === 'matched').length} patients)</span>
+                </button>
+              </div>
+            )}
+
+            {/* Step 2.5: Confirm exactly what will be generated — per client, per document */}
+            {(phase === PHASE.CONFIRM || phase === PHASE.GENERATING) && outputs.length > 0 && (
+              <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">3</div>
+                  <div>
+                    <h2 className="text-sm font-black text-white">Confirm Outputs</h2>
+                    <p className="text-[10px] text-slate-500">Exactly what will be generated for each client, from which files, saved under which name</p>
+                  </div>
+                  {phase === PHASE.CONFIRM && (
+                    <span className="ml-auto text-xs text-violet-400 font-semibold">Uncheck anything you don't want generated</span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {patients.filter(p => p.status === 'matched').map(p => {
+                    const patientOutputs = outputs.filter(o => o.patientName === p.name);
+                    if (patientOutputs.length === 0) return null;
+                    return (
+                      <div key={p.name} className="rounded-xl border border-white/10 bg-white/3 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FolderOpen className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                          <span className="text-sm font-bold text-white truncate">{p.name}</span>
+                        </div>
+                        <div className="space-y-2 pl-6">
+                          {patientOutputs.map(o => (
+                            <div key={o.key} className="rounded-lg border border-white/10 bg-slate-950/60 p-2.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <label className="flex items-start gap-2 text-xs text-white font-semibold cursor-pointer min-w-0">
+                                  <input
+                                    type="checkbox"
+                                    checked={o.included}
+                                    onChange={() => toggleOutputIncluded(o.key)}
+                                    disabled={phase !== PHASE.CONFIRM}
+                                    className="accent-violet-500 mt-0.5 flex-shrink-0"
+                                  />
+                                  <span className="min-w-0">
+                                    {o.label}
+                                    {o.isBootstrap && (
+                                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[9px] font-bold align-middle">AUTO — PASS 1</span>
+                                    )}
+                                  </span>
+                                </label>
+                                <StatusBadge status={o.status} />
+                              </div>
+                              <p className="mt-1.5 text-[10px] text-slate-500">
+                                Source file(s): {o.sourceFiles.length > 0 ? o.sourceFiles.map(f => f.name).join(', ') : '—'}
+                              </p>
+                              <p className="mt-1 text-[10px] text-teal-300 font-mono">
+                                → {o.fileNameBase}{settings.outputFormat === 'Both' ? '.html / .pdf' : settings.outputFormat === 'PDF' ? '.pdf' : '.html'}
+                              </p>
+                              {o.status === 'generating' && (
+                                <div
+                                  role="progressbar"
+                                  aria-label={`Generating ${o.label} for ${p.name}`}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                  aria-valuenow={o.genPercent || 0}
+                                  className="mt-2 w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"
+                                >
+                                  <div
+                                    className="h-full bg-gradient-to-r from-violet-600 to-teal-500 transition-all duration-300 ease-out"
+                                    style={{ width: `${o.genPercent || 0}%` }}
+                                  />
+                                </div>
+                              )}
+                              {o.status === 'error' && o.error && (
+                                <p className="mt-1.5 text-[10px] text-red-400">{o.error}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {phase === PHASE.CONFIRM && (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => setPhase(PHASE.PREVIEW)}
+                      className="flex-shrink-0 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-sm font-bold transition-all"
+                    >
+                      Back
+                    </button>
                     <button
                       onClick={handleGenerate}
-                      disabled={!patients.some(p => p.status === 'matched') || hasAmbiguous}
-                      className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
+                      disabled={!outputs.some(o => o.included)}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
                     >
                       <Play className="w-4 h-4" />
                       Confirm & Generate All Documents
-                      <span className="text-xs opacity-70">({patients.filter(p => p.status === 'matched').length} patients)</span>
+                      <span className="text-xs opacity-70">({outputs.filter(o => o.included).length} document{outputs.filter(o => o.included).length !== 1 ? 's' : ''})</span>
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Step 3: Review generated documents before saving */}
+            {/* Step 4: Review generated documents before saving */}
             {phase === PHASE.REVIEW && (
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-black text-emerald-400">3</div>
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-black text-emerald-400">4</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Review Before Saving</h2>
                     <p className="text-[10px] text-slate-500">Edit content if needed, then approve which documents get saved to Drive</p>
@@ -920,7 +1050,7 @@ export default function BatchProcessor() {
 
                 {/* Document review queue */}
                 <DocumentReviewQueue
-                  patients={generatedForReview}
+                  items={generatedForReview}
                   onReviewStatusChange={handleReviewStatusChange}
                   onRegenerateClick={handleRegenerateClick}
                   phase={phase}
@@ -928,32 +1058,32 @@ export default function BatchProcessor() {
 
                 {/* Review items with HTML edit mode */}
                 <div className="space-y-3 mt-5">
-                  {generatedForReview.map(p => (
-                    p.status === 'generated' && (
-                      <div key={p.name} className="rounded-xl border border-white/10 bg-white/3 p-3">
+                  {generatedForReview.map(o => (
+                    o.status === 'generated' && (
+                      <div key={o.key} className="rounded-xl border border-white/10 bg-white/3 p-3">
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className="text-sm font-bold text-white truncate">{p.name}</span>
+                          <span className="text-sm font-bold text-white truncate">{o.patientName} <span className="text-slate-500 font-normal">— {o.label}</span></span>
                           <button
-                            onClick={() => togglePreviewMode(p.name)}
+                            onClick={() => togglePreviewMode(o.key)}
                             className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors flex-shrink-0"
                           >
                             <Code className="w-3.5 h-3.5" />
-                            {previewMode[p.name] === 'raw' ? 'Preview' : 'Edit HTML'}
+                            {previewMode[o.key] === 'raw' ? 'Preview' : 'Edit HTML'}
                           </button>
                         </div>
 
-                        {previewMode[p.name] === 'raw' ? (
+                        {previewMode[o.key] === 'raw' ? (
                           <textarea
-                            value={p.generatedOutput.html}
-                            onChange={e => updateGeneratedHtml(p.name, e.target.value)}
+                            value={o.generatedOutput.html}
+                            onChange={e => updateGeneratedHtml(o.key, e.target.value)}
                             rows={10}
                             className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-teal-500/40 resize-y"
                           />
                         ) : (
                           <iframe
-                            title={`preview-${p.name}`}
+                            title={`preview-${o.key}`}
                             sandbox=""
-                            srcDoc={p.generatedOutput.html}
+                            srcDoc={o.generatedOutput.html}
                             className="w-full h-64 rounded-lg border border-white/10 bg-white"
                           />
                         )}
@@ -964,13 +1094,13 @@ export default function BatchProcessor() {
 
                 <button
                   onClick={handleSaveApproved}
-                  disabled={!patients.some(p => p.status === 'generated' && p.approved)}
+                  disabled={!outputs.some(o => o.status === 'generated' && o.approved)}
                   className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
                 >
                   <Save className="w-4 h-4" />
                   Save Approved Documents to Drive
                   <span className="text-xs opacity-70">
-                    ({patients.filter(p => p.status === 'generated' && p.approved).length} of {patients.filter(p => p.status === 'generated').length})
+                    ({outputs.filter(o => o.status === 'generated' && o.approved).length} of {outputs.filter(o => o.status === 'generated').length})
                   </span>
                 </button>
               </div>
@@ -1014,7 +1144,7 @@ export default function BatchProcessor() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               {[
-                { label: 'Total Patients',  value: summary.length,                                     color: 'text-white' },
+                { label: 'Total Documents', value: summary.length,                                     color: 'text-white' },
                 { label: 'Completed',       value: summary.filter(r => r.status === 'done').length,    color: 'text-emerald-400' },
                 { label: 'Errors',          value: summary.filter(r => r.status === 'error').length,   color: 'text-red-400' },
                 { label: 'Files Created',   value: summary.reduce((a, r) => a + r.outputs.length, 0),  color: 'text-violet-400' },
@@ -1029,7 +1159,7 @@ export default function BatchProcessor() {
             {/* Per-patient breakdown */}
             <div className="space-y-3">
               {summary.map((row) => (
-                <div key={row.name} className={`rounded-xl border p-4 ${
+                <div key={row.key} className={`rounded-xl border p-4 ${
                   row.status === 'done' ? 'border-emerald-500/25 bg-emerald-500/5'
                   : row.status === 'error' ? 'border-red-500/25 bg-red-500/5'
                   : 'border-white/10 bg-white/3'
@@ -1041,7 +1171,7 @@ export default function BatchProcessor() {
                       ? <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                       : <SkipForward className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     }
-                    <span className="text-sm font-bold text-white">{row.name}</span>
+                    <span className="text-sm font-bold text-white">{row.name} <span className="text-slate-500 font-normal">— {row.label}</span></span>
                     <StatusBadge status={row.status} />
                   </div>
 
