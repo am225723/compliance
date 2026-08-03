@@ -126,6 +126,41 @@ function ServerManagedNotice({ providerLabel, secretName, functionName }) {
   );
 }
 
+/** Comma-separated patterns input. A plain controlled input whose value is
+ *  `patterns.join(', ')` fights typing: every keystroke re-splits on comma
+ *  and re-joins, so a trailing comma (or the empty segment right after one)
+ *  gets immediately stripped before the next character can be typed. This
+ *  keeps its own local text as the source of truth for what's displayed,
+ *  still calling onChange with the parsed array on every keystroke, and
+ *  only resyncs from the `patterns` prop when it changes for a reason other
+ *  than this input's own edit (e.g. loading a preset). */
+function PatternsInput({ patterns, onChange, placeholder }) {
+  const [text, setText] = useState((patterns || []).join(', '));
+
+  function parse(raw) {
+    return raw.split(',').map(v => v.trim()).filter(Boolean);
+  }
+
+  useEffect(() => {
+    const derivedFromText = parse(text);
+    const external = patterns || [];
+    const same = derivedFromText.length === external.length
+      && derivedFromText.every((p, i) => p === external[i]);
+    if (!same) setText(external.join(', '));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patterns]);
+
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={e => { setText(e.target.value); onChange(parse(e.target.value)); }}
+      placeholder={placeholder}
+      className="mt-2 w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500/40"
+    />
+  );
+}
+
 /** Per-document-type approximate filename matching rules editor. */
 function SourceFileRulesEditor({ value, onChange }) {
   function updateType(key, rules) {
@@ -178,12 +213,10 @@ function SourceFileRulesEditor({ value, onChange }) {
                     placeholder="Rule name"
                     className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40"
                   />
-                  <input
-                    type="text"
-                    value={(rule.patterns || []).join(', ')}
-                    onChange={e => updateRule(type.key, rules, index, { patterns: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })}
+                  <PatternsInput
+                    patterns={rule.patterns}
+                    onChange={patterns => updateRule(type.key, rules, index, { patterns })}
                     placeholder="zoom note, transcript, session summary"
-                    className="mt-2 w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-teal-500/40"
                   />
                   <div className="mt-2 flex items-center gap-4">
                     <label className="flex items-center gap-1.5 text-xs text-slate-300">

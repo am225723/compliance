@@ -50,4 +50,30 @@ describe('matchPatientFolders', () => {
     const matches = matchPatientFolders('Robert Johnson', FOLDERS);
     expect(classifyMatch(matches)).toBe('matched');
   });
+
+  it('matches when the folder name reorders tokens ("Last, First" vs "First Last")', () => {
+    const folders = [{ id: '5', name: 'Doe, Jane' }];
+    const matches = matchPatientFolders('Jane Doe', folders);
+    expect(matches.map((m) => m.id)).toEqual(['5']);
+  });
+
+  it('matches when the folder name has an extra token the calendar title lacks', () => {
+    const folders = [{ id: '6', name: 'John Michael Smith' }];
+    const matches = matchPatientFolders('John Smith', folders);
+    expect(matches.map((m) => m.id)).toEqual(['6']);
+  });
+
+  it('matches the reverse direction too (parsed name has an extra token)', () => {
+    const folders = [{ id: '7', name: 'John Smith' }];
+    const matches = matchPatientFolders('Dr. John Smith', folders);
+    expect(matches.map((m) => m.id)).toEqual(['7']);
+  });
+
+  it('does not token-match on a shared token alone when other tokens conflict', () => {
+    const folders = [{ id: '8', name: 'Jane Smith' }];
+    // "John" vs "Jane" share no tokens, "Doe" vs "Smith" share no tokens —
+    // token-subset matching must not partially match on unrelated names.
+    const matches = matchPatientFolders('John Doe', folders);
+    expect(matches).toHaveLength(0);
+  });
 });
