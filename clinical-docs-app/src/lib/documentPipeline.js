@@ -10,6 +10,7 @@ import {
 } from './aiEngine';
 import { applyNamingConvention } from './settings';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, DEFAULT_SERVICE_TYPE_BY_DOC_TYPE, getDocumentTypeMeta } from './documentTypes';
+import { extractLatestDateFromFileNames } from './dateExtraction';
 
 const NAMING_KEY = {
   treatment_plan: 'treatmentPlan',
@@ -165,9 +166,15 @@ export async function saveGeneratedDocument({
     // extra clicks, but it's a convenience on top of the document that just
     // saved successfully — never let it fail the save the user is waiting on.
     try {
+      // Prefer the actual session date over the date the document happened to
+      // be generated: the linked calendar occurrence is authoritative when
+      // present, otherwise fall back to a date found in the source file
+      // names (patients' folders are typically named/dated per visit), and
+      // only default to today as a last resort.
       const dateOfService = calendarLink?.occurrenceStart
         ? new Date(calendarLink.occurrenceStart).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10);
+        : extractLatestDateFromFileNames((patient.files || []).map(f => f.name))
+          || new Date().toISOString().slice(0, 10);
       await saveReport({
         document_id: saved.id,
         patient_name: patient.name,
