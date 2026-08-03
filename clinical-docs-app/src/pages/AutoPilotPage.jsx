@@ -8,7 +8,10 @@ import { findPatientFormsFolder, listSubfolders, listPatientFiles } from '../lib
 import { buildSystemPrompt } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
 import { DOCUMENT_TYPES } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument } from '../lib/documentPipeline';
+import {
+  collectSourceText, generateDocumentForPatient, saveGeneratedDocument,
+  planPatientOutputs, computeOutputFileNameBase,
+} from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 
 const INTERVAL_OPTIONS = [15, 30, 60, 120];
@@ -79,38 +82,61 @@ export default function AutoPilotPage() {
         if (allFiles.length === 0) { lastChecked[folder.name] = runStartedAt; continue; }
 
         addLog(`\n━━━ ${folder.name}: ${sinceIso ? `${changedFiles.length} new file(s)` : 'first check'} ━━━`);
-        const patient = { name: folder.name, folderId: folder.id, folderName: folder.name, files: allFiles };
+        // selectedFileIds = every file — AutoPilot has no file-picker UI, it's
+        // always "use everything found," same as before this fed through
+        // planPatientOutputs. Planning still expands session_note into one
+        // DARP note per Zoom/Gemini file, and treatment_plan into a bootstrap
+        // note (from the oldest such file) feeding the plan, same as the
+        // Batch Processor's Confirm Outputs flow.
+        const patient = { name: folder.name, folderId: folder.id, folderName: folder.name, files: allFiles, selectedFileIds: allFiles.map(f => f.id) };
 
         try {
-          const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`  ${msg}`, type));
-          if (sourceFileList.length === 0) {
-            addLog(`  No readable source files for ${folder.name}, skipping.`, 'warn');
-            lastChecked[folder.name] = runStartedAt;
-            continue;
-          }
-
+          const resultsByKey = {};
           for (const docType of orderedDocTypes) {
-            addLog(`  🔮 Generating ${docType.label} for ${folder.name}...`);
-            const { outputHtml } = await withRetry(
-              () => generateDocumentForPatient({
-                patient, docTypeKey: docType.key, sourceText, systemPrompt, provider, keys,
-                model: settings.aiModel || undefined,
-                getTemplateHtml, fetchLatestDocument,
-                onLog: (msg, type) => addLog(`    ${msg}`, type),
-              }),
-              { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') }
-            );
+            const plannedOutputs = planPatientOutputs(patient, docType.key, settings);
 
-            const { savedOutputs } = await withRetry(
-              () => saveGeneratedDocument({
-                patient, docTypeKey: docType.key, outputHtml, settings,
-                provider, model: settings.aiModel || undefined,
-                saveDocument, saveReport, source: 'autopilot',
-              }),
-              { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2 saving: ${e.message}`, 'warn') }
-            );
+            for (const out of plannedOutputs) {
+              addLog(`  🔮 Generating ${out.label} for ${folder.name}...`);
+              const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), out.sourceFiles);
+              if (sourceFileList.length === 0) {
+                addLog(`    No readable source files for this output, skipping.`, 'warn');
+                continue;
+              }
 
-            addLog(`  ✅ ${docType.label} saved for ${folder.name} — ${savedOutputs.length} file(s)`);
+              let bootstrapNoteHtml = null;
+              if (out.dependsOnKey) {
+                const dep = resultsByKey[out.dependsOnKey];
+                if (dep?.html) {
+                  bootstrapNoteHtml = dep.html;
+                } else {
+                  addLog(`    ⚠ First Session Note wasn't generated — building the Treatment Plan without that extra context.`, 'warn');
+                }
+              }
+
+              const { outputHtml } = await withRetry(
+                () => generateDocumentForPatient({
+                  patient, docTypeKey: out.docTypeKey, sourceText, systemPrompt, provider, keys,
+                  model: settings.aiModel || undefined,
+                  getTemplateHtml, fetchLatestDocument, bootstrapNoteHtml,
+                  onLog: (msg, type) => addLog(`    ${msg}`, type),
+                }),
+                { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') }
+              );
+              resultsByKey[out.key] = { html: outputHtml };
+
+              const fileNameBase = computeOutputFileNameBase(settings.namingConvention, out.docTypeKey, patient.name, out.dateForFilename);
+              const { savedOutputs } = await withRetry(
+                () => saveGeneratedDocument({
+                  patient, docTypeKey: out.docTypeKey, outputHtml, settings,
+                  provider, model: settings.aiModel || undefined,
+                  saveDocument, saveReport, source: 'autopilot',
+                  fileNameBase, dateOfServiceOverride: out.dateForFilename,
+                }),
+                { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2 saving: ${e.message}`, 'warn') }
+              );
+
+              addLog(`  ✅ ${out.label} saved for ${folder.name} — ${savedOutputs.length} file(s)`);
+            }
           }
 
           lastChecked[folder.name] = runStartedAt;

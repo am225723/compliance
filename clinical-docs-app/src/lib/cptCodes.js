@@ -109,3 +109,34 @@ export const CRISIS_ADDITIONAL_CODE = '90840';
 export const CRISIS_CODES = [CRISIS_FIRST_CODE, CRISIS_ADDITIONAL_CODE];
 export const FAMILY_THERAPY_CODES = ['90846', '90847', '90849'];
 export const INTERACTIVE_COMPLEXITY_CODE = '90785';
+
+/** Add-on code whose documented time range contains `minutes`, or null if none fits (open-ended 90838 catches anything 53+). */
+export function suggestAddonForMinutes(minutes) {
+  if (minutes == null) return null;
+  for (const [code, [min, max]] of Object.entries(ADDON_TIME_RANGES)) {
+    if (minutes >= min && minutes <= max) return code;
+  }
+  return null;
+}
+
+/**
+ * Best-guess starting CPT code(s) for a freshly auto-created draft Reports
+ * row, keyed by the generated document's type — a convenience pre-fill the
+ * clinician reviews and corrects, not a billing decision. Deliberately
+ * conservative: prefers E/M + psychotherapy add-on over the intake-only
+ * 90792 code for session notes, and leaves treatment_plan blank since there's
+ * no single code that reliably fits (it's typically billed alongside
+ * whichever E/M/evaluation visit produced it).
+ */
+export function suggestCptCodes(docTypeKey, minutes = null) {
+  if (docTypeKey === 'session_note') {
+    return ['99214', suggestAddonForMinutes(minutes) || '90836'];
+  }
+  if (docTypeKey === 'follow_up') {
+    return ['99213'];
+  }
+  if (docTypeKey === 'pre_intake') {
+    return [INITIAL_EVAL_CODE];
+  }
+  return [];
+}
