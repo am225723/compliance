@@ -85,6 +85,7 @@ function resumeStablePhase(storedPhase) {
 export default function BatchProcessor() {
   const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, user, updateDocumentReview, regenerateDocument } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
+  const [singleClientMode, setSingleClientMode] = useState(false);
   const [batchInput, setBatchInput] = useState('');
   const [patients, setPatients] = useState([]);
   const [log, setLog] = useState([]);
@@ -673,19 +674,58 @@ export default function BatchProcessor() {
             {/* Step 1: Batch Input */}
             {phase !== PHASE.REVIEW && phase !== PHASE.DONE && (
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">1</div>
-                  <h2 className="text-sm font-black text-white">Enter Patient Names</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">1</div>
+                    <h2 className="text-sm font-black text-white">{singleClientMode ? 'Enter Client Name' : 'Enter Patient Names'}</h2>
+                  </div>
+                  {phase === PHASE.IDLE && (
+                    <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => { if (singleClientMode) { setSingleClientMode(false); setBatchInput(''); } }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                          !singleClientMode ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
+                        }`}
+                      >
+                        Batch
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { if (!singleClientMode) { setSingleClientMode(true); setBatchInput(''); } }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                          singleClientMode ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
+                        }`}
+                      >
+                        Single Client
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 mb-3">One patient name per line. Names must match folder names inside PatientForms.</p>
-                <textarea
-                  value={batchInput}
-                  onChange={e => setBatchInput(e.target.value)}
-                  disabled={phase !== PHASE.IDLE}
-                  rows={6}
-                  placeholder={'John Smith\nJane Doe\nRobert Johnson'}
-                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 font-mono focus:outline-none focus:border-violet-500/40 resize-none disabled:opacity-50"
-                />
+                <p className="text-xs text-slate-500 mb-3">
+                  {singleClientMode
+                    ? 'Name must match a folder inside PatientForms.'
+                    : 'One patient name per line. Names must match folder names inside PatientForms.'}
+                </p>
+                {singleClientMode ? (
+                  <input
+                    type="text"
+                    value={batchInput}
+                    onChange={e => setBatchInput(e.target.value)}
+                    disabled={phase !== PHASE.IDLE}
+                    placeholder="John Smith"
+                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 font-mono focus:outline-none focus:border-violet-500/40 disabled:opacity-50"
+                  />
+                ) : (
+                  <textarea
+                    value={batchInput}
+                    onChange={e => setBatchInput(e.target.value)}
+                    disabled={phase !== PHASE.IDLE}
+                    rows={6}
+                    placeholder={'John Smith\nJane Doe\nRobert Johnson'}
+                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 font-mono focus:outline-none focus:border-violet-500/40 resize-none disabled:opacity-50"
+                  />
+                )}
                 <button
                   onClick={handleMatch}
                   disabled={!batchInput.trim() || !driveConnected || phase === PHASE.MATCHING}
@@ -693,7 +733,9 @@ export default function BatchProcessor() {
                 >
                   {phase === PHASE.MATCHING
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning Drive…</>
-                    : <><Search className="w-4 h-4" /> Match Patients to Drive Folders</>
+                    : singleClientMode
+                      ? <><Search className="w-4 h-4" /> Find Client in Drive</>
+                      : <><Search className="w-4 h-4" /> Match Patients to Drive Folders</>
                   }
                 </button>
               </div>
