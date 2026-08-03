@@ -119,21 +119,34 @@ date range and lists ones with errors/warnings or a still-blank
 **Open questions:** what counts as "ready" (errors only, or warnings too)?
 Does this replace or sit alongside the existing CSV export?
 
-### 2.2 Per-patient clinical timeline
+### 2.2 Per-patient clinical timeline — **implemented**
 
 **Problem:** Generation History's "All Files" view (added earlier this
 project) is a flat, cross-patient list sorted by date. There's no single
 page to see one patient's whole documented history — treatment plans,
 DARP notes, reports — in order.
 
-**Approach:** A new route (`/patients/:name` or similar) that queries
-`documents` and `reports` filtered by `patient_name` and renders them on one
-timeline, reusing the existing preview/iframe pattern from
-`DocumentReviewQueue`/`BatchProcessor`.
+**Shipped:** `PatientTimelinePage.jsx` at `/patients/:name`, linked from
+Generation History's "All Files" list. Queries `documents` and `reports`
+filtered by `patient_name` directly (not the capped `AppContext` caches, so
+older history isn't silently truncated) and merges them into one
+chronological view, reusing the existing preview/iframe pattern from
+`DocumentReviewQueue`.
 
-**Open questions:** does this need its own Supabase query/index, or is
-client-side filtering of the already-cached `documents`/`reports` arrays in
-`AppContext` sufficient at current data volumes?
+**Known limitation:** the route and query key off `patient_name`, the same
+identifier used everywhere else in this app (`documents`, `reports`,
+`generation_errors`, `fetchLatestDocument`, …) — there's no `patients` table
+with a stable opaque ID anywhere in the current schema. That means this is
+the first place a patient identifier appears in the browser's URL/history,
+which is a real (if narrow) PHI-exposure surface beyond what the rest of the
+app already has — client-side routing means it's never sent over the network
+as a `Referer`, but it does sit in local browser history and would show up
+in any client-side analytics if those were ever added. Properly fixing this
+means introducing opaque patient IDs across the whole data model (a new
+`patients` table, foreign keys on `documents`/`reports`/etc., a migration) —
+a much larger, cross-cutting change than this feature, and one that should
+be a deliberate decision rather than a side effect of adding a timeline
+view. Flagging it here rather than silently accepting the risk.
 
 ### 2.3 Side-by-side version diff
 
@@ -151,25 +164,23 @@ needs to run on extracted text, not live HTML.
 across `ai-prompt` spans specifically would be more useful than a raw text
 diff but is more work.
 
-### 2.4 AI-assisted E/M level suggestion
+### 2.4 AI-assisted E/M level suggestion — **implemented**
 
 **Problem:** `suggestCptCodes()` always suggests `99214` (moderate MDM) for
 session notes — a reasonable single default, but not informed by what the
 note actually documents (risk factors, medication changes, complexity of the
 visit).
 
-**Approach:** After a session note is generated, a lightweight follow-up
-pass (or a second structured-output prompt in the same call) reads the
-generated content and picks 99213/99214/99215 based on documented complexity,
-still surfaced as an editable suggestion — never auto-submitted. This is the
-one item here with real scope for over-reach: it must stay a suggestion
-clinicians can freely override, with the same "never invent facts" discipline
-`buildSystemPrompt()` already enforces for note content.
-
-**Open questions:** worth a dedicated AI call (cost/latency) versus a
-deterministic heuristic (e.g. counting documented risk factors)? Needs a
-product decision on how confident the heuristic must be before suggesting a
-level at all.
+**Shipped:** a deterministic keyword heuristic, `suggestEmLevel()` in
+`lib/cptCodes.js`, not a second AI call — no added cost/latency, and no risk
+of a model inventing complexity signals that aren't in the note (the same
+"never invent facts" discipline `buildSystemPrompt()` enforces for note
+content applies here too). It scans the generated note's stripped text for
+high-complexity signals (SI/HI, hospitalization, crisis, non-adherence, …)
+and stable/low-complexity signals, and picks 99215/99213/99214 accordingly,
+defaulting to 99214 when signals are absent or conflicting. Still fully
+editable in the Reports CPT picker — this only changes the *starting*
+suggestion.
 
 ### 2.5 AutoPilot run digest
 
@@ -187,3 +198,11 @@ tab to be open.
 
 **Open questions:** in-app only, or an actual notification channel (email)?
 If email, that's a new Edge Function and a "notify me" setting.
+
+**PHI constraint (applies before any email/notification channel is built):**
+keep the digest aggregate-only by default — counts of processed/saved/
+skipped/errored, not patient names, note content, or unrestricted Drive
+links. Sending any of that off-app requires its own design pass: recipient
+authorization, payload limits, retention, audit logging, and link-access
+controls. Don't bolt on email delivery casually just because a Supabase Edge
+Function makes it easy.

@@ -119,6 +119,44 @@ export function suggestAddonForMinutes(minutes) {
   return null;
 }
 
+// Deliberately deterministic, not a second AI call: no added generation
+// cost/latency, and no risk of a model inventing complexity signals that
+// aren't actually in the note. Phrases, not single words, to avoid false
+// hits (e.g. "stable" alone is too common to be a signal on its own).
+const HIGH_COMPLEXITY_SIGNALS = [
+  'suicidal ideation', 'homicidal ideation', 'self-harm', 'self harm',
+  'hospitalization', 'inpatient', 'psychiatric hold', 'crisis',
+  'acute exacerbation', 'safety plan', 'non-adherent', 'nonadherent',
+  'adverse reaction', 'emergency room', 'emergency department',
+];
+const LOW_COMPLEXITY_SIGNALS = [
+  'stable on current regimen', 'no acute concerns', 'no new symptoms',
+  'no medication changes', 'continue current medications',
+  'no side effects reported', 'stable and improving', 'doing well overall',
+];
+
+function stripHtml(html) {
+  return (html || '').replace(/<[^>]*>/g, ' ').toLowerCase();
+}
+
+/**
+ * Suggest an established-patient E/M level (99213/99214/99215) for a
+ * generated session note by scanning its text for documented complexity
+ * signals — a starting point for the clinician to confirm, not a coding
+ * decision. Any high-complexity signal (risk, crisis, non-adherence, …)
+ * wins outright; otherwise two or more low-complexity ("stable") signals
+ * downgrade from the default moderate level. No signal, or a mix that
+ * doesn't clear that bar, stays at the 99214 default.
+ */
+export function suggestEmLevel(noteHtml) {
+  const text = stripHtml(noteHtml);
+  if (!text.trim()) return '99214';
+  if (HIGH_COMPLEXITY_SIGNALS.some(s => text.includes(s))) return '99215';
+  const lowHits = LOW_COMPLEXITY_SIGNALS.filter(s => text.includes(s)).length;
+  if (lowHits >= 2) return '99213';
+  return '99214';
+}
+
 /**
  * Best-guess starting CPT code(s) for a freshly auto-created draft Reports
  * row, keyed by the generated document's type — a convenience pre-fill the
@@ -128,9 +166,9 @@ export function suggestAddonForMinutes(minutes) {
  * no single code that reliably fits (it's typically billed alongside
  * whichever E/M/evaluation visit produced it).
  */
-export function suggestCptCodes(docTypeKey, minutes = null) {
+export function suggestCptCodes(docTypeKey, minutes = null, noteHtml = null) {
   if (docTypeKey === 'session_note') {
-    return ['99214', suggestAddonForMinutes(minutes) || '90836'];
+    return [suggestEmLevel(noteHtml), suggestAddonForMinutes(minutes) || '90836'];
   }
   if (docTypeKey === 'follow_up') {
     return ['99213'];

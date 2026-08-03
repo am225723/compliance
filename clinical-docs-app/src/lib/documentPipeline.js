@@ -306,7 +306,7 @@ export async function saveGeneratedDocument({
         type_of_service: DEFAULT_SERVICE_TYPE_BY_DOC_TYPE[docTypeKey] || null,
         date_of_service: dateOfService,
         psychotherapy_minutes: psychotherapyMinutes,
-        cpt_codes: suggestCptCodes(docTypeKey, psychotherapyMinutes),
+        cpt_codes: suggestCptCodes(docTypeKey, psychotherapyMinutes, outputHtml),
       });
     } catch (e) {
       console.error('Auto-create report entry failed:', e);
