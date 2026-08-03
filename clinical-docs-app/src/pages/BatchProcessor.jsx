@@ -683,7 +683,7 @@ export default function BatchProcessor() {
                     <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
                       <button
                         type="button"
-                        onClick={() => { setSingleClientMode(false); setBatchInput(''); }}
+                        onClick={() => { if (singleClientMode) { setSingleClientMode(false); setBatchInput(''); } }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                           !singleClientMode ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
                         }`}
@@ -692,7 +692,7 @@ export default function BatchProcessor() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setSingleClientMode(true); setBatchInput(''); }}
+                        onClick={() => { if (!singleClientMode) { setSingleClientMode(true); setBatchInput(''); } }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                           singleClientMode ? 'bg-violet-500/20 text-violet-300' : 'text-slate-500 hover:text-white'
                         }`}
