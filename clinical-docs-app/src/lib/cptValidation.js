@@ -9,7 +9,8 @@
 import {
   VALID_CPT_CODES, EM_CODES, ADDON_CODES, ADDON_TIME_RANGES,
   STANDALONE_THERAPY_CODES, STANDALONE_THERAPY_TIME_RANGES,
-  INITIAL_EVAL_CODE, CRISIS_FIRST_CODE, CRISIS_ADDITIONAL_CODE,
+  INITIAL_EVAL_CODE, CRISIS_FIRST_CODE, CRISIS_ADDITIONAL_CODE, CRISIS_CODES,
+  FAMILY_THERAPY_CODES, INTERACTIVE_COMPLEXITY_CODE,
 } from './cptCodes';
 
 function formatRange([min, max]) {
@@ -52,9 +53,30 @@ export function validateCptClaim(codes, minutes) {
     errors.push(`90840 requires 90839 (first 60 minutes of crisis psychotherapy) in the same claim.`);
   }
 
+  const crisisCodes = list.filter(c => CRISIS_CODES.includes(c));
+  if (crisisCodes.length && emCodes.length) {
+    errors.push(`Crisis psychotherapy (${crisisCodes.join(', ')}) should not be combined with an E/M code (${emCodes.join(', ')}).`);
+  }
+
   const standaloneCodes = list.filter(c => STANDALONE_THERAPY_CODES.includes(c));
   if (standaloneCodes.length && emCodes.length) {
     warnings.push(`${standaloneCodes.join(', ')} is a stand-alone psychotherapy code, usually billed without an E/M code — did you mean the add-on code instead?`);
+  }
+
+  if (list.includes(INTERACTIVE_COMPLEXITY_CODE)) {
+    const familyCodes = list.filter(c => FAMILY_THERAPY_CODES.includes(c));
+    if (list.filter(c => c !== INTERACTIVE_COMPLEXITY_CODE).length === 0) {
+      errors.push('90785 (Interactive Complexity) requires a primary psychiatric service code in the same claim.');
+    }
+    if (emCodes.length && !addonCodes.length && !standaloneCodes.length) {
+      errors.push('90785 with an E/M code also requires a psychotherapy code (add-on or stand-alone) in the same claim.');
+    }
+    if (crisisCodes.length) {
+      errors.push(`90785 should not be combined with crisis psychotherapy (${crisisCodes.join(', ')}).`);
+    }
+    if (familyCodes.length) {
+      errors.push(`90785 should not be combined with family psychotherapy (${familyCodes.join(', ')}).`);
+    }
   }
 
   const timedCode = [...addonCodes, ...standaloneCodes][0];

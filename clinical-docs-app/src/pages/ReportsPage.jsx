@@ -298,7 +298,6 @@ function ReportFormModal({ report, onClose, onSave }) {
             <input
               type="number"
               min="0"
-              max="240"
               value={form.psychotherapy_minutes}
               onChange={e => setForm(f => ({ ...f, psychotherapy_minutes: e.target.value }))}
               placeholder="e.g. 60"
