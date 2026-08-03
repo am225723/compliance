@@ -13,7 +13,10 @@ import { DATE_PRESETS, getPresetRange } from '../lib/dateRanges';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { parseAppointment } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
-import { collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent } from '../lib/documentPipeline';
+import {
+  collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
+  resolveSessionSourcePatterns,
+} from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../lib/settings';
@@ -27,9 +30,11 @@ import { getSessionSourceFiles, isSessionSourceFile } from '../lib/sessionSource
  * so (unlike the Batch Processor, which doesn't know a target date and so
  * splits into one note per file) Calendar Notes just needs the single best
  * match instead of dumping every session file in the folder into context.
+ * `patterns` should be the caller's resolveSessionSourcePatterns(settings)
+ * result, so this honors the same user-configured patterns as planning does.
  */
-function pickBestSessionFile(files, apptStartIso) {
-  const sessionFiles = getSessionSourceFiles(files);
+function pickBestSessionFile(files, apptStartIso, patterns) {
+  const sessionFiles = getSessionSourceFiles(files, patterns);
   if (sessionFiles.length === 0) return null;
   const apptTime = new Date(apptStartIso).getTime();
   let best = sessionFiles[0];
@@ -491,6 +496,7 @@ export default function CalendarNotesPage() {
 
       try {
         const patient = { name: appt.parsedName, folderId: appt.folderId, folderName: appt.folderName, files: appt.files };
+        const sessionSourcePatterns = resolveSessionSourcePatterns(settings);
 
         // session_note: prefer the one Zoom/Gemini file whose date is closest
         // to this appointment, instead of dumping every session file in the
@@ -498,9 +504,9 @@ export default function CalendarNotesPage() {
         // session this note is for).
         let selectedFiles = null; // null = use every file, same as before
         if (docKey === 'session_note') {
-          const best = pickBestSessionFile(appt.files, appt.start);
+          const best = pickBestSessionFile(appt.files, appt.start, sessionSourcePatterns);
           if (best) {
-            const extras = appt.files.filter((f) => f.id !== best.id && !isSessionSourceFile(f.name));
+            const extras = appt.files.filter((f) => f.id !== best.id && !isSessionSourceFile(f.name, sessionSourcePatterns));
             selectedFiles = [best, ...extras];
           }
         }
@@ -512,7 +518,7 @@ export default function CalendarNotesPage() {
         // the way a patient folder does.
         let bootstrapNoteHtml = null;
         if (docKey === 'treatment_plan') {
-          const sessionFiles = getSessionSourceFiles(appt.files);
+          const sessionFiles = getSessionSourceFiles(appt.files, sessionSourcePatterns);
           if (sessionFiles.length > 0) {
             const oldest = sessionFiles[0];
             addLog(`  🔮 Generating First Session Note pass (context only, not saved) from ${oldest.name}...`);

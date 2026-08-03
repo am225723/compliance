@@ -42,7 +42,7 @@ export function computeOutputFileNameBase(namingConvention, docTypeKey, patientN
  *  user has customized them in Settings — falls back to the shared default
  *  (undefined) so planning stays consistent with what's actually preselected
  *  in the Verify Source Files step. */
-function resolveSessionSourcePatterns(settings) {
+export function resolveSessionSourcePatterns(settings) {
   const rule = getSourceRules(settings, 'session_note').find(r => r.id === 'session_source');
   return rule?.patterns?.length ? rule.patterns : undefined;
 }

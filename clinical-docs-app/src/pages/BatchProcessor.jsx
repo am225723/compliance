@@ -591,7 +591,10 @@ export default function BatchProcessor() {
       });
       addLog(`  ✅ ${output.label} regenerated (${outputHtml.length} chars)`);
     } catch (e) {
-      updateOutputByKey(key, { regenerating: false, error: e.message });
+      // Revoke approval so a failed regeneration can't be saved silently —
+      // matches handleGenerate's failure behavior — and require the
+      // clinician to re-approve deliberately once it's fixed.
+      updateOutputByKey(key, { regenerating: false, error: e.message, status: 'error', approved: false });
       addLog(`  ❌ Regeneration failed for ${output.patientName} — ${output.label}: ${e.message}`, 'error');
     }
   }
