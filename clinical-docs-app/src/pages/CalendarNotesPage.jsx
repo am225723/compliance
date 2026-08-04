@@ -3,6 +3,7 @@ import {
   CalendarDays, Search, Play, Loader2, CheckCircle2, AlertTriangle,
   RefreshCw, Ban, History, Save, Code, HelpCircle, Info,
   List, XCircle, Eye, FilePlus, CalendarClock,
+  BookmarkPlus, Trash2, Plus, Settings2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -11,7 +12,7 @@ import {
 import { listCalendars, listEventsForCalendars } from '../lib/googleCalendar';
 import { DATE_PRESETS, getPresetRange } from '../lib/dateRanges';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
-import { parseAppointment } from '../lib/appointmentParsing';
+import { parseAppointment, shouldSkipEvent } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
 import {
   collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
@@ -159,6 +160,8 @@ export default function CalendarNotesPage() {
   const [progress, setProgress] = useState({ percent: 0, current: 0, total: 0, step: '' });
   const [previewMode, setPreviewMode] = useState({});
   const [resumeBanner, setResumeBanner] = useState(null);
+  const [showMatchSettings, setShowMatchSettings] = useState(false);
+  const [newSkipPattern, setNewSkipPattern] = useState('');
 
   const abortRef = useRef(false);
   const knownPatientsRef = useRef([]);
@@ -292,7 +295,7 @@ export default function CalendarNotesPage() {
 
     try {
       addLog(`Fetching appointments (${DATE_PRESETS.find((p) => p.id === preset)?.label})…`);
-      const [{ events, errors }, root] = await withRetry(
+      const [{ events: allEvents, errors }, root] = await withRetry(
         () => Promise.all([
           listEventsForCalendars(selectedCalendarIds, { ...range, timeZone }),
           findPatientFormsFolder(),
@@ -300,7 +303,12 @@ export default function CalendarNotesPage() {
         { retries: 2, onRetry: (e, n) => addLog(`⟳ Retry ${n}/2 loading appointments: ${e.message}`, 'warn') },
       );
       errors.forEach((e) => addLog(`⚠ Calendar ${e.calendarId}: ${e.message}`, 'warn'));
-      addLog(`Found ${events.length} appointment(s) across ${selectedCalendarIds.length} calendar(s).`);
+      addLog(`Found ${allEvents.length} appointment(s) across ${selectedCalendarIds.length} calendar(s).`);
+
+      const skipPatterns = calendarSettings.skipPatterns || [];
+      const events = skipPatterns.length ? allEvents.filter((ev) => !shouldSkipEvent(ev, skipPatterns)) : allEvents;
+      const skippedCount = allEvents.length - events.length;
+      if (skippedCount > 0) addLog(`Skipped ${skippedCount} non-patient event(s) per saved skip patterns.`);
 
       const subfolders = await withRetry(
         () => listSubfolders(root.id),
@@ -411,6 +419,50 @@ export default function CalendarNotesPage() {
 
   function handleNameEdit(id, name) {
     updateAppointment(id, { parsedName: name, needsNameReview: false, parseConfidence: 'high', parseMethod: 'manual' });
+  }
+
+  // ── Aliases & skip patterns — let a one-time correction (or a known
+  //    non-patient event) stick, instead of the reviewer redoing the same
+  //    fix by hand every time the same calendar title recurs. ──
+  function saveAliasForAppointment(id) {
+    const appt = appointments.find((a) => a.id === id);
+    const raw = appt?.title?.trim();
+    if (!raw || !appt.parsedName) return;
+    updateSettings({ calendar: { ...settings.calendar, aliases: { ...settings.calendar.aliases, [raw]: appt.parsedName } } });
+    updateAppointment(id, { parseMethod: 'alias', parseConfidence: 'high', needsNameReview: false });
+    addLog(`Remembered "${raw}" → ${appt.parsedName} for future appointments.`);
+  }
+
+  function removeAlias(raw) {
+    const next = { ...settings.calendar.aliases };
+    delete next[raw];
+    updateSettings({ calendar: { ...settings.calendar, aliases: next } });
+  }
+
+  function skipEventPattern(id) {
+    const appt = appointments.find((a) => a.id === id);
+    const raw = appt?.title?.trim();
+    if (!raw) return;
+    const current = settings.calendar.skipPatterns || [];
+    if (!current.includes(raw)) {
+      updateSettings({ calendar: { ...settings.calendar, skipPatterns: [...current, raw] } });
+    }
+    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    addLog(`"${raw}" will be skipped on future loads.`);
+  }
+
+  function addSkipPatternFromInput() {
+    const raw = newSkipPattern.trim();
+    if (!raw) return;
+    const current = settings.calendar.skipPatterns || [];
+    if (!current.includes(raw)) {
+      updateSettings({ calendar: { ...settings.calendar, skipPatterns: [...current, raw] } });
+    }
+    setNewSkipPattern('');
+  }
+
+  function removeSkipPattern(raw) {
+    updateSettings({ calendar: { ...settings.calendar, skipPatterns: (settings.calendar.skipPatterns || []).filter((p) => p !== raw) } });
   }
 
   async function resolveAmbiguousFolder(id, folderId) {
@@ -806,6 +858,75 @@ export default function CalendarNotesPage() {
               </div>
             </div>
 
+            {/* Remembered name matches & skipped events — a corrected name or a
+                skipped non-patient event can be saved from the appointment table
+                below (bookmark / ban icons); this panel is where they're
+                reviewed or removed later. */}
+            <div>
+              <button
+                onClick={() => setShowMatchSettings((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Manage Remembered Names & Skipped Events
+                {((Object.keys(calendarSettings.aliases || {}).length) + (calendarSettings.skipPatterns || []).length) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-[10px]">
+                    {Object.keys(calendarSettings.aliases || {}).length + (calendarSettings.skipPatterns || []).length}
+                  </span>
+                )}
+              </button>
+
+              {showMatchSettings && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-white/10 bg-white/3">
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Remembered Name Matches</h3>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                      {Object.entries(calendarSettings.aliases || {}).length === 0 && (
+                        <p className="text-[11px] text-slate-600">None yet — click the bookmark icon next to a corrected name below to remember it.</p>
+                      )}
+                      {Object.entries(calendarSettings.aliases || {}).map(([raw, canonical]) => (
+                        <div key={raw} className="flex items-center gap-2 text-xs bg-slate-800 rounded-lg px-2.5 py-1.5">
+                          <span className="text-slate-400 truncate flex-1 min-w-0">"{raw}" → <span className="text-white font-bold">{canonical}</span></span>
+                          <button onClick={() => removeAlias(raw)} className="flex-shrink-0 text-slate-600 hover:text-red-400" aria-label={`Remove alias for ${raw}`}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2">Skipped Events</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        value={newSkipPattern}
+                        onChange={(e) => setNewSkipPattern(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkipPatternFromInput(); } }}
+                        placeholder="e.g. Chef Unity"
+                        className="flex-1 min-w-0 bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500/40"
+                      />
+                      <button onClick={addSkipPatternFromInput} className="flex-shrink-0 p-1.5 rounded-lg bg-sky-500/15 text-sky-300 hover:bg-sky-500/25 transition-colors" aria-label="Add skip pattern">
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {(calendarSettings.skipPatterns || []).length === 0 && (
+                        <p className="text-[11px] text-slate-600">None yet — events whose title or description contains any of these are excluded before parsing.</p>
+                      )}
+                      {(calendarSettings.skipPatterns || []).map((raw) => (
+                        <div key={raw} className="flex items-center gap-2 text-xs bg-slate-800 rounded-lg px-2.5 py-1.5">
+                          <span className="text-slate-300 truncate flex-1 min-w-0">"{raw}"</span>
+                          <button onClick={() => removeSkipPattern(raw)} className="flex-shrink-0 text-slate-600 hover:text-red-400" aria-label={`Remove skip pattern ${raw}`}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleFetchAppointments}
               disabled={busy || selectedCalendarIds.length === 0}
@@ -898,6 +1019,13 @@ export default function CalendarNotesPage() {
                             </p>
                           </div>
                         </div>
+                        <button
+                          onClick={() => skipEventPattern(appt.id)}
+                          title={`Never show "${appt.title}" again — skips it on future loads too`}
+                          className="flex-shrink-0 p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
                       </div>
 
                       {/* Patient name (editable) + confidence */}
@@ -909,8 +1037,17 @@ export default function CalendarNotesPage() {
                           placeholder="Patient name…"
                           className="flex-1 min-w-0 bg-slate-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500/40"
                         />
+                        {appt.parsedName && appt.parseMethod !== 'alias' && (
+                          <button
+                            onClick={() => saveAliasForAppointment(appt.id)}
+                            title={`Remember "${appt.title}" → ${appt.parsedName} for future appointments`}
+                            className="flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-sky-300 hover:bg-sky-500/10 transition-colors"
+                          >
+                            <BookmarkPlus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${confidenceBadge(appt.parseConfidence)}`}>
-                          {appt.parseMethod === 'manual' ? 'manual' : `${appt.parseConfidence} confidence`}
+                          {appt.parseMethod === 'manual' ? 'manual' : appt.parseMethod === 'alias' ? 'remembered' : `${appt.parseConfidence} confidence`}
                         </span>
                         <FolderStatusBadge status={appt.folderStatus} />
                       </div>

@@ -4,7 +4,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 
-export default function DeduplicationWarning({ duplicates, patientName }) {
+export default function DeduplicationWarning({ duplicates }) {
   if (!duplicates || duplicates.length === 0) {
     return null;
   }

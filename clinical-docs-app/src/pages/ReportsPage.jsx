@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BarChart3, Plus, Trash2, Search, RefreshCw, Loader2,
   FileText, Calendar, Edit3, X, Check, ChevronDown, ChevronUp,
@@ -356,7 +355,6 @@ function ReportFormModal({ report, onClose, onSave }) {
 }
 
 export default function ReportsPage() {
-  const navigate = useNavigate();
   const { reports, reportsLoading, saveReport, updateReport, deleteReport, deleteReports, fetchReports } = useApp();
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Settings, Key, HardDrive, FileOutput, AlignLeft, Tag, CheckCircle,
+  HardDrive, FileOutput, AlignLeft, Tag, CheckCircle,
   Eye, EyeOff, Wifi, WifiOff, AlertTriangle, Bot, ChevronDown, ExternalLink,
   Save, Lock, Calendar as CalendarIcon
 } from 'lucide-react';

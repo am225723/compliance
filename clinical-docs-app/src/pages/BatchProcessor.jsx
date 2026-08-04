@@ -3,7 +3,7 @@ import {
   ClipboardList, Search, CheckCircle2, AlertTriangle,
   Play, Loader2, FileText, FilePlus, SkipForward, Eye,
   FolderOpen, List, RefreshCw, XCircle, Info, Heart, Calendar,
-  HelpCircle, Code, Save, History, Ban, AlertCircle
+  HelpCircle, Code, Save, History, Ban
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -21,7 +21,7 @@ import { withRetry } from '../lib/retry';
 import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
 import { getSourceRules, resolveSourceFiles, validateSelectedSourceFiles } from '../lib/sourceFileSelection';
 import {
-  detectDuplicateSourceFiles, validateBatchBefore, generateBatchId,
+  detectDuplicateSourceFiles, generateBatchId,
   saveGenerationLog, saveGenerationError, completeGenerationLog,
 } from '../lib/generationAudit';
 import DeduplicationWarning from '../components/DeduplicationWarning';
@@ -98,7 +98,7 @@ function resumeStablePhase(storedPhase) {
 }
 
 export default function BatchProcessor() {
-  const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, user, updateDocumentReview, regenerateDocument } = useApp();
+  const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, user } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [singleClientMode, setSingleClientMode] = useState(false);
   const [batchInput, setBatchInput] = useState('');
@@ -109,9 +109,6 @@ export default function BatchProcessor() {
   const [expandedFiles, setExpandedFiles] = useState({});
   const [previewMode, setPreviewMode] = useState({}); // { [name]: 'rendered' | 'raw' }
   const [resumeBanner, setResumeBanner] = useState(null);
-  const [batchPreValidationErrors, setBatchPreValidationErrors] = useState([]);
-  const [batchPreValidationWarnings, setBatchPreValidationWarnings] = useState([]);
-  const [generationLogId, setGenerationLogId] = useState(null);
   const abortRef = useRef(false);
   const persistTimeoutRef = useRef(null);
 
@@ -382,7 +379,6 @@ export default function BatchProcessor() {
         sourceFileRules: settings.sourceFiles,
       },
     });
-    setGenerationLogId(batchLog?.id);
     if (!batchLog) addLog('⚠ Warning: Could not create audit log', 'warn');
 
     const systemPrompt = buildSystemPrompt(settings.detailLevel);
@@ -667,9 +663,6 @@ export default function BatchProcessor() {
     setSummary(null);
     setBatchInput('');
     setExpandedFiles({});
-    setGenerationLogId(null);
-    setBatchPreValidationErrors([]);
-    setBatchPreValidationWarnings([]);
     localStorage.removeItem(BATCH_STORAGE_KEY);
   }
 

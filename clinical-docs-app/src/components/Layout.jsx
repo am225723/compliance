@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Settings, FileText, LayoutDashboard,
-  ClipboardList, ChevronRight, Wifi, WifiOff, Menu, X,
+  ClipboardList, ChevronRight, Wifi, WifiOff, Menu,
   BarChart3, LogOut, ChevronDown, Zap, CalendarDays, History
 } from 'lucide-react';
 import { useState } from 'react';

@@ -39,7 +39,8 @@ function formatDate(iso) {
 export default function PatientTimelinePage() {
   const { name } = useParams();
   const patientName = decodeURIComponent(name || '');
-  const { user } = useApp();
+  const { user, updateDocumentReview } = useApp();
+  const [reviewUpdating, setReviewUpdating] = useState({});
 
   const [documents, setDocuments] = useState([]);
   const [reports, setReports] = useState([]);
@@ -95,6 +96,15 @@ export default function PatientTimelinePage() {
   }
   function togglePreviewMode(key) {
     setPreviewMode(prev => ({ ...prev, [key]: prev[key] === 'raw' ? 'rendered' : 'raw' }));
+  }
+
+  async function handleReviewChange(docId, reviewStatus) {
+    setReviewUpdating(prev => ({ ...prev, [docId]: true }));
+    const updated = await updateDocumentReview(docId, { reviewStatus, reviewNotes: null });
+    if (updated) {
+      setDocuments(prev => prev.map(d => (d.id === docId ? updated : d)));
+    }
+    setReviewUpdating(prev => ({ ...prev, [docId]: false }));
   }
 
   return (
@@ -163,6 +173,30 @@ export default function PatientTimelinePage() {
                           <p className="text-xs text-slate-500 mt-1">{formatDate(entry.date)} · via {d.source || 'manual'}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {reviewUpdating[d.id] ? (
+                            <Loader2 className="w-3.5 h-3.5 text-slate-500 animate-spin" />
+                          ) : (
+                            <>
+                              {d.review_status !== 'approved' && (
+                                <button
+                                  onClick={() => handleReviewChange(d.id, 'approved')}
+                                  title="Approve"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {d.review_status !== 'rejected' && (
+                                <button
+                                  onClick={() => handleReviewChange(d.id, 'rejected')}
+                                  title="Reject"
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
+                          )}
                           {d.drive_file_url && (
                             <a
                               href={d.drive_file_url}
