@@ -34,6 +34,7 @@ export const defaultSettings = {
     patientScope: 'all',            // 'all' | 'list'
     patientList: [],                // used when patientScope === 'list'
     lastCheckedByPatient: {},       // { [patientName]: isoTimestamp }
+    lastRunSummary: null,           // aggregate-only counts from the most recent run — see design.md 2.5
   },
 
   // Calendar Notes defaults

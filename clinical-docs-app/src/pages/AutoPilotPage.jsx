@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Zap, Power, Clock, Users, Play, Loader2, AlertTriangle,
-  RadioTower, ListChecks, Info,
+  RadioTower, ListChecks, Info, ClipboardCheck, CheckCircle2, XCircle, SkipForward, FileCheck2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { findPatientFormsFolder, listSubfolders, listPatientFiles } from '../lib/googleDrive';
@@ -55,6 +55,13 @@ export default function AutoPilotPage() {
     setRunning(true);
     addLog(manual ? '▶ Manual run started…' : '▶ Scheduled run started…');
 
+    // Aggregate-only counters for the persisted run summary (design.md 2.5)
+    // — deliberately no patient names or note content in here, since this
+    // gets written to settings/localStorage, unlike the in-memory-only
+    // Activity Log above which already shows patient names transiently.
+    const runStartedAt = new Date().toISOString();
+    let patientsScanned = 0, patientsProcessed = 0, patientsSkipped = 0, patientsErrored = 0, documentsSaved = 0;
+
     try {
       const root = await findPatientFormsFolder();
       const subfolders = await listSubfolders(root.id);
@@ -68,18 +75,19 @@ export default function AutoPilotPage() {
       const lastChecked = { ...(autoPilot.lastCheckedByPatient || {}) };
       const systemPrompt = buildSystemPrompt(settings.detailLevel);
       const orderedDocTypes = DOCUMENT_TYPES.filter(t => autoPilot.docTypes.includes(t.key));
-      const runStartedAt = new Date().toISOString();
 
       for (const folder of scoped) {
+        patientsScanned++;
         const sinceIso = lastChecked[folder.name] || null;
         const changedFiles = await listPatientFiles(folder.id, sinceIso);
 
         if (changedFiles.length === 0 && sinceIso) {
+          patientsSkipped++;
           continue; // nothing new since we last generated for this patient
         }
 
         const allFiles = sinceIso ? await listPatientFiles(folder.id) : changedFiles;
-        if (allFiles.length === 0) { lastChecked[folder.name] = runStartedAt; continue; }
+        if (allFiles.length === 0) { lastChecked[folder.name] = runStartedAt; patientsSkipped++; continue; }
 
         addLog(`\n━━━ ${folder.name}: ${sinceIso ? `${changedFiles.length} new file(s)` : 'first check'} ━━━`);
         // selectedFileIds = every file — AutoPilot has no file-picker UI, it's
@@ -127,6 +135,7 @@ export default function AutoPilotPage() {
           ];
 
           const resultsByKey = {};
+          let savedForThisPatient = 0;
           for (const out of orderedOutputs) {
             addLog(`  🔮 Generating ${out.label} for ${folder.name}...`);
             const { sourceText, sourceFileList } = await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), out.sourceFiles);
@@ -168,19 +177,35 @@ export default function AutoPilotPage() {
             );
 
             addLog(`  ✅ ${out.label} saved for ${folder.name} — ${savedOutputs.length} file(s)`);
+            savedForThisPatient += savedOutputs.length;
           }
 
+          documentsSaved += savedForThisPatient;
+          if (savedForThisPatient > 0) patientsProcessed++;
           lastChecked[folder.name] = runStartedAt;
         } catch (e) {
           addLog(`  ❌ ${folder.name} failed: ${e.message}`, 'error');
+          patientsErrored++;
           // Don't advance lastChecked on failure — retry this patient's changes next cycle.
         }
       }
 
-      patchAutoPilot({ lastCheckedByPatient: lastChecked });
+      patchAutoPilot({
+        lastCheckedByPatient: lastChecked,
+        lastRunSummary: {
+          startedAt: runStartedAt, finishedAt: new Date().toISOString(), manual, failed: false,
+          patientsScanned, patientsProcessed, patientsSkipped, patientsErrored, documentsSaved,
+        },
+      });
       addLog('\n✅ Run complete.');
     } catch (e) {
       addLog(`Run failed: ${e.message}`, 'error');
+      patchAutoPilot({
+        lastRunSummary: {
+          startedAt: runStartedAt, finishedAt: new Date().toISOString(), manual, failed: true, error: e.message,
+          patientsScanned, patientsProcessed, patientsSkipped, patientsErrored, documentsSaved,
+        },
+      });
     } finally {
       runningRef.current = false;
       setRunning(false);
@@ -284,6 +309,54 @@ export default function AutoPilotPage() {
             Run Now
           </button>
         </div>
+
+        {/* Last run summary — surfaces silent failures without requiring the
+            tab to be open when they happen; see design.md 2.5. Aggregate
+            counts only, persisted with settings (no patient names/content). */}
+        {autoPilot.lastRunSummary && (
+          <div className={`rounded-2xl border p-5 mb-5 ${
+            autoPilot.lastRunSummary.failed ? 'border-red-500/25 bg-red-500/5' : 'border-white/10 bg-slate-900'
+          }`}>
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <ClipboardCheck className="w-4 h-4 text-teal-400" />
+              <h2 className="text-sm font-black text-white">Last Run Summary</h2>
+              <span className="text-xs text-slate-500">
+                {new Date(autoPilot.lastRunSummary.finishedAt).toLocaleString()}
+                {autoPilot.lastRunSummary.manual ? ' · manual' : ' · scheduled'}
+              </span>
+              {autoPilot.lastRunSummary.failed && (
+                <span className="ml-auto text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold">Run failed</span>
+              )}
+            </div>
+
+            {autoPilot.lastRunSummary.failed && (
+              <p className="text-xs text-red-300 mb-3">{autoPilot.lastRunSummary.error}</p>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {[
+                { label: 'Scanned',  value: autoPilot.lastRunSummary.patientsScanned,  icon: Users,        color: 'text-slate-400' },
+                { label: 'Saved',    value: autoPilot.lastRunSummary.documentsSaved,   icon: FileCheck2,   color: 'text-teal-400' },
+                { label: 'Processed', value: autoPilot.lastRunSummary.patientsProcessed, icon: CheckCircle2, color: 'text-emerald-400' },
+                { label: 'Skipped',  value: autoPilot.lastRunSummary.patientsSkipped,  icon: SkipForward,  color: 'text-slate-400' },
+                { label: 'Errored',  value: autoPilot.lastRunSummary.patientsErrored,  icon: XCircle,      color: autoPilot.lastRunSummary.patientsErrored > 0 ? 'text-red-400' : 'text-slate-400' },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="rounded-xl bg-white/3 border border-white/8 p-3">
+                  <Icon className={`w-3.5 h-3.5 ${color} mb-1.5`} />
+                  <p className="text-base font-black text-white">{value}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold">{label}</p>
+                </div>
+              ))}
+            </div>
+            {autoPilot.lastRunSummary.patientsErrored > 0 && (
+              <p className="text-[11px] text-amber-400 mt-3">
+                {autoPilot.lastRunSummary.patientsErrored} patient(s) failed during this run — their changes
+                weren't marked as processed, so they'll be retried next cycle. If this run happened in the
+                current tab, the Activity Log below has per-patient details.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Config */}

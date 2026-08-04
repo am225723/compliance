@@ -136,20 +136,25 @@ Ordered by how directly each one builds on what already exists — not by
 priority. Each is a sketch, not a spec; the "Open questions" are things worth
 resolving with the user before implementation, not things to guess past.
 
-### 2.1 Billing readiness dashboard
+### 2.1 Billing readiness dashboard — **implemented**
 
 **Problem:** Reports rows are auto-created as drafts with a suggested CPT
 code, but nothing surfaces which ones are still incomplete (missing CPT
 codes/minutes, or would fail `cptValidation.js`) before a billing cycle.
 
-**Approach:** A view — likely a card on `HomeDashboard.jsx` or a filter on
-`ReportsPage.jsx` — that runs `validateCptClaim()` across all reports in a
-date range and lists ones with errors/warnings or a still-blank
-`cpt_codes`/`psychotherapy_minutes`. Purely additive: no new tables, reuses
-`cptValidation.js` as-is.
+**Shipped:** `lib/billingReadiness.js` — `assessReportReadiness(report)` runs
+`validateCptClaim()` and additionally treats a still-empty `cpt_codes` as
+not-ready (errors only decide readiness; warnings, like a missing
+`psychotherapy_minutes` on an otherwise-valid claim, don't). `ReportsPage.jsx`
+gets a clickable "Needs Attention" stat tile that filters the table down to
+exactly those rows, plus a per-row warning icon next to the CPT column so an
+entry needing attention is visible even outside the filtered view. Purely
+additive — no new tables, reuses `cptValidation.js` as-is, sits alongside the
+existing CSV export rather than replacing it.
 
-**Open questions:** what counts as "ready" (errors only, or warnings too)?
-Does this replace or sit alongside the existing CSV export?
+**Open question resolved:** "ready" means errors-only (matches the same
+draft-entry policy `cptValidation.js` already documents: an incomplete draft
+is expected and not itself an error).
 
 ### 2.2 Per-patient clinical timeline — **implemented**
 
@@ -180,21 +185,31 @@ a much larger, cross-cutting change than this feature, and one that should
 be a deliberate decision rather than a side effect of adding a timeline
 view. Flagging it here rather than silently accepting the risk.
 
-### 2.3 Side-by-side version diff
+### 2.3 Side-by-side version diff — **implemented**
 
 **Problem:** `DocumentVersionHistory.jsx` already lists a document's versions
 (via `version_number`/`previous_version_id`) but only as a flat list — there's
 no way to see *what changed* between two versions without opening both.
 
-**Approach:** Add a diff mode to `DocumentVersionHistory` — pick two versions,
-render their `content_html` side by side (or word-diffed) using a small
-client-side HTML/text diff. Given the CSP-style constraints elsewhere in this
-app (sandboxed iframes for generated HTML), whatever diff renderer is chosen
-needs to run on extracted text, not live HTML.
+**Shipped:** a "Compare Versions" toggle in `DocumentVersionHistory.jsx` lets
+a clinician check exactly two versions; `VersionDiffView.jsx` then renders a
+word-level diff (`lib/textDiff.js`) between them, with additions/removals
+highlighted inline. The diff runs on **extracted text, not raw HTML** — an
+`htmlToText()` regex strip, not a live-DOM parse — matching the sandboxed-
+iframe discipline used everywhere else generated HTML is shown, and avoiding
+a dependency on the `diff` package (not in `package.json`). The underlying
+LCS word-diff is O(n·m); a size guard bails out (with a message instead of a
+result) rather than let an oversized version pair hang the tab.
 
-**Open questions:** diff the rendered text or the raw HTML? A structural diff
-across `ai-prompt` spans specifically would be more useful than a raw text
-diff but is more work.
+Also newly wired `DocumentVersionHistory.jsx` into `PatientTimelinePage.jsx`
+(per expanded document) — it existed as a component but wasn't reachable from
+any page before this, so without that wiring the diff feature would have
+shipped with no way to actually open it.
+
+**Open question resolved:** diffs the rendered text, not raw HTML or an
+`ai-prompt`-span structural diff — cheaper and safer given the sandboxing
+constraint above; the trade-off is that formatting-only changes (bold, list
+structure) won't show, which the diff view says explicitly.
 
 ### 2.4 AI-assisted E/M level suggestion — **implemented**
 
@@ -214,22 +229,32 @@ defaulting to 99214 when signals are absent or conflicting. Still fully
 editable in the Reports CPT picker — this only changes the *starting*
 suggestion.
 
-### 2.5 AutoPilot run digest
+### 2.5 AutoPilot run digest — **implemented (in-app only)**
 
 **Problem:** AutoPilot runs unattended with no review step. If a run fails
 silently (bad source file, transient API error) while nobody's watching the
 tab, nothing surfaces that until someone happens to check the Activity Log.
 
-**Approach:** At the end of each `runCycle`, build a summary (patients
-processed, documents saved, skipped, errored) and surface it — at minimum a
-persisted "last run summary" shown on the AutoPilot page itself; ideally an
-email/notification via a Supabase Edge Function for real unattended
-visibility. Errors already fail loudly in-run (no `lastChecked` advance, see
-`AutoPilotPage.jsx`); this is about making that visible without requiring the
-tab to be open.
+**Shipped:** `runCycle()` in `AutoPilotPage.jsx` now tracks aggregate counters
+(patients scanned/processed/skipped/errored, documents saved) through the
+run and, on both normal completion and an outer-level failure, persists them
+as `settings.autoPilot.lastRunSummary` — a "Last Run Summary" card at the top
+of the AutoPilot page shows these counts (and the error message, if the run
+failed outright) whether or not the tab was open when the run happened. This
+is deliberately the in-app half of the two options in the open question
+below — no email/notification channel was built.
 
-**Open questions:** in-app only, or an actual notification channel (email)?
-If email, that's a new Edge Function and a "notify me" setting.
+**Why aggregate-only, not the patient-level detail the Activity Log already
+shows:** the Activity Log is in-memory only and resets on reload; persisting
+`lastRunSummary` writes it into `settings`, which is backed by localStorage
+(see `lib/settings.js`). Including patient names there would reintroduce
+exactly the persisted-PHI-in-localStorage pattern fixed in PR #26 for the
+Calendar Notes resume snapshot — so the persisted summary is counts only,
+consistent with the PHI constraint below.
+
+**Open question resolved (partially):** in-app only, for now — the email/
+notification half is still explicitly out of scope; the PHI constraint below
+still applies in full if that's ever built.
 
 **PHI constraint (applies before any email/notification channel is built):**
 keep the digest aggregate-only by default — counts of processed/saved/

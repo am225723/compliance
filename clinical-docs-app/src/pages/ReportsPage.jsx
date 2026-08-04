@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart3, Plus, Trash2, Search, RefreshCw, Loader2,
   FileText, Calendar, Edit3, X, Check, ChevronDown, ChevronUp,
-  Download, AlertCircle, AlertTriangle, Users, Clock
+  Download, AlertCircle, AlertTriangle, Users, Clock, ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CPT_CODE_GROUPS, CPT_CODE_LOOKUP } from '../lib/cptCodes';
 import { validateCptClaim } from '../lib/cptValidation';
+import { filterReportsNeedingAttention } from '../lib/billingReadiness';
 
 const SERVICE_TYPES = [
   'Psychiatric Evaluation',
@@ -363,14 +364,19 @@ export default function ReportsPage() {
   const [sortField, setSortField] = useState('date_of_service');
   const [sortDir, setSortDir] = useState('desc');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
   }
 
+  const needsAttention = useMemo(() => filterReportsNeedingAttention(reports), [reports]);
+  const needsAttentionIds = useMemo(() => new Set(needsAttention.map(r => r.id)), [needsAttention]);
+
   const filtered = reports
     .filter(r => {
+      if (needsAttentionOnly && !needsAttentionIds.has(r.id)) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -489,7 +495,7 @@ export default function ReportsPage() {
 
       <div className="max-w-7xl mx-auto px-6 mt-6">
         {/* Stats summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           {[
             { label: 'Total Entries',    value: reports.length, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10' },
             { label: 'Unique Patients',  value: new Set(reports.map(r => r.patient_name)).size, icon: Users, color: 'text-teal-400', bg: 'bg-teal-500/10' },
@@ -507,6 +513,27 @@ export default function ReportsPage() {
               <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">{label}</p>
             </div>
           ))}
+          <button
+            onClick={() => setNeedsAttentionOnly(v => !v)}
+            title="Reports missing CPT codes, or with a CPT-claim error from cptValidation.js"
+            className={`text-left rounded-2xl border p-4 transition-all ${
+              needsAttentionOnly
+                ? 'border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/30'
+                : needsAttention.length > 0
+                  ? 'border-amber-500/25 bg-amber-500/5 hover:border-amber-500/40'
+                  : 'border-white/8 bg-white/3'
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${needsAttention.length > 0 ? 'bg-amber-500/15' : 'bg-emerald-500/10'}`}>
+              {needsAttention.length > 0
+                ? <AlertTriangle className="w-4 h-4 text-amber-400" />
+                : <ShieldCheck className="w-4 h-4 text-emerald-400" />}
+            </div>
+            <p className="text-lg font-black text-white truncate">{needsAttention.length}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5 font-semibold">
+              Needs Attention{needsAttentionOnly ? ' · filtering' : ''}
+            </p>
+          </button>
         </div>
 
         {reportsLoading ? (
@@ -613,7 +640,7 @@ export default function ReportsPage() {
                         <p className="text-sm text-slate-300 whitespace-nowrap">{report.type_of_service || '—'}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
                           {(report.cpt_codes || []).map(code => (
                             <span key={code} className="px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 text-[11px] font-mono font-bold whitespace-nowrap">
                               {code}
@@ -621,6 +648,12 @@ export default function ReportsPage() {
                           ))}
                           {(!report.cpt_codes || report.cpt_codes.length === 0) && (
                             <span className="text-slate-700 text-xs">—</span>
+                          )}
+                          {needsAttentionIds.has(report.id) && (
+                            <AlertTriangle
+                              className="w-3.5 h-3.5 text-amber-400 flex-shrink-0"
+                              aria-label="Needs attention before billing"
+                            />
                           )}
                         </div>
                       </td>
@@ -658,9 +691,21 @@ export default function ReportsPage() {
               </table>
             </div>
 
-            {filtered.length === 0 && search && (
+            {filtered.length === 0 && (search || needsAttentionOnly) && (
               <div className="text-center py-12">
-                <p className="text-sm text-slate-500">No results for "{search}"</p>
+                <p className="text-sm text-slate-500">
+                  {search
+                    ? `No results for "${search}"`
+                    : 'No reports need attention right now.'}
+                </p>
+                {needsAttentionOnly && (
+                  <button
+                    onClick={() => setNeedsAttentionOnly(false)}
+                    className="mt-2 text-xs text-teal-400 hover:text-teal-300 font-bold"
+                  >
+                    Clear filter
+                  </button>
+                )}
               </div>
             )}
           </>
