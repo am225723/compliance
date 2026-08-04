@@ -14,7 +14,9 @@ import {
   CheckCircle2, Clock, XCircle,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useApp } from '../context/AppContext';
 import ClientFacingActions from '../components/ClientFacingActions';
+import DocumentVersionHistory from '../components/DocumentVersionHistory';
 
 const DOC_TYPE_LABEL = {
   treatment_plan: 'Treatment Plan',
@@ -37,6 +39,7 @@ function formatDate(iso) {
 export default function PatientTimelinePage() {
   const { name } = useParams();
   const patientName = decodeURIComponent(name || '');
+  const { user } = useApp();
 
   const [documents, setDocuments] = useState([]);
   const [reports, setReports] = useState([]);
@@ -202,6 +205,9 @@ export default function PatientTimelinePage() {
                             />
                           )}
                           <ClientFacingActions documentHtml={d.content_html} patientName={patientName} />
+                          {user?.id && (
+                            <DocumentVersionHistory docId={d.id} patientName={patientName} userId={user.id} />
+                          )}
                         </div>
                       )}
                     </div>
