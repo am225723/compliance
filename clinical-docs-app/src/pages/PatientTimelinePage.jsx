@@ -100,11 +100,18 @@ export default function PatientTimelinePage() {
 
   async function handleReviewChange(docId, reviewStatus) {
     setReviewUpdating(prev => ({ ...prev, [docId]: true }));
-    const updated = await updateDocumentReview(docId, { reviewStatus, reviewNotes: null });
-    if (updated) {
+    try {
+      const updated = await updateDocumentReview(docId, { reviewStatus, reviewNotes: null });
+      if (!updated) {
+        setError('Failed to update document review status.');
+        return;
+      }
       setDocuments(prev => prev.map(d => (d.id === docId ? updated : d)));
+    } catch {
+      setError('Failed to update document review status.');
+    } finally {
+      setReviewUpdating(prev => ({ ...prev, [docId]: false }));
     }
-    setReviewUpdating(prev => ({ ...prev, [docId]: false }));
   }
 
   return (
@@ -174,25 +181,30 @@ export default function PatientTimelinePage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {reviewUpdating[d.id] ? (
-                            <Loader2 className="w-3.5 h-3.5 text-slate-500 animate-spin" />
+                            <span role="status">
+                              <Loader2 aria-hidden="true" className="w-3.5 h-3.5 text-slate-500 animate-spin" />
+                              <span className="sr-only">Updating review status</span>
+                            </span>
                           ) : (
                             <>
                               {d.review_status !== 'approved' && (
                                 <button
                                   onClick={() => handleReviewChange(d.id, 'approved')}
                                   title="Approve"
+                                  aria-label="Approve document"
                                   className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5" />
                                 </button>
                               )}
                               {d.review_status !== 'rejected' && (
                                 <button
                                   onClick={() => handleReviewChange(d.id, 'rejected')}
                                   title="Reject"
+                                  aria-label="Reject document"
                                   className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                                 >
-                                  <XCircle className="w-3.5 h-3.5" />
+                                  <XCircle aria-hidden="true" className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             </>
