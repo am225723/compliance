@@ -260,6 +260,10 @@ export default function BatchProcessor() {
       }));
 
       setPatients(result);
+      // Show every matched patient's note list right away — the reviewer
+      // shouldn't have to click the ± toggle per patient just to see what's
+      // in their folder before picking which ones to include.
+      setExpandedFiles(Object.fromEntries(result.filter(p => p.status === 'matched').map(p => [p.name, true])));
       setPhase(PHASE.PREVIEW);
     } catch (e) {
       addLog(`Error: ${e.message}`, 'error');
@@ -278,6 +282,7 @@ export default function BatchProcessor() {
         status: 'matched', folderId: candidate.id, folderName: candidate.name, files, error: null,
         selectedFileIds: sourceResolution.selectedFileIds, sourceRuleResults: sourceResolution.ruleResults,
       });
+      setExpandedFiles(prev => ({ ...prev, [name]: true }));
       addLog(`✓ Resolved "${name}" → "${candidate.name}"`);
     } catch (e) {
       updatePatientByName(name, { status: 'error', error: e.message });
