@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Eye, EyeOff, Brain, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function AuthPage() {
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'reset'

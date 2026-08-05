@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { CheckCircle2, XCircle, RotateCw, Eye, Loader2, MessageSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, RotateCw, Eye, MessageSquare } from 'lucide-react';
 import ClientFacingActions from './ClientFacingActions';
 
 export default function DocumentReviewQueue({

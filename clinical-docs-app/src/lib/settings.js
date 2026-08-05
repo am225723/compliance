@@ -43,6 +43,7 @@ export const defaultSettings = {
     calendarIds: [],                // Google Calendar IDs selected by default
     docTypes: ['session_note'],     // default document type(s) to generate per appointment
     aliases: {},                    // { rawAppointmentText: canonicalPatientName }
+    skipPatterns: [],               // raw substrings — matching events are excluded before parsing (e.g. non-patient recurring events)
     timeZone: '',                   // IANA zone; '' = use the browser's local zone
     useAiFallback: true,            // allow AI fallback when deterministic parsing is uncertain
   },

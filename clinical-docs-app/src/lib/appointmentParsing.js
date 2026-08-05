@@ -72,6 +72,20 @@ function findKnownPatientMentions(text, knownPatients) {
 }
 
 /**
+ * Should this calendar event be excluded entirely before parsing/matching
+ * even runs — e.g. a recurring non-patient event like "Chef Unity" that
+ * shows up on the same calendar as real appointments? `skipPatterns` is a
+ * user-configured list of raw substrings (Calendar Notes -> Manage Aliases
+ * & Skipped Events), matched case-insensitively against title+description,
+ * same matching semantics as `aliases` below.
+ */
+export function shouldSkipEvent(event, skipPatterns = []) {
+  if (!skipPatterns?.length) return false;
+  const combined = `${event?.title || ''}\n${event?.description || ''}`.toLowerCase();
+  return skipPatterns.some((raw) => raw && combined.includes(raw.toLowerCase()));
+}
+
+/**
  * Deterministic parse only (no network call). `knownPatients` is the list
  * of Drive PatientForms subfolders ({id, name}); `aliases` is a
  * user-configured map of raw appointment text -> canonical patient name

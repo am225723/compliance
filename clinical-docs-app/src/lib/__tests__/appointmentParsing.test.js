@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { parseAppointmentDeterministic } from '../appointmentParsing';
+import { parseAppointmentDeterministic, shouldSkipEvent } from '../appointmentParsing';
+
+describe('shouldSkipEvent', () => {
+  it('matches a skip pattern against the title, case-insensitively', () => {
+    expect(shouldSkipEvent({ title: 'Chef Unity Meeting', description: '' }, ['chef unity'])).toBe(true);
+  });
+
+  it('matches against the description too', () => {
+    expect(shouldSkipEvent({ title: 'Team Sync', description: 'Weekly Chef Unity check-in' }, ['Chef Unity'])).toBe(true);
+  });
+
+  it('does not skip when no pattern matches', () => {
+    expect(shouldSkipEvent({ title: 'John Smith - Follow Up', description: '' }, ['Chef Unity'])).toBe(false);
+  });
+
+  it('returns false for empty/missing skip patterns', () => {
+    expect(shouldSkipEvent({ title: 'Anything', description: '' }, [])).toBe(false);
+    expect(shouldSkipEvent({ title: 'Anything', description: '' })).toBe(false);
+  });
+
+  it('handles a missing event gracefully', () => {
+    expect(shouldSkipEvent(null, ['Chef Unity'])).toBe(false);
+  });
+});
 
 describe('parseAppointmentDeterministic', () => {
   it('an alias match always wins, with high confidence and no review needed', () => {

@@ -40,48 +40,6 @@ export function detectDuplicateSourceFiles(selectedFiles, sourceRuleResults) {
 }
 
 /**
- * Collect pre-generation validation errors/warnings before starting the batch.
- * Returns { criticalErrors: Error[], warnings: Warning[] }
- */
-export function validateBatchBefore(patients, rules) {
-  const criticalErrors = [];
-  const warnings = [];
-
-  patients.forEach(patient => {
-    if (!patient.status === 'matched') return;
-
-    // Check for missing required files
-    const requiredRules = rules.filter(r => r.required);
-    requiredRules.forEach(rule => {
-      const hasMatch = patient.files.some(f =>
-        rule.patterns.some(pattern => {
-          const { fileMatchesPattern } = require('./sourceFileSelection');
-          return fileMatchesPattern(f.name, pattern);
-        })
-      );
-      if (!hasMatch) {
-        criticalErrors.push({
-          patient: patient.name,
-          message: `Required source file missing: ${rule.label}`,
-        });
-      }
-    });
-
-    // Check for duplicates (warning, not critical)
-    const duplicates = detectDuplicateSourceFiles(patient.files, patient.sourceRuleResults || []);
-    if (duplicates.length > 0) {
-      warnings.push({
-        patient: patient.name,
-        message: `${duplicates.length} file(s) match multiple rules and will be included multiple times: ${duplicates.map(d => d.fileName).join(', ')}`,
-        duplicates,
-      });
-    }
-  });
-
-  return { criticalErrors, warnings };
-}
-
-/**
  * Format cost data for display. Accepts tokens from API response or null if not tracked.
  */
 export function calculateAndFormatCost(provider, model, promptTokens, completionTokens) {
@@ -180,7 +138,6 @@ export async function saveGenerationError(supabase, {
 export async function completeGenerationLog(supabase, {
   generationLogId, successfulCount, failedCount, skippedCount,
 }) {
-  const totalProcessed = successfulCount + failedCount + skippedCount;
   const status = failedCount === 0 ? 'completed' : (successfulCount > 0 ? 'partial' : 'failed');
 
   const { error } = await supabase
