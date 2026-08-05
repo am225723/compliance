@@ -216,34 +216,25 @@ export async function listSubfolders(parentId) {
 }
 
 /**
- * List files inside a patient folder (only target types). When `sinceIso` is
- * given, only files modified after that timestamp are returned — used by the
- * AutoPilot watcher to detect new/changed source documents.
+ * List files inside a patient folder, excluding subfolders. When `sinceIso`
+ * is given, only files modified after that timestamp are returned — used by
+ * the AutoPilot watcher to detect new/changed source documents.
+ *
+ * Deliberately no filename filtering here — that used to be a hardcoded
+ * keyword list (isTargetFile) that silently dropped files before the
+ * user-configurable matching downstream (Source File Rules in
+ * sourceFileSelection.js, session-source patterns in sessionSourceFiles.js)
+ * ever got a chance to see them. E.g. "Full Intake Form.pdf" doesn't end
+ * with "intake.pdf" so the old filter dropped it, even though the
+ * configured "intake" rule would have matched it correctly. Precision
+ * filtering belongs entirely to those configurable systems now.
  */
 export async function listPatientFiles(folderId, sinceIso = null) {
-  let q = `'${folderId}' in parents and trashed = false`;
+  let q = `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`;
   if (sinceIso) q += ` and modifiedTime > '${sinceIso}'`;
   const query = encodeURIComponent(q);
   const data = await driveRequest(`/files?q=${query}&fields=files(id,name,mimeType,size,modifiedTime)&pageSize=200&spaces=drive`);
-  const all = data.files || [];
-  // Filter to target files only
-  return all.filter(f => isTargetFile(f.name));
-}
-
-export function isTargetFile(name) {
-  const lower = name.toLowerCase();
-  return (
-    lower.endsWith('intake.pdf') ||
-    lower.includes('pre-session') ||
-    lower.includes('presession') ||
-    lower.includes('pre_session') ||
-    lower.includes('transcript') ||
-    lower.includes('test result') ||
-    lower.includes('test_result') ||
-    lower.includes('evaluation') ||
-    lower.includes('lab') ||
-    lower.includes('psychological')
-  );
+  return data.files || [];
 }
 
 /** Download a file's text content */
