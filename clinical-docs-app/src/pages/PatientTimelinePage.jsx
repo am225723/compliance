@@ -160,13 +160,19 @@ export default function PatientTimelinePage() {
       }
       const files = await withRetry(() => listPatientFiles(candidates[0].id), { retries: 2 });
       const rules = getSourceRules(settings, docTypeKey);
-      const { selectedFileIds } = resolveSourceFiles(files, rules);
+      const { selectedFileIds, missingRequired } = resolveSourceFiles(files, rules);
+      if (missingRequired.length > 0) {
+        throw new Error(`Required source file rule(s) not found in Drive: ${missingRequired.map(r => r.rule.label).join(', ')}.`);
+      }
       const selectedFiles = files.filter(f => selectedFileIds.includes(f.id));
       if (selectedFiles.length === 0) {
         throw new Error('No source files in Drive match this document type\'s Source File Rules — nothing to regenerate from.');
       }
 
-      const { sourceText } = await collectSourceText({ name: patientName, files }, null, selectedFiles);
+      const { sourceText, sourceFileList } = await collectSourceText({ name: patientName, files }, null, selectedFiles);
+      if (sourceFileList.length === 0) {
+        throw new Error('None of the matched source files could be read — nothing to regenerate from.');
+      }
       const systemPrompt = buildSystemPrompt(settings.detailLevel);
       const { outputHtml } = await withRetry(
         () => generateDocumentForPatient({
@@ -332,7 +338,7 @@ export default function PatientTimelinePage() {
                               patientName={patientName}
                               userId={user.id}
                               documentType={d.document_type}
-                              onRegenerateClick={() => handleRegenerateVersion(d)}
+                              onRegenerateClick={handleRegenerateVersion}
                             />
                           )}
                           {regeneratingDocId === d.id && (

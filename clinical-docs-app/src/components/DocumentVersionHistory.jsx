@@ -7,6 +7,31 @@ import { RotateCw, ChevronDown, ChevronUp, Eye, GitCompare, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import VersionDiffView from './VersionDiffView';
 
+/**
+ * `document_type` alone isn't a document's identity — a patient can have
+ * several independent DARP notes (one per session), not just one lineage of
+ * versions. Narrow the document_type-scoped rows down to just the ones
+ * actually connected to `seedId` by walking `previous_version_id` links in
+ * both directions (a row can be an ancestor via its own previous_version_id,
+ * or a descendant if some other row's previous_version_id points at it).
+ */
+function computeLineage(seedId, candidates) {
+  const byId = new Map(candidates.map(v => [v.id, v]));
+  const visited = new Set();
+  const queue = [seedId];
+  while (queue.length) {
+    const id = queue.shift();
+    if (visited.has(id) || !byId.has(id)) continue;
+    visited.add(id);
+    const row = byId.get(id);
+    if (row.previous_version_id) queue.push(row.previous_version_id);
+    for (const v of candidates) {
+      if (v.previous_version_id === id) queue.push(v.id);
+    }
+  }
+  return candidates.filter(v => visited.has(v.id));
+}
+
 export default function DocumentVersionHistory({ docId, patientName, userId, documentType, onRegenerateClick }) {
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,10 +46,11 @@ export default function DocumentVersionHistory({ docId, patientName, userId, doc
   async function loadVersions() {
     if (!userId || !patientName || !docId) return;
     setLoading(true);
-    // Scoped by document_type too, not just patient — otherwise a patient
-    // with e.g. both a Treatment Plan and a DARP note would show every
-    // version of both interleaved into one list, sorted only by
-    // version_number, as if they were versions of the same document.
+    // document_type narrows the candidate set (so a Treatment Plan and a
+    // DARP note never mix), but isn't itself a document's identity — a
+    // patient can have several independent same-type documents (one DARP
+    // note per session). computeLineage() below narrows further to just the
+    // versions actually chained to docId via previous_version_id.
     let query = supabase
       .from('documents')
       .select('*')
@@ -33,7 +59,7 @@ export default function DocumentVersionHistory({ docId, patientName, userId, doc
     if (documentType) query = query.eq('document_type', documentType);
     const { data, error } = await query.order('version_number', { ascending: false });
     if (!error && data) {
-      setVersions(data);
+      setVersions(computeLineage(docId, data));
     }
     setLoading(false);
   }
@@ -135,7 +161,7 @@ export default function DocumentVersionHistory({ docId, patientName, userId, doc
                 )}
                 {idx === 0 && onRegenerateClick && (
                   <button
-                    onClick={() => onRegenerateClick(patientName)}
+                    onClick={() => onRegenerateClick(version)}
                     className="w-full mt-2 px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors text-xs font-bold flex items-center justify-center gap-2"
                   >
                     <RotateCw className="w-3 h-3" />
