@@ -26,6 +26,13 @@ export function getDocumentTypeMeta(key) {
   return DOCUMENT_TYPES.find(t => t.key === key) || null;
 }
 
+/** Reverse of CANONICAL_DOCUMENT_TYPE — given a documents.document_type value
+ *  ('darp', 'treatment_plan', …), find the docTypeKey the generation pipeline
+ *  and settings.sourceFiles rules are keyed by ('session_note', …). */
+export function docTypeKeyForCanonical(canonical) {
+  return Object.keys(CANONICAL_DOCUMENT_TYPE).find(key => CANONICAL_DOCUMENT_TYPE[key] === canonical) || null;
+}
+
 /** Default Reports-page "Type of Service" for each generated document type —
  *  used to pre-fill the billing entry auto-created alongside a saved
  *  document. Values match ReportsPage's SERVICE_TYPES options exactly so the

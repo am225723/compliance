@@ -185,6 +185,16 @@ a much larger, cross-cutting change than this feature, and one that should
 be a deliberate decision rather than a side effect of adding a timeline
 view. Flagging it here rather than silently accepting the risk.
 
+**Regenerate as a new version:** `handleRegenerateVersion()` closes the gap
+flagged in 2.3 below — it re-collects a document's source files from Drive
+(via the same configured Source File Rules Batch Processor uses), regenerates
+the content, and calls `AppContext.regenerateDocument()` to persist it as a
+new `version_number`. `regenerateDocument()` itself was patched to fall back
+to fetching the original row directly when it isn't in the capped
+`AppContext.documents` cache — otherwise regenerating an older patient's
+document from this very page would silently fail for the same reason this
+page exists in the first place.
+
 ### 2.3 Side-by-side version diff — **implemented**
 
 **Problem:** `DocumentVersionHistory.jsx` already lists a document's versions

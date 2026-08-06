@@ -272,7 +272,16 @@ export function AppProvider({ children }) {
 
   async function regenerateDocument(originalDocId, newHtml, { provider, model, tokens }) {
     if (!session?.user) return null;
-    const originalDoc = documents.find(d => d.id === originalDocId);
+    // The cached `documents` array is capped (50 rows, newest-first) — a
+    // patient with older history can have their document fall outside it,
+    // exactly the gap PatientTimelinePage's direct queries exist to avoid.
+    // Fall back to fetching the row directly rather than silently failing
+    // just because it isn't in the cache.
+    let originalDoc = documents.find(d => d.id === originalDocId);
+    if (!originalDoc) {
+      const { data } = await supabase.from('documents').select('*').eq('id', originalDocId).maybeSingle();
+      originalDoc = data;
+    }
     if (!originalDoc) return null;
 
     const { promptTokens, completionTokens } = tokens || {};
