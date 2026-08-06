@@ -171,23 +171,27 @@ export default function AppointmentReportPage() {
   const stats = useMemo(() => ({
     total: rows.length,
     uniquePatients: new Set(rows.map((r) => r.patientName).filter(Boolean)).size,
-    missingDarp: rows.filter((r) => r.patientName && !r.darpCreated).length,
+    missingDarp: rows.filter((r) => !r.darpCreated).length,
     missingTreatmentPlan: rows.filter((r) => r.treatmentPlanStatus === 'missing').length,
   }), [rows]);
 
   function exportCSV() {
     const headers = ['Date', 'Appointment', 'Calendar', 'Patient', 'Name Confidence', 'First Visit', 'DARP Note', 'Treatment Plan'];
     const csvRows = filteredRows.map((r) => [
-      r.start ? new Date(r.start).toLocaleString() : '',
+      r.start ? new Date(r.start).toLocaleString('en-US', { timeZone: getEffectiveTimeZone(settings) }) : '',
       r.title,
       r.calendarName,
       r.patientName || '(unparsed)',
       r.needsNameReview ? `${r.parseConfidence} (verify)` : r.parseConfidence,
       r.isFirstVisit ? 'Yes' : 'No',
-      r.patientName ? (r.darpCreated ? 'Created' : 'Missing') : 'N/A',
+      r.darpCreated ? 'Created' : 'Missing',
       r.treatmentPlanStatus === 'n/a' ? 'N/A' : r.treatmentPlanStatus === 'created' ? 'Created' : 'Missing',
     ]);
-    const csv = [headers, ...csvRows].map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = [headers, ...csvRows].map((row) => row.map((v) => {
+      const value = String(v ?? '');
+      const safeValue = /^[\t\r\n ]*[=+\-@]/.test(value) ? `'${value}` : value;
+      return `"${safeValue.replace(/"/g, '""')}"`;
+    }).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -346,9 +350,9 @@ export default function AppointmentReportPage() {
                         <tr key={r.key} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${idx % 2 === 0 ? 'bg-white/1' : ''}`}>
                           <td className="px-4 py-3">
                             <p className="text-sm text-slate-300 whitespace-nowrap">
-                              {r.start ? new Date(r.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                              {r.start ? new Date(r.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: getEffectiveTimeZone(settings) }) : '—'}
                             </p>
-                            <p className="text-[10px] text-slate-600">{r.durationMinutes != null ? new Date(r.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}</p>
+                            <p className="text-[10px] text-slate-600">{r.durationMinutes != null ? new Date(r.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: getEffectiveTimeZone(settings) }) : ''}</p>
                           </td>
                           <td className="px-4 py-3">
                             <p className="text-sm font-bold text-white">{r.title}</p>
@@ -374,7 +378,7 @@ export default function AppointmentReportPage() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <DocStatus status={r.patientName ? r.darpCreated : 'n/a'} />
+                            <DocStatus status={r.darpCreated} />
                           </td>
                           <td className="px-4 py-3">
                             <DocStatus status={r.treatmentPlanStatus} />
