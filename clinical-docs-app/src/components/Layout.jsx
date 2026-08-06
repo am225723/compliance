@@ -2,7 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Settings, FileText, LayoutDashboard,
   ClipboardList, ChevronRight, Wifi, WifiOff, Menu,
-  BarChart3, LogOut, ChevronDown, Zap, CalendarDays, History
+  BarChart3, LogOut, ChevronDown, Zap, CalendarDays, History, ClipboardCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
@@ -28,6 +28,7 @@ const navSections = [
     items: [
       { to: '/history', icon: History, label: 'Generation History', sub: 'Batch Logs & Errors' },
       { to: '/reports', icon: BarChart3, label: 'Reports', sub: 'Billing & Analytics' },
+      { to: '/appointment-report', icon: ClipboardCheck, label: 'Appointment Report', sub: 'Documentation Status' },
     ],
   },
   {
