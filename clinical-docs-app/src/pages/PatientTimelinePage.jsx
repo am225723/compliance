@@ -15,6 +15,14 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
+import { findPatientFormsFolder, listSubfolders, listPatientFiles } from '../lib/googleDrive';
+import { matchPatientFolders, classifyMatch } from '../lib/patientMatching';
+import { getSourceRules, resolveSourceFiles } from '../lib/sourceFileSelection';
+import { collectSourceText, generateDocumentForPatient } from '../lib/documentPipeline';
+import { buildSystemPrompt } from '../lib/aiEngine';
+import { getProviderKeys, isProviderConfigured } from '../lib/settings';
+import { docTypeKeyForCanonical } from '../lib/documentTypes';
+import { withRetry } from '../lib/retry';
 import ClientFacingActions from '../components/ClientFacingActions';
 import DocumentVersionHistory from '../components/DocumentVersionHistory';
 
@@ -39,8 +47,13 @@ function formatDate(iso) {
 export default function PatientTimelinePage() {
   const { name } = useParams();
   const patientName = decodeURIComponent(name || '');
-  const { user, updateDocumentReview } = useApp();
+  const {
+    user, settings, driveConnected, updateDocumentReview, regenerateDocument,
+    getTemplateHtml, fetchLatestDocument,
+  } = useApp();
   const [reviewUpdating, setReviewUpdating] = useState({});
+  const [regeneratingDocId, setRegeneratingDocId] = useState(null);
+  const [versionRefreshKey, setVersionRefreshKey] = useState(0);
 
   const [documents, setDocuments] = useState([]);
   const [reports, setReports] = useState([]);
@@ -111,6 +124,67 @@ export default function PatientTimelinePage() {
       setError('Failed to update document review status.');
     } finally {
       setReviewUpdating(prev => ({ ...prev, [docId]: false }));
+    }
+  }
+
+  /**
+   * Re-run generation for an already-saved document and persist the result
+   * as a new version via AppContext's regenerateDocument — the only code
+   * path that actually creates a versioned row, which is what
+   * DocumentVersionHistory's diff view needs something real to compare
+   * against. No bootstrap-note chaining here (unlike Batch Processor/
+   * AutoPilot/Calendar Notes generating a fresh Treatment Plan alongside its
+   * source note) — this regenerates one existing document from its own
+   * configured source files only.
+   */
+  async function handleRegenerateVersion(doc) {
+    if (regeneratingDocId) return;
+    const docTypeKey = docTypeKeyForCanonical(doc.document_type);
+    if (!docTypeKey) { setError(`Unknown document type "${doc.document_type}" — can't regenerate.`); return; }
+    if (!driveConnected) { setError('Connect Google Drive in Settings before regenerating.'); return; }
+    const provider = settings.aiProvider || 'gemini';
+    const keys = getProviderKeys(settings);
+    if (!isProviderConfigured(provider, keys)) { setError(`AI provider "${provider}" has no API key configured — go to Settings.`); return; }
+
+    setRegeneratingDocId(doc.id);
+    setError('');
+    try {
+      const root = await withRetry(() => findPatientFormsFolder(), { retries: 2 });
+      const subfolders = await withRetry(() => listSubfolders(root.id), { retries: 2 });
+      const candidates = matchPatientFolders(patientName, subfolders);
+      const matchStatus = classifyMatch(candidates);
+      if (matchStatus !== 'matched') {
+        throw new Error(matchStatus === 'ambiguous'
+          ? `"${patientName}" matches ${candidates.length} Drive folders — resolve this in Batch Processor first.`
+          : `No Drive folder found for "${patientName}".`);
+      }
+      const files = await withRetry(() => listPatientFiles(candidates[0].id), { retries: 2 });
+      const rules = getSourceRules(settings, docTypeKey);
+      const { selectedFileIds } = resolveSourceFiles(files, rules);
+      const selectedFiles = files.filter(f => selectedFileIds.includes(f.id));
+      if (selectedFiles.length === 0) {
+        throw new Error('No source files in Drive match this document type\'s Source File Rules — nothing to regenerate from.');
+      }
+
+      const { sourceText } = await collectSourceText({ name: patientName, files }, null, selectedFiles);
+      const systemPrompt = buildSystemPrompt(settings.detailLevel);
+      const { outputHtml } = await withRetry(
+        () => generateDocumentForPatient({
+          patient: { name: patientName }, docTypeKey, sourceText, systemPrompt,
+          provider, keys, model: settings.aiModel || undefined,
+          getTemplateHtml, fetchLatestDocument,
+        }),
+        { retries: 2 },
+      );
+
+      const updated = await regenerateDocument(doc.id, outputHtml, { provider, model: settings.aiModel || undefined });
+      if (!updated) throw new Error('Regeneration produced new content, but saving it as a new version failed.');
+      setDocuments(prev => [updated, ...prev]);
+      setVersionRefreshKey(k => k + 1);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setRegeneratingDocId(null);
     }
   }
 
@@ -252,7 +326,19 @@ export default function PatientTimelinePage() {
                           )}
                           <ClientFacingActions documentHtml={d.content_html} patientName={patientName} />
                           {user?.id && (
-                            <DocumentVersionHistory docId={d.id} patientName={patientName} userId={user.id} />
+                            <DocumentVersionHistory
+                              key={`${d.id}-${versionRefreshKey}`}
+                              docId={d.id}
+                              patientName={patientName}
+                              userId={user.id}
+                              documentType={d.document_type}
+                              onRegenerateClick={() => handleRegenerateVersion(d)}
+                            />
+                          )}
+                          {regeneratingDocId === d.id && (
+                            <p className="mt-2 text-xs text-teal-400 flex items-center gap-1.5">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerating…
+                            </p>
                           )}
                         </div>
                       )}

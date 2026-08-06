@@ -7,7 +7,7 @@ import { RotateCw, ChevronDown, ChevronUp, Eye, GitCompare, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import VersionDiffView from './VersionDiffView';
 
-export default function DocumentVersionHistory({ docId, patientName, userId, onRegenerateClick }) {
+export default function DocumentVersionHistory({ docId, patientName, userId, documentType, onRegenerateClick }) {
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedVersion, setExpandedVersion] = useState(null);
@@ -16,17 +16,22 @@ export default function DocumentVersionHistory({ docId, patientName, userId, onR
 
   useEffect(() => {
     loadVersions();
-  }, [docId, patientName, userId]);
+  }, [docId, patientName, userId, documentType]);
 
   async function loadVersions() {
     if (!userId || !patientName || !docId) return;
     setLoading(true);
-    const { data, error } = await supabase
+    // Scoped by document_type too, not just patient — otherwise a patient
+    // with e.g. both a Treatment Plan and a DARP note would show every
+    // version of both interleaved into one list, sorted only by
+    // version_number, as if they were versions of the same document.
+    let query = supabase
       .from('documents')
       .select('*')
       .eq('user_id', userId)
-      .eq('patient_name', patientName)
-      .order('version_number', { ascending: false });
+      .eq('patient_name', patientName);
+    if (documentType) query = query.eq('document_type', documentType);
+    const { data, error } = await query.order('version_number', { ascending: false });
     if (!error && data) {
       setVersions(data);
     }
