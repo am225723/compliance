@@ -22,7 +22,7 @@ export default function WizardSteps({ steps, currentIndex, accent = 'teal' }) {
           const done = i < currentIndex;
           const active = i === currentIndex;
           return (
-            <li key={label} className="flex items-center">
+            <li key={label} aria-current={active ? 'step' : undefined} className="flex items-center">
               <div className="flex items-center gap-2">
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0 transition-all ${
@@ -36,6 +36,7 @@ export default function WizardSteps({ steps, currentIndex, accent = 'teal' }) {
                   {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
                 <span className={`text-xs font-bold whitespace-nowrap ${active ? 'text-white' : done ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <span className="sr-only">{active ? 'Current step: ' : done ? 'Completed: ' : 'Upcoming: '}</span>
                   {label}
                 </span>
               </div>

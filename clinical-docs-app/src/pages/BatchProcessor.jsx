@@ -35,14 +35,17 @@ const PHASE = {
 
 const WIZARD_STEPS = ['Input', 'Verify', 'Confirm', 'Generate', 'Review', 'Save'];
 
-function wizardStepIndex(phase) {
+function wizardStepIndex(phase, saveWasCancelled) {
   switch (phase) {
     case PHASE.PREVIEW: return 1;
     case PHASE.CONFIRM: return 2;
     case PHASE.GENERATING: return 3;
     case PHASE.REVIEW: return 4;
     case PHASE.SAVING: return 5;
-    case PHASE.DONE: return WIZARD_STEPS.length;
+    // A cancelled save can still land in DONE with some outputs unsaved —
+    // leave the Save step showing active rather than complete so the
+    // tracker doesn't claim more finished than actually did.
+    case PHASE.DONE: return saveWasCancelled ? 5 : WIZARD_STEPS.length;
     default: return 0; // IDLE, MATCHING
   }
 }
@@ -124,6 +127,7 @@ export default function BatchProcessor() {
   const [expandedFiles, setExpandedFiles] = useState({});
   const [previewMode, setPreviewMode] = useState({}); // { [name]: 'rendered' | 'raw' }
   const [resumeBanner, setResumeBanner] = useState(null);
+  const [saveWasCancelled, setSaveWasCancelled] = useState(false);
   const abortRef = useRef(false);
   const persistTimeoutRef = useRef(null);
 
@@ -625,13 +629,14 @@ export default function BatchProcessor() {
 
     setPhase(PHASE.SAVING);
     abortRef.current = false;
+    setSaveWasCancelled(false);
     const auditRows = [];
     const total = approved.length;
     updateProgress(0, 0, total, 'Saving...');
 
     for (let i = 0; i < approved.length; i++) {
       const out = approved[i];
-      if (abortRef.current) { addLog('\n⏹ Save cancelled.', 'warn'); break; }
+      if (abortRef.current) { addLog('\n⏹ Save cancelled.', 'warn'); setSaveWasCancelled(true); break; }
       const patient = patients.find(p => p.name === out.patientName);
 
       updateOutputByKey(out.key, { status: 'saving' });
@@ -683,6 +688,7 @@ export default function BatchProcessor() {
     setSummary(null);
     setBatchInput('');
     setExpandedFiles({});
+    setSaveWasCancelled(false);
     localStorage.removeItem(BATCH_STORAGE_KEY);
   }
 
@@ -740,7 +746,7 @@ export default function BatchProcessor() {
           )}
         </div>
 
-        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase)} accent="violet" />
+        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase, saveWasCancelled)} accent="violet" />
 
         {/* Config summary bar */}
         <div className="flex flex-wrap gap-2 mb-6">

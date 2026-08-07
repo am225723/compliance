@@ -57,13 +57,16 @@ const PHASE = {
 
 const WIZARD_STEPS = ['Setup', 'Review Appointments', 'Generate', 'Review Notes', 'Save'];
 
-function wizardStepIndex(phase) {
+function wizardStepIndex(phase, saveWasCancelled) {
   switch (phase) {
     case PHASE.REVIEW_APPTS: return 1;
     case PHASE.GENERATING: return 2;
     case PHASE.REVIEW_DOCS: return 3;
     case PHASE.SAVING: return 4;
-    case PHASE.DONE: return WIZARD_STEPS.length;
+    // A cancelled save can still land in DONE with some documents unsaved —
+    // leave the Save step showing active rather than complete so the
+    // tracker doesn't claim more finished than actually did.
+    case PHASE.DONE: return saveWasCancelled ? 4 : WIZARD_STEPS.length;
     default: return 0; // IDLE, LOADING
   }
 }
@@ -174,6 +177,7 @@ export default function CalendarNotesPage() {
   const [progress, setProgress] = useState({ percent: 0, current: 0, total: 0, step: '' });
   const [previewMode, setPreviewMode] = useState({});
   const [resumeBanner, setResumeBanner] = useState(null);
+  const [saveWasCancelled, setSaveWasCancelled] = useState(false);
   const [showMatchSettings, setShowMatchSettings] = useState(false);
   const [newSkipPattern, setNewSkipPattern] = useState('');
 
@@ -684,12 +688,13 @@ export default function CalendarNotesPage() {
 
     setPhase(PHASE.SAVING);
     abortRef.current = false;
+    setSaveWasCancelled(false);
     const auditRows = [];
     const total = workItems.length;
     updateProgress(0, 0, total, 'Saving...');
 
     for (let i = 0; i < workItems.length; i++) {
-      if (abortRef.current) { addLog('\n⏹ Save cancelled.', 'warn'); break; }
+      if (abortRef.current) { addLog('\n⏹ Save cancelled.', 'warn'); setSaveWasCancelled(true); break; }
       const { apptId, docKey } = workItems[i];
       const appt = appointments.find((a) => a.id === apptId);
       const dt = appt.perDocType[docKey];
@@ -733,6 +738,7 @@ export default function CalendarNotesPage() {
     setAppointments([]);
     setLog([]);
     setSummary(null);
+    setSaveWasCancelled(false);
     sessionStorage.removeItem(STORAGE_KEY);
   }
 
@@ -779,7 +785,7 @@ export default function CalendarNotesPage() {
           )}
         </div>
 
-        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase)} accent="sky" />
+        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase, saveWasCancelled)} accent="sky" />
 
         {!driveConnected && (
           <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 flex gap-3 items-start">
