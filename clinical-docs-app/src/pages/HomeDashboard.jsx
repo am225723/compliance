@@ -4,7 +4,7 @@ import {
   FileText, ClipboardList, Calendar, Heart, ChevronRight,
   Play, Settings, BarChart3, Plus, RefreshCw, Loader2,
   FileCheck2, Trash2, Sparkles, Brain,
-  ExternalLink, Search, X, Zap, CalendarDays, History, HardDrive,
+  ExternalLink, Search, X, Zap, CalendarDays, History, HardDrive, TrendingUp,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
@@ -109,6 +109,8 @@ export default function HomeDashboard() {
   // Stats
   const totalDocs = documents.length;
   const uniquePatients = new Set(documents.map(d => d.patient_name)).size;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const docsThisWeek = documents.filter(d => d.created_at && new Date(d.created_at).getTime() >= weekAgo).length;
   const firstName = user?.email ? user.email.split('@')[0].split(/[._]/)[0] : '';
   const greetingName = firstName ? `, ${firstName.charAt(0).toUpperCase()}${firstName.slice(1)}` : '';
 
@@ -284,7 +286,7 @@ export default function HomeDashboard() {
           {[
             { label: 'Total Documents', value: totalDocs,      icon: FileCheck2, color: 'text-teal-400',   bg: 'bg-teal-500/10',   ring: 'group-hover:ring-teal-500/20' },
             { label: 'Patients',        value: uniquePatients, icon: Brain,      color: 'text-blue-400',   bg: 'bg-blue-500/10',   ring: 'group-hover:ring-blue-500/20' },
-            { label: 'AI Provider',     value: activeProvider?.label || 'None', icon: Sparkles, color: 'text-violet-400', bg: 'bg-violet-500/10', ring: 'group-hover:ring-violet-500/20' },
+            { label: 'This Week',       value: docsThisWeek,   icon: TrendingUp, color: 'text-violet-400', bg: 'bg-violet-500/10', ring: 'group-hover:ring-violet-500/20' },
             { label: 'Drive',           value: driveConnected ? 'Connected' : 'Offline', icon: HardDrive, color: driveConnected ? 'text-emerald-400' : 'text-slate-500', bg: driveConnected ? 'bg-emerald-500/10' : 'bg-white/5', ring: driveConnected ? 'group-hover:ring-emerald-500/20' : 'group-hover:ring-white/10' },
           ].map(({ label, value, icon: Icon, color, bg, ring }) => (
             <div key={label} className={`group rounded-2xl border border-white/8 bg-white/[0.03] p-4 transition-all duration-200 hover:bg-white/[0.05] hover:-translate-y-0.5 ring-1 ring-transparent ${ring}`}>
