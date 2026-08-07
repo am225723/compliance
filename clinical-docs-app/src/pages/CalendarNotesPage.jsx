@@ -1103,7 +1103,7 @@ export default function CalendarNotesPage() {
                           return (
                             <div key={dk} className="flex flex-col gap-1 min-w-[6rem]">
                               <div className="flex items-center gap-1">
-                                <span className="text-[10px] text-slate-600">{getDocumentTypeMeta(dk)?.label}:</span>
+                                <span className="text-[11px] text-slate-600">{getDocumentTypeMeta(dk)?.label}:</span>
                                 <DocTypeStatusBadge status={dtStatus.status || 'idle'} />
                               </div>
                               {dtStatus.status === 'generating' && (
@@ -1127,7 +1127,7 @@ export default function CalendarNotesPage() {
                       </div>
 
                       {appt.files.length > 0 && (
-                        <p className="pl-6 mt-1.5 text-[10px] text-slate-600 flex items-center gap-1">
+                        <p className="pl-6 mt-1.5 text-[11px] text-slate-600 flex items-center gap-1">
                           <List className="w-3 h-3" /> {appt.files.length} source file(s) found
                         </p>
                       )}

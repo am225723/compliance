@@ -910,7 +910,7 @@ export default function BatchProcessor() {
                   <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">2</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Verify Source Files</h2>
-                    <p className="text-[10px] text-slate-500">Click ± to see which documents will be used</p>
+                    <p className="text-[11px] text-slate-500">Click ± to see which documents will be used</p>
                   </div>
                   <span className="ml-auto text-xs text-teal-400 font-semibold">Confirm before generating</span>
                 </div>
@@ -949,7 +949,7 @@ export default function BatchProcessor() {
                           <button
                             type="button"
                             onClick={() => applyConfiguredFileRules(p.name)}
-                            className="mb-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/25 text-teal-300 text-[10px] font-bold hover:bg-teal-500/20 transition-colors"
+                            className="mb-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/25 text-teal-300 text-[11px] font-bold hover:bg-teal-500/20 transition-colors"
                           >
                             Re-apply Settings Rules
                           </button>
@@ -963,16 +963,16 @@ export default function BatchProcessor() {
                               />
                               <FileText className="w-3 h-3 flex-shrink-0" />
                               {f.name}
-                              <span className="text-slate-600 text-[10px]">({f.mimeType?.split('/').pop()})</span>
+                              <span className="text-slate-600 text-[11px]">({f.mimeType?.split('/').pop()})</span>
                             </label>
                           ))}
                           {p.sourceRuleResults?.some(r => r.rule.required && r.matches.length === 0) && (
-                            <p className="text-[10px] text-red-400 flex items-center gap-1 pt-1">
+                            <p className="text-[11px] text-red-400 flex items-center gap-1 pt-1">
                               <AlertTriangle className="w-3 h-3" /> Missing required: {p.sourceRuleResults.filter(r => r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
                             </p>
                           )}
                           {p.sourceRuleResults?.some(r => !r.rule.required && r.matches.length === 0) && (
-                            <p className="text-[10px] text-amber-400 flex items-center gap-1 pt-1">
+                            <p className="text-[11px] text-amber-400 flex items-center gap-1 pt-1">
                               <Info className="w-3 h-3" /> Missing optional: {p.sourceRuleResults.filter(r => !r.rule.required && r.matches.length === 0).map(r => r.rule.label).join(', ')}
                             </p>
                           )}
@@ -1048,7 +1048,7 @@ export default function BatchProcessor() {
                   <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">3</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Confirm Outputs</h2>
-                    <p className="text-[10px] text-slate-500">Exactly what will be generated for each client, from which files, saved under which name</p>
+                    <p className="text-[11px] text-slate-500">Exactly what will be generated for each client, from which files, saved under which name</p>
                   </div>
                   {phase === PHASE.CONFIRM && (
                     <span className="ml-auto text-xs text-violet-400 font-semibold">Uncheck anything you don't want generated</span>
@@ -1080,16 +1080,16 @@ export default function BatchProcessor() {
                                   <span className="min-w-0">
                                     {o.label}
                                     {o.isBootstrap && (
-                                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[9px] font-bold align-middle">AUTO — PASS 1</span>
+                                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] font-bold align-middle">AUTO — PASS 1</span>
                                     )}
                                   </span>
                                 </label>
                                 <StatusBadge status={o.status} />
                               </div>
-                              <p className="mt-1.5 text-[10px] text-slate-500">
+                              <p className="mt-1.5 text-[11px] text-slate-500">
                                 Source file(s): {o.sourceFiles.length > 0 ? o.sourceFiles.map(f => f.name).join(', ') : '—'}
                               </p>
-                              <p className="mt-1 text-[10px] text-teal-300 font-mono">
+                              <p className="mt-1 text-[11px] text-teal-300 font-mono">
                                 → {o.fileNameBase}{settings.outputFormat === 'Both' ? '.html / .pdf' : settings.outputFormat === 'PDF' ? '.pdf' : '.html'}
                               </p>
                               {o.status === 'generating' && (
@@ -1108,7 +1108,7 @@ export default function BatchProcessor() {
                                 </div>
                               )}
                               {o.status === 'error' && o.error && (
-                                <p className="mt-1.5 text-[10px] text-red-400">{o.error}</p>
+                                <p className="mt-1.5 text-[11px] text-red-400">{o.error}</p>
                               )}
                             </div>
                           ))}
@@ -1147,7 +1147,7 @@ export default function BatchProcessor() {
                   <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">4</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Review Before Saving</h2>
-                    <p className="text-[10px] text-slate-500">Edit content if needed, then approve which documents get saved to Drive</p>
+                    <p className="text-[11px] text-slate-500">Edit content if needed, then approve which documents get saved to Drive</p>
                   </div>
                 </div>
 
@@ -1253,7 +1253,7 @@ export default function BatchProcessor() {
                 { label: 'Files Created',   value: summary.reduce((a, r) => a + r.outputs.length, 0),  color: 'text-violet-400' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="bg-white/5 rounded-xl p-3 border border-white/10">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">{label}</p>
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">{label}</p>
                   <p className={`text-2xl font-black ${color}`}>{value}</p>
                 </div>
               ))}
