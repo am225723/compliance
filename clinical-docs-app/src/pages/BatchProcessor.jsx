@@ -26,11 +26,26 @@ import {
 } from '../lib/generationAudit';
 import DeduplicationWarning from '../components/DeduplicationWarning';
 import DocumentReviewQueue from '../components/DocumentReviewQueue';
+import WizardSteps from '../components/WizardSteps';
 
 const PHASE = {
   IDLE: 'idle', MATCHING: 'matching', PREVIEW: 'preview', CONFIRM: 'confirm',
   GENERATING: 'generating', REVIEW: 'review', SAVING: 'saving', DONE: 'done',
 };
+
+const WIZARD_STEPS = ['Input', 'Verify', 'Confirm', 'Generate', 'Review', 'Save'];
+
+function wizardStepIndex(phase) {
+  switch (phase) {
+    case PHASE.PREVIEW: return 1;
+    case PHASE.CONFIRM: return 2;
+    case PHASE.GENERATING: return 3;
+    case PHASE.REVIEW: return 4;
+    case PHASE.SAVING: return 5;
+    case PHASE.DONE: return WIZARD_STEPS.length;
+    default: return 0; // IDLE, MATCHING
+  }
+}
 
 const BATCH_STORAGE_KEY = 'clinicaldocs_batch_inflight';
 
@@ -725,6 +740,8 @@ export default function BatchProcessor() {
           )}
         </div>
 
+        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase)} accent="violet" />
+
         {/* Config summary bar */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
@@ -884,7 +901,7 @@ export default function BatchProcessor() {
             {phase === PHASE.PREVIEW && patients.length > 0 && (
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-teal-500/20 flex items-center justify-center text-xs font-black text-teal-400">2</div>
+                  <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">2</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Verify Source Files</h2>
                     <p className="text-[10px] text-slate-500">Click ± to see which documents will be used</p>
@@ -1121,7 +1138,7 @@ export default function BatchProcessor() {
             {phase === PHASE.REVIEW && (
               <div className="bg-slate-900 border border-white/10 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-black text-emerald-400">4</div>
+                  <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-black text-violet-400">4</div>
                   <div>
                     <h2 className="text-sm font-black text-white">Review Before Saving</h2>
                     <p className="text-[10px] text-slate-500">Edit content if needed, then approve which documents get saved to Drive</p>

@@ -24,6 +24,7 @@ import { getProviderKeys, getEffectiveTimeZone, isProviderConfigured } from '../
 import { buildExistingNoteIndex, findExistingNote } from '../lib/calendarDedup';
 import { getSessionSourceFiles, isSessionSourceFile } from '../lib/sessionSourceFiles';
 import ClientFacingActions from '../components/ClientFacingActions';
+import WizardSteps from '../components/WizardSteps';
 
 /**
  * Among a folder's Zoom-note / Notes-by-Gemini files, pick the one whose
@@ -53,6 +54,19 @@ const PHASE = {
   IDLE: 'idle', LOADING: 'loading', REVIEW_APPTS: 'review_appts',
   GENERATING: 'generating', REVIEW_DOCS: 'review_docs', SAVING: 'saving', DONE: 'done',
 };
+
+const WIZARD_STEPS = ['Setup', 'Review Appointments', 'Generate', 'Review Notes', 'Save'];
+
+function wizardStepIndex(phase) {
+  switch (phase) {
+    case PHASE.REVIEW_APPTS: return 1;
+    case PHASE.GENERATING: return 2;
+    case PHASE.REVIEW_DOCS: return 3;
+    case PHASE.SAVING: return 4;
+    case PHASE.DONE: return WIZARD_STEPS.length;
+    default: return 0; // IDLE, LOADING
+  }
+}
 
 const STORAGE_KEY = 'clinicaldocs_calendar_inflight';
 
@@ -764,6 +778,8 @@ export default function CalendarNotesPage() {
             </div>
           )}
         </div>
+
+        <WizardSteps steps={WIZARD_STEPS} currentIndex={wizardStepIndex(phase)} accent="sky" />
 
         {!driveConnected && (
           <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 flex gap-3 items-start">
