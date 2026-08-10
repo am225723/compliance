@@ -16,7 +16,7 @@ import { parseAppointment, shouldSkipEvent } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
 import {
   collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
-  resolveSessionSourcePatterns,
+  resolveSessionSourcePatterns, computeOutputFileNameBase,
 } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
@@ -575,6 +575,14 @@ export default function CalendarNotesPage() {
     updateProgress(0, 0, total, 'Starting...');
     const systemPrompt = buildSystemPrompt(settings.detailLevel);
 
+    // A date range commonly holds several appointments for the same
+    // patient — each one selected for treatment_plan would otherwise
+    // independently bootstrap its own near-identical First Session Note
+    // from the same oldest source file. Track which (patient, source file)
+    // pairs already got one this run and skip the rest, attaching the
+    // already-generated note's key as their dependency instead.
+    const bootstrapKeyBySourceFile = new Map(); // `${patientName}::${fileId}` -> apptId that holds the generated note
+
     for (let i = 0; i < workItems.length; i++) {
       if (abortRef.current) { addLog('\n⏹ Generation cancelled.', 'warn'); break; }
       const { apptId, docKey } = workItems[i];
@@ -612,30 +620,42 @@ export default function CalendarNotesPage() {
           const sessionFiles = getSessionSourceFiles(appt.files, sessionSourcePatterns);
           if (sessionFiles.length > 0) {
             const oldest = sessionFiles[0];
-            addLog(`  🔮 Generating First Session Note from ${oldest.name}...`);
-            try {
-              const { sourceText: bootstrapSourceText, sourceFileList: bootstrapFileList } =
-                await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), [oldest]);
-              if (bootstrapFileList.length > 0) {
-                const { outputHtml: bootstrapHtml } = await withRetry(
-                  () => generateDocumentForPatient({
-                    patient, docTypeKey: 'session_note', sourceText: bootstrapSourceText, systemPrompt, provider, keys,
-                    model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
-                    onLog: (msg, type) => addLog(`    ${msg}`, type),
-                  }),
-                  { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
-                );
-                bootstrapNoteHtml = bootstrapHtml;
-                setDocTypeStatus(apptId, BOOTSTRAP_DOC_KEY, {
-                  status: 'generated',
-                  generatedOutput: { html: bootstrapHtml, sourceFileList: bootstrapFileList },
-                  dateForFilename: oldest.extractedDate || null,
-                  approved: true, error: null,
-                });
-                addLog(`  ✓ First Session Note generated — review it below before saving.`);
+            const sourceKey = `${patient.name}::${oldest.id}`;
+            const reused = bootstrapKeyBySourceFile.get(sourceKey);
+            if (reused) {
+              // Another appointment for this same patient already bootstrapped
+              // a note from this same oldest file earlier in this run — reuse
+              // its content as context instead of generating (and later
+              // potentially saving) a near-duplicate.
+              bootstrapNoteHtml = reused.html;
+              addLog(`  ↺ Reusing First Session Note generated earlier this run for ${patient.name}.`);
+            } else {
+              addLog(`  🔮 Generating First Session Note from ${oldest.name}...`);
+              try {
+                const { sourceText: bootstrapSourceText, sourceFileList: bootstrapFileList } =
+                  await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), [oldest]);
+                if (bootstrapFileList.length > 0) {
+                  const { outputHtml: bootstrapHtml } = await withRetry(
+                    () => generateDocumentForPatient({
+                      patient, docTypeKey: 'session_note', sourceText: bootstrapSourceText, systemPrompt, provider, keys,
+                      model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
+                      onLog: (msg, type) => addLog(`    ${msg}`, type),
+                    }),
+                    { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
+                  );
+                  bootstrapNoteHtml = bootstrapHtml;
+                  bootstrapKeyBySourceFile.set(sourceKey, { apptId, html: bootstrapHtml });
+                  setDocTypeStatus(apptId, BOOTSTRAP_DOC_KEY, {
+                    status: 'generated',
+                    generatedOutput: { html: bootstrapHtml, sourceFileList: bootstrapFileList },
+                    dateForFilename: oldest.extractedDate || null,
+                    approved: true, error: null,
+                  });
+                  addLog(`  ✓ First Session Note generated — review it below before saving.`);
+                }
+              } catch (e) {
+                addLog(`  ⚠ Could not generate First Session Note context: ${e.message} — continuing without it.`, 'warn');
               }
-            } catch (e) {
-              addLog(`  ⚠ Could not generate First Session Note context: ${e.message} — continuing without it.`, 'warn');
             }
           }
         }
@@ -745,6 +765,15 @@ export default function CalendarNotesPage() {
               calendarId: appt.calendarId, eventId: appt.eventId, occurrenceStart: appt.start,
               durationMinutes: appt.durationMinutes,
             },
+            // saveGeneratedDocument only names the file from fileNameBase (or
+            // today) — dateOfServiceOverride alone doesn't reach the
+            // filename, just the auto-created billing entry — so the
+            // bootstrap needs its own source-dated fileNameBase too, or its
+            // file name would say today while its content is about an older
+            // session.
+            fileNameBase: isBootstrap && dt.dateForFilename
+              ? computeOutputFileNameBase(settings.namingConvention, 'session_note', appt.parsedName, dt.dateForFilename)
+              : null,
             dateOfServiceOverride: isBootstrap ? (dt.dateForFilename || null) : null,
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
