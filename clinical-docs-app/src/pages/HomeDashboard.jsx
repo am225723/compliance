@@ -9,6 +9,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { AI_PROVIDERS } from '../lib/aiEngine';
 import { getProviderKeys, isProviderConfigured } from '../lib/settings';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const DOC_TYPE_LABELS = {
   treatment_plan: { label: 'Treatment Plan', color: 'from-blue-500 to-indigo-600',   icon: Heart,         tag: 'Tx Plan'   },
@@ -96,6 +97,8 @@ export default function HomeDashboard() {
   const { settings, driveConnected, documents, docsLoading, deleteDocument, deleteDocuments, fetchDocuments, user } = useApp();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [pendingDelete, setPendingDelete] = useState(null); // { type: 'single', id, name } | { type: 'bulk', count }
+  const [deleting, setDeleting] = useState(false);
 
   const keys = getProviderKeys(settings);
   const activeProviderId = settings.aiProvider || 'gemini';
@@ -138,9 +141,35 @@ export default function HomeDashboard() {
     );
   }
 
-  async function handleBulkDelete() {
-    await deleteDocuments(Array.from(selectedIds));
-    setSelectedIds(new Set());
+  function requestDelete(id) {
+    const doc = documents.find(d => d.id === id);
+    setPendingDelete({ type: 'single', id, name: doc?.patient_name || 'this document' });
+  }
+
+  function requestBulkDelete() {
+    setPendingDelete({ type: 'bulk', count: selectedIds.size });
+  }
+
+  async function confirmPendingDelete() {
+    if (deleting || !pendingDelete) return; // reject repeat confirms while a delete is already in flight
+    const target = pendingDelete;
+    setDeleting(true);
+    try {
+      if (target.type === 'single') {
+        await deleteDocument(target.id);
+      } else {
+        await deleteDocuments(Array.from(selectedIds));
+        setSelectedIds(new Set());
+      }
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  }
+
+  function cancelPendingDelete() {
+    if (deleting) return; // a request already in flight can't actually be cancelled — don't pretend it can
+    setPendingDelete(null);
   }
 
   return (
@@ -408,7 +437,7 @@ export default function HomeDashboard() {
             </label>
             {selectedIds.size > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={requestBulkDelete}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold transition-colors"
               >
                 <Trash2 className="w-3 h-3" /> Delete {selectedIds.size} selected
@@ -447,7 +476,7 @@ export default function HomeDashboard() {
               <DocCard
                 key={doc.id}
                 doc={doc}
-                onDelete={deleteDocument}
+                onDelete={requestDelete}
                 selected={selectedIds.has(doc.id)}
                 onToggleSelect={toggleSelect}
               />
@@ -466,6 +495,17 @@ export default function HomeDashboard() {
           </div>
         )}
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={pendingDelete.type === 'bulk' ? `Delete ${pendingDelete.count} document${pendingDelete.count === 1 ? '' : 's'}?` : `Delete document for ${pendingDelete.name}?`}
+          message="This permanently removes the record from Reports and document history. It does not delete the file from Google Drive, if one was saved there."
+          confirmLabel="Delete"
+          busy={deleting}
+          onConfirm={confirmPendingDelete}
+          onCancel={cancelPendingDelete}
+        />
+      )}
     </div>
   );
 }
