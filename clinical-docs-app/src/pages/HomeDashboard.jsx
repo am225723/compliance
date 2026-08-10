@@ -98,6 +98,7 @@ export default function HomeDashboard() {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [pendingDelete, setPendingDelete] = useState(null); // { type: 'single', id, name } | { type: 'bulk', count }
+  const [deleting, setDeleting] = useState(false);
 
   const keys = getProviderKeys(settings);
   const activeProviderId = settings.aiProvider || 'gemini';
@@ -150,12 +151,24 @@ export default function HomeDashboard() {
   }
 
   async function confirmPendingDelete() {
-    if (pendingDelete?.type === 'single') {
-      await deleteDocument(pendingDelete.id);
-    } else if (pendingDelete?.type === 'bulk') {
-      await deleteDocuments(Array.from(selectedIds));
-      setSelectedIds(new Set());
+    if (deleting || !pendingDelete) return; // reject repeat confirms while a delete is already in flight
+    const target = pendingDelete;
+    setDeleting(true);
+    try {
+      if (target.type === 'single') {
+        await deleteDocument(target.id);
+      } else {
+        await deleteDocuments(Array.from(selectedIds));
+        setSelectedIds(new Set());
+      }
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
     }
+  }
+
+  function cancelPendingDelete() {
+    if (deleting) return; // a request already in flight can't actually be cancelled — don't pretend it can
     setPendingDelete(null);
   }
 
@@ -488,8 +501,9 @@ export default function HomeDashboard() {
           title={pendingDelete.type === 'bulk' ? `Delete ${pendingDelete.count} document${pendingDelete.count === 1 ? '' : 's'}?` : `Delete document for ${pendingDelete.name}?`}
           message="This permanently removes the record from Reports and document history. It does not delete the file from Google Drive, if one was saved there."
           confirmLabel="Delete"
+          busy={deleting}
           onConfirm={confirmPendingDelete}
-          onCancel={() => setPendingDelete(null)}
+          onCancel={cancelPendingDelete}
         />
       )}
     </div>

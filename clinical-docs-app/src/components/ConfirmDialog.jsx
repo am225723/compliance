@@ -1,32 +1,38 @@
 import { useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 /**
  * Modal confirmation for destructive actions (delete, discard, etc.) —
  * render conditionally (`{state && <ConfirmDialog .../>}`) rather than
  * passing `open`, so it never sits mounted-but-hidden.
+ *
+ * `busy` marks the confirmed action as in flight: Escape, the backdrop,
+ * and both buttons are disabled, since an in-flight request can't
+ * actually be cancelled by dismissing the dialog — pretending otherwise
+ * would let a "cancelled" delete complete anyway.
  */
 export default function ConfirmDialog({
   title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel',
-  danger = true, onConfirm, onCancel,
+  danger = true, busy = false, onConfirm, onCancel,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === 'Escape') onCancel();
+      if (e.key === 'Escape' && !busy) onCancel();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
+  }, [busy, onCancel]);
 
   return (
     <div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center px-4"
-      onClick={onCancel}
+      onClick={() => { if (!busy) onCancel(); }}
     >
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
+        aria-busy={busy}
         className="bg-slate-900 border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -43,16 +49,19 @@ export default function ConfirmDialog({
           <div className="flex gap-2 justify-end">
             <button
               onClick={onCancel}
+              disabled={busy}
               autoFocus
-              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all"
+              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {cancelLabel}
             </button>
             <button
               onClick={onConfirm}
-              className={`px-4 py-2 rounded-xl text-white text-xs font-black transition-all ${danger ? 'bg-red-600 hover:bg-red-500' : 'bg-teal-600 hover:bg-teal-500'}`}
+              disabled={busy}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-black transition-all disabled:opacity-60 disabled:cursor-not-allowed ${danger ? 'bg-red-600 hover:bg-red-500' : 'bg-teal-600 hover:bg-teal-500'}`}
             >
-              {confirmLabel}
+              {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {busy ? 'Working…' : confirmLabel}
             </button>
           </div>
         </div>
