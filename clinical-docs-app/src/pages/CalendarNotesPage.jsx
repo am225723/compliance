@@ -16,7 +16,7 @@ import { parseAppointment, shouldSkipEvent } from '../lib/appointmentParsing';
 import { DOCUMENT_TYPES, CANONICAL_DOCUMENT_TYPE, getDocumentTypeMeta } from '../lib/documentTypes';
 import {
   collectSourceText, generateDocumentForPatient, saveGeneratedDocument, estimateGenerationPercent,
-  resolveSessionSourcePatterns,
+  resolveSessionSourcePatterns, computeOutputFileNameBase,
 } from '../lib/documentPipeline';
 import { withRetry } from '../lib/retry';
 import { buildSystemPrompt, AI_PROVIDERS } from '../lib/aiEngine';
@@ -54,6 +54,25 @@ const PHASE = {
   IDLE: 'idle', LOADING: 'loading', REVIEW_APPTS: 'review_appts',
   GENERATING: 'generating', REVIEW_DOCS: 'review_docs', SAVING: 'saving', DONE: 'done',
 };
+
+/**
+ * Synthetic perDocType key for the "First Session Note" a Treatment Plan
+ * bootstraps from the patient's oldest session file (see planPatientOutputs
+ * in documentPipeline.js — same concept as Batch Processor's Pass-1 note).
+ * Deliberately not one of DOCUMENT_TYPES' real keys: it isn't a type the
+ * user selects, and unlike every other saved note here it's intentionally
+ * NOT linked to a calendar occurrence — the source file that produced it
+ * doesn't reliably correspond to whichever appointment triggered the
+ * Treatment Plan, so guessing an occurrence to attach it to risks either
+ * linking the wrong appointment or colliding with that appointment's own
+ * separately-generated session note under the same calendar-dedup slot.
+ */
+const BOOTSTRAP_DOC_KEY = 'session_note_bootstrap';
+
+function metaForDocKey(docKey) {
+  if (docKey === BOOTSTRAP_DOC_KEY) return { key: BOOTSTRAP_DOC_KEY, label: 'First Session Note' };
+  return getDocumentTypeMeta(docKey);
+}
 
 const WIZARD_STEPS = ['Setup', 'Review Appointments', 'Generate', 'Review Notes', 'Save'];
 
@@ -556,6 +575,14 @@ export default function CalendarNotesPage() {
     updateProgress(0, 0, total, 'Starting...');
     const systemPrompt = buildSystemPrompt(settings.detailLevel);
 
+    // A date range commonly holds several appointments for the same
+    // patient — each one selected for treatment_plan would otherwise
+    // independently bootstrap its own near-identical First Session Note
+    // from the same oldest source file. Track which (patient, source file)
+    // pairs already got one this run and skip the rest, attaching the
+    // already-generated note's key as their dependency instead.
+    const bootstrapKeyBySourceFile = new Map(); // `${patientName}::${fileId}` -> apptId that holds the generated note
+
     for (let i = 0; i < workItems.length; i++) {
       if (abortRef.current) { addLog('\n⏹ Generation cancelled.', 'warn'); break; }
       const { apptId, docKey } = workItems[i];
@@ -583,32 +610,52 @@ export default function CalendarNotesPage() {
         }
 
         // treatment_plan: bootstrap a Pass-1 DARP note from the oldest
-        // session file, same as the Batch Processor — but generated
-        // in-memory only here (not saved as its own document), since a
-        // calendar occurrence doesn't map onto an unrelated bootstrap note
-        // the way a patient folder does.
+        // session file, same as the Batch Processor. Unlike Batch Processor,
+        // it's not tied to a calendar occurrence (see BOOTSTRAP_DOC_KEY) —
+        // but it IS now saved as a real session note, same template, once
+        // approved, so the first visit still ends up with an actual note on
+        // record instead of the context being thrown away after use.
         let bootstrapNoteHtml = null;
         if (docKey === 'treatment_plan') {
           const sessionFiles = getSessionSourceFiles(appt.files, sessionSourcePatterns);
           if (sessionFiles.length > 0) {
             const oldest = sessionFiles[0];
-            addLog(`  🔮 Generating First Session Note pass (context only, not saved) from ${oldest.name}...`);
-            try {
-              const { sourceText: bootstrapSourceText, sourceFileList: bootstrapFileList } =
-                await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), [oldest]);
-              if (bootstrapFileList.length > 0) {
-                const { outputHtml: bootstrapHtml } = await withRetry(
-                  () => generateDocumentForPatient({
-                    patient, docTypeKey: 'session_note', sourceText: bootstrapSourceText, systemPrompt, provider, keys,
-                    model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
-                    onLog: (msg, type) => addLog(`    ${msg}`, type),
-                  }),
-                  { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
-                );
-                bootstrapNoteHtml = bootstrapHtml;
+            const sourceKey = `${patient.name}::${oldest.id}`;
+            const reused = bootstrapKeyBySourceFile.get(sourceKey);
+            if (reused) {
+              // Another appointment for this same patient already bootstrapped
+              // a note from this same oldest file earlier in this run — reuse
+              // its content as context instead of generating (and later
+              // potentially saving) a near-duplicate.
+              bootstrapNoteHtml = reused.html;
+              addLog(`  ↺ Reusing First Session Note generated earlier this run for ${patient.name}.`);
+            } else {
+              addLog(`  🔮 Generating First Session Note from ${oldest.name}...`);
+              try {
+                const { sourceText: bootstrapSourceText, sourceFileList: bootstrapFileList } =
+                  await collectSourceText(patient, (msg, type) => addLog(`    ${msg}`, type), [oldest]);
+                if (bootstrapFileList.length > 0) {
+                  const { outputHtml: bootstrapHtml } = await withRetry(
+                    () => generateDocumentForPatient({
+                      patient, docTypeKey: 'session_note', sourceText: bootstrapSourceText, systemPrompt, provider, keys,
+                      model: settings.aiModel || undefined, getTemplateHtml, fetchLatestDocument,
+                      onLog: (msg, type) => addLog(`    ${msg}`, type),
+                    }),
+                    { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
+                  );
+                  bootstrapNoteHtml = bootstrapHtml;
+                  bootstrapKeyBySourceFile.set(sourceKey, { apptId, html: bootstrapHtml });
+                  setDocTypeStatus(apptId, BOOTSTRAP_DOC_KEY, {
+                    status: 'generated',
+                    generatedOutput: { html: bootstrapHtml, sourceFileList: bootstrapFileList },
+                    dateForFilename: oldest.extractedDate || null,
+                    approved: true, error: null,
+                  });
+                  addLog(`  ✓ First Session Note generated — review it below before saving.`);
+                }
+              } catch (e) {
+                addLog(`  ⚠ Could not generate First Session Note context: ${e.message} — continuing without it.`, 'warn');
               }
-            } catch (e) {
-              addLog(`  ⚠ Could not generate First Session Note context: ${e.message} — continuing without it.`, 'warn');
             }
           }
         }
@@ -657,7 +704,7 @@ export default function CalendarNotesPage() {
     for (const appt of appointments) {
       for (const [docKey, dt] of Object.entries(appt.perDocType || {})) {
         if (dt.status === 'generated' || dt.status === 'error') {
-          rows.push({ apptId: appt.id, docKey, appt, dt, meta: getDocumentTypeMeta(docKey) });
+          rows.push({ apptId: appt.id, docKey, appt, dt, meta: metaForDocKey(docKey) });
         }
       }
     }
@@ -698,21 +745,36 @@ export default function CalendarNotesPage() {
       const { apptId, docKey } = workItems[i];
       const appt = appointments.find((a) => a.id === apptId);
       const dt = appt.perDocType[docKey];
-      const meta = getDocumentTypeMeta(docKey);
+      const isBootstrap = docKey === BOOTSTRAP_DOC_KEY;
+      const meta = metaForDocKey(docKey);
       setDocTypeStatus(apptId, docKey, { status: 'saving' });
       updateProgress(Math.round((i / total) * 100), i + 1, total, `Saving ${appt.parsedName}...`);
 
       try {
         const patient = { name: appt.parsedName, folderId: appt.folderId, folderName: appt.folderName };
         const { savedOutputs } = await withRetry(
+          // Every other note here is linked to the calendar occurrence that
+          // produced it — the bootstrap note deliberately isn't (see
+          // BOOTSTRAP_DOC_KEY), so it saves as an ordinary, unlinked session
+          // note under its real canonical type.
           () => saveGeneratedDocument({
-            patient, docTypeKey: docKey, outputHtml: dt.generatedOutput.html, settings,
+            patient, docTypeKey: isBootstrap ? 'session_note' : docKey, outputHtml: dt.generatedOutput.html, settings,
             provider: settings.aiProvider || 'gemini', model: settings.aiModel || undefined,
             saveDocument, saveReport, source: 'manual',
-            calendarLink: {
+            calendarLink: isBootstrap ? null : {
               calendarId: appt.calendarId, eventId: appt.eventId, occurrenceStart: appt.start,
               durationMinutes: appt.durationMinutes,
             },
+            // saveGeneratedDocument only names the file from fileNameBase (or
+            // today) — dateOfServiceOverride alone doesn't reach the
+            // filename, just the auto-created billing entry — so the
+            // bootstrap needs its own source-dated fileNameBase too, or its
+            // file name would say today while its content is about an older
+            // session.
+            fileNameBase: isBootstrap && dt.dateForFilename
+              ? computeOutputFileNameBase(settings.namingConvention, 'session_note', appt.parsedName, dt.dateForFilename)
+              : null,
+            dateOfServiceOverride: isBootstrap ? (dt.dateForFilename || null) : null,
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
         );
