@@ -3,7 +3,7 @@
  * Batch Processor and the autonomous AutoPilot watcher so the two never
  * drift out of sync.
  */
-import { downloadFileText, uploadFile } from './googleDrive';
+import { downloadFileText, getOrCreateFile } from './googleDrive';
 import {
   buildTreatmentPlanPrompt, buildDARPPrompt, extractPdfText,
   generateClinicalDocument, htmlToPdfBlob,
@@ -230,13 +230,28 @@ export async function generateDocumentForPatient({
   return { outputHtml, templateLabel: meta.label };
 }
 
-/** Upload a generated document to Drive (HTML and/or a real PDF) and save its record to Supabase. */
+/**
+ * Upload a generated document to Drive (HTML and/or a real PDF) and save its
+ * record to Supabase.
+ *
+ * Every caller wraps this in withRetry, and a failure can happen *after* the
+ * Drive upload(s) already succeeded (e.g. the Supabase insert times out) —
+ * without the two idempotency checks below, a retry would re-run the whole
+ * function and create a duplicate Drive file and/or a duplicate document
+ * row for the exact same generation. getOrCreateFile reuses an existing
+ * Drive file with the same name instead of re-uploading, and — using that
+ * now-stable file's URL as a natural cross-system idempotency key —
+ * findDocumentByDriveUrl reuses an existing document row already pointing
+ * at it instead of inserting a second one (and skips re-creating the
+ * billing entry too, for the same reason).
+ */
 export async function saveGeneratedDocument({
   patient, docTypeKey, outputHtml, settings, provider, model, saveDocument, source = 'manual',
   calendarLink = null, // { calendarId, eventId, occurrenceStart, durationMinutes? } | null — set by Calendar Notes
   saveReport = null,   // optional — auto-creates a linked draft Reports row for billing/visit tracking
   fileNameBase = null, // precomputed via computeOutputFileNameBase — reused as-is so a previewed filename matches what's actually saved
   dateOfServiceOverride = null, // ISO 'YYYY-MM-DD' — e.g. the specific source file's extracted date for a per-session output
+  findDocumentByDriveUrl = null, // optional — enables retry-safe reuse of an already-saved document row (see above)
 }) {
   const meta = getDocumentTypeMeta(docTypeKey);
   if (!meta) throw new Error(`Unknown document type: ${docTypeKey}`);
@@ -251,17 +266,19 @@ export async function saveGeneratedDocument({
   const savedOutputs = [];
 
   if (wantsHtml) {
-    const file = await uploadFile(patient.folderId, `${fileName}.html`, outputHtml, 'text/html');
+    const file = await getOrCreateFile(patient.folderId, `${fileName}.html`, outputHtml, 'text/html');
     savedOutputs.push({ name: `${fileName}.html`, id: file.id, link: file.webViewLink, type: meta.label });
   }
   if (wantsPdf) {
     const pdfBlob = await htmlToPdfBlob(outputHtml);
-    const file = await uploadFile(patient.folderId, `${fileName}.pdf`, pdfBlob, 'application/pdf');
+    const file = await getOrCreateFile(patient.folderId, `${fileName}.pdf`, pdfBlob, 'application/pdf');
     savedOutputs.push({ name: `${fileName}.pdf`, id: file.id, link: file.webViewLink, type: `${meta.label} (PDF)` });
   }
 
   const driveLink = savedOutputs[0]?.link || null;
-  const saved = await saveDocument({
+  const existing = await findDocumentByDriveUrl?.(driveLink);
+  const alreadySaved = !!existing;
+  const saved = existing || await saveDocument({
     patient_name:   patient.name,
     document_type:  CANONICAL_DOCUMENT_TYPE[docTypeKey] || docTypeKey,
     content_html:   outputHtml,
@@ -285,7 +302,7 @@ export async function saveGeneratedDocument({
     throw new Error('Document uploaded to Drive but the database record could not be saved.');
   }
 
-  if (saveReport) {
+  if (saveReport && !alreadySaved) {
     // Best-effort: a draft billing row makes the Reports page useful without
     // extra clicks, but it's a convenience on top of the document that just
     // saved successfully — never let it fail the save the user is waiting on.

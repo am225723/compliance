@@ -151,26 +151,46 @@ export function AppProvider({ children }) {
   }
 
   async function deleteDocument(id) {
-    await supabase.from('documents').delete().eq('id', id);
+    const { error } = await supabase.from('documents').delete().eq('id', id);
+    if (error) throw error;
     setDocuments(prev => prev.filter(d => d.id !== id));
   }
 
   async function deleteReport(id) {
-    await supabase.from('reports').delete().eq('id', id);
+    const { error } = await supabase.from('reports').delete().eq('id', id);
+    if (error) throw error;
     setReports(prev => prev.filter(r => r.id !== id));
   }
 
   async function deleteDocuments(ids) {
     if (!ids.length) return;
-    await supabase.from('documents').delete().in('id', ids);
+    const { error } = await supabase.from('documents').delete().in('id', ids);
+    if (error) throw error;
     setDocuments(prev => prev.filter(d => !ids.includes(d.id)));
   }
 
   async function deleteReports(ids) {
     if (!ids.length) return;
-    await supabase.from('reports').delete().in('id', ids);
+    const { error } = await supabase.from('reports').delete().in('id', ids);
+    if (error) throw error;
     setReports(prev => prev.filter(r => !ids.includes(r.id)));
   }
+
+  /** A document already saved for this exact Drive file URL, if any — lets a
+   *  retried save (see withRetry around saveGeneratedDocument) tell "the
+   *  previous attempt's insert actually succeeded" apart from "it really did
+   *  fail," so it can reuse that row instead of inserting a duplicate. */
+  const findDocumentByDriveUrl = useCallback(async (driveFileUrl) => {
+    if (!driveFileUrl) return null;
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('drive_file_url', driveFileUrl)
+      .limit(1)
+      .maybeSingle();
+    if (error) { console.error('findDocumentByDriveUrl error:', error); return null; }
+    return data;
+  }, []);
 
   /** Most recent saved document of a given canonical type for a patient — used to chain
    *  the Treatment Plan into the DARP note prompt automatically. */
@@ -350,6 +370,7 @@ export function AppProvider({ children }) {
       user: session?.user ?? null,
       // Documents
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
+      findDocumentByDriveUrl,
       fetchExistingCalendarNotes, updateDocumentReview, regenerateDocument,
       // Reports
       reports, reportsLoading, saveReport, updateReport, deleteReport, deleteReports, fetchReports,

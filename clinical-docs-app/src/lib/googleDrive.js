@@ -296,3 +296,40 @@ export async function uploadFile(folderId, fileName, content, mimeType = 'text/h
   if (!res.ok) throw new Error(`Upload error ${res.status}: ${await res.text()}`);
   return res.json();
 }
+
+/** Find a non-trashed file by exact name within a folder — returns null if none exists. */
+export async function findFileInFolder(folderId, fileName) {
+  const escapedName = fileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const q = encodeURIComponent(`'${folderId}' in parents and name = '${escapedName}' and trashed = false`);
+  const data = await driveRequest(`/files?q=${q}&fields=files(id,name,webViewLink,modifiedTime)&pageSize=1&spaces=drive`);
+  return data.files?.[0] || null;
+}
+
+// How recent an existing same-named file has to be to count as "this is
+// almost certainly my own just-now attempt" rather than an unrelated
+// earlier document. Filenames are date-based, not timestamp-based, so a
+// deliberate regeneration later the same day would otherwise collide with
+// this check — bounding it to a realistic retry window (a few backed-off
+// attempts, not minutes) is what keeps that a legitimate new save instead
+// of a silent no-op that discards the freshly generated content.
+const IDEMPOTENT_REUSE_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * Same contract as uploadFile, but safe to call more than once for the same
+ * (folderId, fileName) *within a few minutes*: reuses an existing non-trashed
+ * file with that name if it was created inside IDEMPOTENT_REUSE_WINDOW_MS,
+ * otherwise uploads a fresh one (same as uploadFile always did). This is
+ * what makes retrying a failed save (see withRetry callers of
+ * saveGeneratedDocument) idempotent on the Drive side — a retry that finds
+ * the previous attempt's upload already succeeded just reuses it rather
+ * than creating a second copy — without that reuse also silently absorbing
+ * a genuinely separate, deliberate regeneration of the same document later on.
+ */
+export async function getOrCreateFile(folderId, fileName, content, mimeType = 'text/html') {
+  const existing = await findFileInFolder(folderId, fileName);
+  if (existing) {
+    const age = Date.now() - new Date(existing.modifiedTime).getTime();
+    if (age >= 0 && age < IDEMPOTENT_REUSE_WINDOW_MS) return existing;
+  }
+  return uploadFile(folderId, fileName, content, mimeType);
+}

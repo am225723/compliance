@@ -161,9 +161,13 @@ export default function HomeDashboard() {
         await deleteDocuments(Array.from(selectedIds));
         setSelectedIds(new Set());
       }
+      setPendingDelete(null);
+    } catch (e) {
+      // Keep the dialog open on failure — clearing it here would tell the
+      // user the delete happened when it didn't.
+      setPendingDelete(prev => prev && { ...prev, error: e.message || 'Delete failed. Try again.' });
     } finally {
       setDeleting(false);
-      setPendingDelete(null);
     }
   }
 
@@ -502,6 +506,7 @@ export default function HomeDashboard() {
           message="This permanently removes the record from Reports and document history. It does not delete the file from Google Drive, if one was saved there."
           confirmLabel="Delete"
           busy={deleting}
+          error={pendingDelete.error}
           onConfirm={confirmPendingDelete}
           onCancel={cancelPendingDelete}
         />

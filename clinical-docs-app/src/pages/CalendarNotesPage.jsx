@@ -174,7 +174,7 @@ function resumeStablePhase(storedPhase) {
 export default function CalendarNotesPage() {
   const {
     settings, updateSettings, driveConnected,
-    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes,
+    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes, findDocumentByDriveUrl,
   } = useApp();
 
   const calendarSettings = settings.calendar;
@@ -775,6 +775,7 @@ export default function CalendarNotesPage() {
               ? computeOutputFileNameBase(settings.namingConvention, 'session_note', appt.parsedName, dt.dateForFilename)
               : null,
             dateOfServiceOverride: isBootstrap ? (dt.dateForFilename || null) : null,
+            findDocumentByDriveUrl,
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
         );
@@ -883,7 +884,7 @@ export default function CalendarNotesPage() {
                   {calendars.map((c) => {
                     const checked = selectedCalendarIds.includes(c.id);
                     return (
-                      <label key={c.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all text-xs font-bold ${
+                      <label key={c.id} className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border cursor-pointer transition-all text-xs font-bold ${
                         checked ? 'border-sky-500/40 bg-sky-500/10 text-sky-200' : 'border-white/10 bg-white/3 text-slate-400 hover:bg-white/6'
                       }`}
                       >
@@ -897,14 +898,14 @@ export default function CalendarNotesPage() {
             </div>
 
             {/* Date presets — every preset has identical visual weight, including Last 90 Days */}
-            <div>
+            <div className="pt-5 border-t border-white/5">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Date Range</h2>
               <div className="flex flex-wrap gap-2">
                 {DATE_PRESETS.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => selectPreset(p.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition-all ${
                       preset === p.id ? 'bg-sky-600 border-sky-500 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
                     }`}
                   >
@@ -924,13 +925,13 @@ export default function CalendarNotesPage() {
             </div>
 
             {/* Document types (multiple) */}
-            <div>
+            <div className="pt-5 border-t border-white/5">
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Document Types to Generate</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {DOCUMENT_TYPES.map((t) => {
                   const checked = selectedDocTypes.includes(t.key);
                   return (
-                    <label key={t.key} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all text-xs font-bold ${
+                    <label key={t.key} className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-all text-xs font-bold ${
                       checked ? 'border-teal-500/40 bg-teal-500/10 text-teal-200' : 'border-white/10 bg-white/3 text-slate-400 hover:bg-white/6'
                     }`}
                     >
@@ -946,7 +947,7 @@ export default function CalendarNotesPage() {
                 skipped non-patient event can be saved from the appointment table
                 below (bookmark / ban icons); this panel is where they're
                 reviewed or removed later. */}
-            <div>
+            <div className="pt-5 border-t border-white/5">
               <button
                 onClick={() => setShowMatchSettings((v) => !v)}
                 className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors"
