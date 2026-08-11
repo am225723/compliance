@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Save, RotateCcw, Loader2, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DOCUMENT_TYPES } from '../lib/documentTypes';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function TemplatesPage() {
   const { templates, saveTemplate, deleteTemplate } = useApp();
@@ -11,6 +12,9 @@ export default function TemplatesPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState(null);
 
   const meta = DOCUMENT_TYPES.find(t => t.key === selectedKey);
   const override = templates.find(t => t.key === selectedKey);
@@ -42,14 +46,32 @@ export default function TemplatesPage() {
     }
   }
 
-  async function handleResetToDefault() {
+  function requestReset() {
     if (!override) return;
-    setSaving(true);
-    await deleteTemplate(selectedKey);
-    const content = await fetch(`/templates/${meta.file}`).then(r => r.text());
-    setHtml(content);
-    setDirty(false);
-    setSaving(false);
+    setResetError(null);
+    setConfirmingReset(true);
+  }
+
+  function cancelReset() {
+    if (resetting) return; // a request already in flight can't actually be cancelled — don't pretend it can
+    setConfirmingReset(false);
+  }
+
+  async function confirmReset() {
+    if (resetting) return; // reject repeat confirms while a request is already in flight
+    setResetting(true);
+    const ok = await deleteTemplate(selectedKey);
+    if (ok) {
+      const content = await fetch(`/templates/${meta.file}`).then(r => r.text());
+      setHtml(content);
+      setDirty(false);
+      setConfirmingReset(false);
+    } else {
+      // Keep the dialog open on failure — clearing it here would tell the
+      // user the reset happened when it didn't.
+      setResetError('Reset failed. Try again.');
+    }
+    setResetting(false);
   }
 
   return (
@@ -99,7 +121,7 @@ export default function TemplatesPage() {
                   </span>
                 )}
                 <button
-                  onClick={handleResetToDefault}
+                  onClick={requestReset}
                   disabled={!override || saving || loadingHtml}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-30"
                 >
@@ -137,6 +159,18 @@ export default function TemplatesPage() {
           </div>
         </div>
       </div>
+
+      {confirmingReset && (
+        <ConfirmDialog
+          title={`Reset ${meta.label} to default?`}
+          message="This discards your customized version of this template. It can't be undone — you'll need to redo the edits if you want them back."
+          confirmLabel="Reset"
+          busy={resetting}
+          error={resetError}
+          onConfirm={confirmReset}
+          onCancel={cancelReset}
+        />
+      )}
     </div>
   );
 }
