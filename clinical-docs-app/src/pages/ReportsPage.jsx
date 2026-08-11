@@ -433,9 +433,13 @@ export default function ReportsPage() {
         await deleteReports(Array.from(selectedIds));
         setSelectedIds(new Set());
       }
+      setPendingDelete(null);
+    } catch (e) {
+      // Keep the dialog open on failure — clearing it here would tell the
+      // user the delete happened when it didn't.
+      setPendingDelete(prev => prev && { ...prev, error: e.message || 'Delete failed. Try again.' });
     } finally {
       setDeleting(false);
-      setPendingDelete(null);
     }
   }
 
@@ -759,6 +763,7 @@ export default function ReportsPage() {
           message="This permanently removes the billing entry. It does not delete the underlying document, if one is linked."
           confirmLabel="Delete"
           busy={deleting}
+          error={pendingDelete.error}
           onConfirm={confirmPendingDelete}
           onCancel={cancelPendingDelete}
         />

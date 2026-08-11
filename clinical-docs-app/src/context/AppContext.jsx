@@ -151,24 +151,28 @@ export function AppProvider({ children }) {
   }
 
   async function deleteDocument(id) {
-    await supabase.from('documents').delete().eq('id', id);
+    const { error } = await supabase.from('documents').delete().eq('id', id);
+    if (error) throw error;
     setDocuments(prev => prev.filter(d => d.id !== id));
   }
 
   async function deleteReport(id) {
-    await supabase.from('reports').delete().eq('id', id);
+    const { error } = await supabase.from('reports').delete().eq('id', id);
+    if (error) throw error;
     setReports(prev => prev.filter(r => r.id !== id));
   }
 
   async function deleteDocuments(ids) {
     if (!ids.length) return;
-    await supabase.from('documents').delete().in('id', ids);
+    const { error } = await supabase.from('documents').delete().in('id', ids);
+    if (error) throw error;
     setDocuments(prev => prev.filter(d => !ids.includes(d.id)));
   }
 
   async function deleteReports(ids) {
     if (!ids.length) return;
-    await supabase.from('reports').delete().in('id', ids);
+    const { error } = await supabase.from('reports').delete().in('id', ids);
+    if (error) throw error;
     setReports(prev => prev.filter(r => !ids.includes(r.id)));
   }
 

@@ -13,7 +13,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
  */
 export default function ConfirmDialog({
   title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel',
-  danger = true, busy = false, onConfirm, onCancel,
+  danger = true, busy = false, error = null, onConfirm, onCancel,
 }) {
   useEffect(() => {
     function handleKeyDown(e) {
@@ -44,6 +44,9 @@ export default function ConfirmDialog({
             <div className="min-w-0">
               <h2 id="confirm-dialog-title" className="text-sm font-black text-white">{title}</h2>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">{message}</p>
+              {error && (
+                <p className="text-xs text-red-400 mt-2 leading-relaxed">{error}</p>
+              )}
             </div>
           </div>
           <div className="flex gap-2 justify-end">
