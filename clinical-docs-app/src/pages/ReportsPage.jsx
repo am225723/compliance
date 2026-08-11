@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { CPT_CODE_GROUPS, CPT_CODE_LOOKUP } from '../lib/cptCodes';
 import { validateCptClaim } from '../lib/cptValidation';
 import { filterReportsNeedingAttention } from '../lib/billingReadiness';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const SERVICE_TYPES = [
   'Psychiatric Evaluation',
@@ -363,6 +364,8 @@ export default function ReportsPage() {
   const [sortDir, setSortDir] = useState('desc');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null); // { type: 'single', id, name } | { type: 'bulk', count }
+  const [deleting, setDeleting] = useState(false);
 
   function toggleSort(field) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -410,9 +413,35 @@ export default function ReportsPage() {
     );
   }
 
-  async function handleBulkDelete() {
-    await deleteReports(Array.from(selectedIds));
-    setSelectedIds(new Set());
+  function requestDelete(id) {
+    const report = reports.find(r => r.id === id);
+    setPendingDelete({ type: 'single', id, name: report?.patient_name || 'this entry' });
+  }
+
+  function requestBulkDelete() {
+    setPendingDelete({ type: 'bulk', count: selectedIds.size });
+  }
+
+  async function confirmPendingDelete() {
+    if (deleting || !pendingDelete) return; // reject repeat confirms while a delete is already in flight
+    const target = pendingDelete;
+    setDeleting(true);
+    try {
+      if (target.type === 'single') {
+        await deleteReport(target.id);
+      } else {
+        await deleteReports(Array.from(selectedIds));
+        setSelectedIds(new Set());
+      }
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  }
+
+  function cancelPendingDelete() {
+    if (deleting) return; // a request already in flight can't actually be cancelled — don't pretend it can
+    setPendingDelete(null);
   }
 
   function exportCSV() {
@@ -562,7 +591,7 @@ export default function ReportsPage() {
               </p>
               {selectedIds.size > 0 && (
                 <button
-                  onClick={handleBulkDelete}
+                  onClick={requestBulkDelete}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold transition-colors"
                 >
                   <Trash2 className="w-3 h-3" /> Delete {selectedIds.size} selected
@@ -676,7 +705,7 @@ export default function ReportsPage() {
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => deleteReport(report.id)}
+                            onClick={() => requestDelete(report.id)}
                             className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -721,6 +750,17 @@ export default function ReportsPage() {
           report={editingReport}
           onClose={() => setEditingReport(null)}
           onSave={patch => updateReport(editingReport.id, patch)}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={pendingDelete.type === 'bulk' ? `Delete ${pendingDelete.count} entr${pendingDelete.count === 1 ? 'y' : 'ies'}?` : `Delete report entry for ${pendingDelete.name}?`}
+          message="This permanently removes the billing entry. It does not delete the underlying document, if one is linked."
+          confirmLabel="Delete"
+          busy={deleting}
+          onConfirm={confirmPendingDelete}
+          onCancel={cancelPendingDelete}
         />
       )}
     </div>
