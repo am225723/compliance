@@ -116,7 +116,7 @@ function resumeStablePhase(storedPhase) {
 }
 
 export default function BatchProcessor() {
-  const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, user } = useApp();
+  const { settings, driveConnected, saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, findDocumentByDriveUrl, user } = useApp();
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [singleClientMode, setSingleClientMode] = useState(false);
   const [batchInput, setBatchInput] = useState('');
@@ -656,6 +656,7 @@ export default function BatchProcessor() {
             source: 'manual',
             fileNameBase: out.fileNameBase,
             dateOfServiceOverride: out.dateForFilename,
+            findDocumentByDriveUrl,
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2 saving ${out.patientName} — ${out.label}: ${e.message}`, 'warn') }
         );

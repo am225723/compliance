@@ -176,6 +176,22 @@ export function AppProvider({ children }) {
     setReports(prev => prev.filter(r => !ids.includes(r.id)));
   }
 
+  /** A document already saved for this exact Drive file URL, if any — lets a
+   *  retried save (see withRetry around saveGeneratedDocument) tell "the
+   *  previous attempt's insert actually succeeded" apart from "it really did
+   *  fail," so it can reuse that row instead of inserting a duplicate. */
+  const findDocumentByDriveUrl = useCallback(async (driveFileUrl) => {
+    if (!driveFileUrl) return null;
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('drive_file_url', driveFileUrl)
+      .limit(1)
+      .maybeSingle();
+    if (error) { console.error('findDocumentByDriveUrl error:', error); return null; }
+    return data;
+  }, []);
+
   /** Most recent saved document of a given canonical type for a patient — used to chain
    *  the Treatment Plan into the DARP note prompt automatically. */
   const fetchLatestDocument = useCallback(async (patientName, documentType) => {
@@ -354,6 +370,7 @@ export function AppProvider({ children }) {
       user: session?.user ?? null,
       // Documents
       documents, docsLoading, saveDocument, deleteDocument, deleteDocuments, fetchDocuments, fetchLatestDocument,
+      findDocumentByDriveUrl,
       fetchExistingCalendarNotes, updateDocumentReview, regenerateDocument,
       // Reports
       reports, reportsLoading, saveReport, updateReport, deleteReport, deleteReports, fetchReports,

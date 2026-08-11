@@ -174,7 +174,7 @@ function resumeStablePhase(storedPhase) {
 export default function CalendarNotesPage() {
   const {
     settings, updateSettings, driveConnected,
-    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes,
+    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, fetchExistingCalendarNotes, findDocumentByDriveUrl,
   } = useApp();
 
   const calendarSettings = settings.calendar;
@@ -775,6 +775,7 @@ export default function CalendarNotesPage() {
               ? computeOutputFileNameBase(settings.namingConvention, 'session_note', appt.parsedName, dt.dateForFilename)
               : null,
             dateOfServiceOverride: isBootstrap ? (dt.dateForFilename || null) : null,
+            findDocumentByDriveUrl,
           }),
           { retries: 2, onRetry: (e, n) => addLog(`  ⟳ Retry ${n}/2: ${e.message}`, 'warn') },
         );

@@ -19,7 +19,7 @@ const INTERVAL_OPTIONS = [15, 30, 60, 120];
 export default function AutoPilotPage() {
   const {
     settings, updateSettings, driveConnected,
-    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument,
+    saveDocument, saveReport, getTemplateHtml, fetchLatestDocument, findDocumentByDriveUrl,
   } = useApp();
 
   const autoPilot = settings.autoPilot;
@@ -172,6 +172,7 @@ export default function AutoPilotPage() {
                 provider, model: settings.aiModel || undefined,
                 saveDocument, saveReport, source: 'autopilot',
                 fileNameBase, dateOfServiceOverride: out.dateForFilename,
+                findDocumentByDriveUrl,
               }),
               { retries: 2, onRetry: (e, n) => addLog(`    ⟳ Retry ${n}/2 saving: ${e.message}`, 'warn') }
             );
